@@ -211,10 +211,10 @@ input,select,textarea,button{font-family:var(--font)}
 .nw-input:focus{border-color:var(--accent)}
 
 /* MONTHLY AMOUNTS GRID */
-.month-amounts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-.month-amt-field{display:flex;flex-direction:column;gap:4px}
-.month-amt-field label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase}
-.month-amt-field input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--r3);padding:8px;font-size:13px;font-family:var(--mono);outline:none;text-align:right}
+.month-amounts-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:12px}
+.month-amt-field{display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between}
+.month-amt-field label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;min-width:50px;flex-shrink:0}
+.month-amt-field input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--r3);padding:8px 10px;font-size:13px;font-family:var(--mono);outline:none;text-align:right;flex:1}
 .month-amt-field input:focus{border-color:var(--accent)}
 
 /* EMPTY STATE */
@@ -488,8 +488,20 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="field"><label>Net Servet (₺)</label><input type="number" id="cfg-nw" placeholder="Toplam varlıklarınız"></div>
       <div style="margin-top:12px">
         <div class="toggle-field">
+          <div><div class="toggle-label">Tema</div><div class="toggle-sub">Açık / Koyu modu seç</div></div>
+          <label class="toggle"><input type="checkbox" id="cfg-theme" onchange="changeTheme(this)"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="toggle-field">
           <div><div class="toggle-label">Bildirimler</div><div class="toggle-sub">Ödeme ve PPF bildirimleri</div></div>
           <label class="toggle"><input type="checkbox" id="cfg-notif" onchange="toggleNotif(this)"><span class="toggle-slider"></span></label>
+        </div>
+        <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:var(--r2);font-size:12px;color:var(--muted);line-height:1.6">
+          <div style="color:var(--accent);font-weight:600;margin-bottom:6px">ℹ️ Bildirim Sistemi</div>
+          <div>📬 Sayfayı açık tutarsanız her saat başında otomatik kontrol edilir.</div>
+          <div style="margin-top:4px">🔔 Her gün saat 9:00'de ödeme ve PPF bildirimleri gönderilir.</div>
+          <div style="margin-top:4px">⚙️ Hafta sonu ödemeler otomatik pazartesi'ye alınır.</div>
         </div>
       </div>
       <button class="btn-primary" onclick="saveSettings()">Kaydet</button>
@@ -801,6 +813,9 @@ function renderDashboard(){
     ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">Bu Ay PPF Tutarı</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
   } else { ppfBox.innerHTML=''; }
 
+  // Year Table Button
+  document.getElementById('dash-ppf').innerHTML+=`<button style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>`;
+
   // Charts
   renderBarChart();
   renderPieChart(d);
@@ -1043,26 +1058,20 @@ function renderGider(){
   const el=document.getElementById('gider-content');
 
   let html='';
-
-  // Year table button
-  html+=`<div style="display:flex;gap:8px;margin-bottom:12px">
-    <button style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>
-  </div>`;
-
+  
   ['sabit','kredi','kk'].forEach(cat=>{
     const items=yd.expenses.filter(e=>e.category===cat);
     const catTotal=items.reduce((s,e)=>s+parseFloat(e.amounts[month]||0),0);
-    const isOpen=true;
 
     html+=`<div class="exp-accordion">
       <div class="acc-header" onclick="toggleAcc(this)">
         <div class="acc-title">${CAT_LABELS[cat]}</div>
         <div class="acc-right">
           <div class="acc-total">${fmtTRY(catTotal)}</div>
-          <div class="acc-arrow open">›</div>
+          <div class="acc-arrow">›</div>
         </div>
       </div>
-      <div class="acc-body open">`;
+      <div class="acc-body">`;
 
     if(items.length===0){
       html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Kayıt yok</div>`;
@@ -1073,28 +1082,29 @@ function renderGider(){
         const adj=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
         const isDue=adj&&isPaymentDueToday(year,month,exp.dueDay);
         const dueStr=adj?`${adj.getDate()} ${MONTHS[adj.getMonth()]}`:'-';
-        html+=`<div class="exp-item" onclick="openStatusModal('${exp.id}',${month})">
-          <div class="exp-item-left">
+        const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';        const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
+        html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
+          <div class="exp-item-left" style="flex:1">
             <div class="exp-item-name">
               ${exp.ppf?'<span class="badge badge-ppf">PPF</span>':''}
               ${exp.name}
               ${isDue?'<span class="badge badge-due">BUGÜN</span>':''}
+              ${instInfo?'<span style="font-size:11px;color:var(--muted)">'+instInfo+'</span>':''}
             </div>
             <div class="exp-item-meta">Ödeme: ${dueStr}${exp.detail?' · '+exp.detail:''}</div>
           </div>
-          <div class="exp-item-right">
-            <div class="exp-item-amount">${fmtTRY(amt)}</div>
-            <div class="exp-item-status"><span class="badge badge-${status}">${status==='paid'?'Ödendi':status==='partial'?'Kısmen':'Ödenmedi'}</span></div>
+          <div class="exp-item-right" style="display:flex;gap:8px;align-items:center">
+            <div style="text-align:right">
+              <div class="exp-item-amount">${fmtTRY(amt)}</div>
+              <div class="exp-item-status"><span class="badge badge-${status}">${status==='paid'?'Ödendi':status==='partial'?'Kısmen':'Ödenmedi'}</span></div>
+            </div>
+            <button onclick="event.stopPropagation();openAddExpense('${exp.id}')" style="padding:6px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">✏️</button>
           </div>
-        </div>
-        <div style="padding:4px 8px;border-top:1px solid var(--border);display:flex;gap:6px">
-          <button onclick="event.stopPropagation();openAddExpense('${exp.id}')" style="flex:1;padding:7px;background:none;border:1px solid var(--border);border-radius:var(--r3);color:var(--muted);font-size:12px;cursor:pointer">✏️ Düzenle</button>
         </div>`;
       });
     }
 
-    html+=`<button class="add-item-btn" onclick="openAddExpense(null,'${cat}')">+ ${CAT_LABELS[cat]}'e Ekle</button>
-      </div>
+    html+=`</div>
     </div>`;
   });
 
@@ -1463,6 +1473,7 @@ function addNewYear(){
 function openSettingsModal(){
   document.getElementById('cfg-salary').value=S.settings.salaryDay;
   document.getElementById('cfg-nw').value=S.settings.netWorth||0;
+  document.getElementById('cfg-theme').checked=S.settings.theme==='light';
   document.getElementById('cfg-notif').checked=S.settings.notifEnabled&&Notification.permission==='granted';
   openModal('overlay-settings');
 }
@@ -1470,6 +1481,16 @@ function openSettingsModal(){
 function saveSettings(){
   S.settings.salaryDay=parseInt(document.getElementById('cfg-salary').value)||1;
   S.settings.netWorth=parseFloat(document.getElementById('cfg-nw').value)||0;
+  const newTheme=document.getElementById('cfg-theme').checked?'light':'dark';
+  if(newTheme!==S.settings.theme){
+    S.settings.theme=newTheme;
+    const root=document.documentElement;
+    if(newTheme==='light'){
+      root.classList.add('light-mode');
+    } else {
+      root.classList.remove('light-mode');
+    }
+  }
   saveS();
   closeModal('overlay-settings');
   renderPage(currentPage);
@@ -1520,15 +1541,18 @@ function shareWhatsApp(){
   const month=S.settings.currentMonth;
   const d=getMonthlyData(year,month);
 
-  const text=`📊 *${MONTHS_FULL[month-1]} ${year} — Mali Özet*\n\n`+
-    `💰 Gelir: ${fmtTRY(d.totalIncome)}\n`+
+  const text=`${MONTHS_FULL[month-1]} ${year} — Mali Özet\n═══════════════════════════\n`+
+    `🤑 Gelir: ${fmtTRY(d.totalIncome)}\n\n`+
+    `Harcamalar\n`+
     `🏠 Sabit: ${fmtTRY(d.sabitTotal)}\n`+
-    `🏦 Krediler: ${fmtTRY(d.krediTotal)}\n`+
-    `💳 KK: ${fmtTRY(d.kkTotal)}\n`+
-    `💸 Toplam Gider: ${fmtTRY(d.totalExpense)}\n`+
-    `📈 Yatırım: ${fmtTRY(d.investment)}\n\n`+
-    `💵 *Nakit Kalan: ${fmtTRY(d.cashLeft)}*\n`+
-    `📊 Tasarruf: ${fmtPct(d.savingsRate)}`+
+    `🪙 Krediler: ${fmtTRY(d.krediTotal)}\n`+
+    `💳 Kredi Kartı: ${fmtTRY(d.kkTotal)}\n`+
+    `───────────────────────────\n`+
+    `💸 Toplam Gider: ${fmtTRY(d.totalExpense)}\n\n`+
+    `💼 Yatırım: ${fmtTRY(d.investment)}\n═══════════════════════════\n`+
+    `💲 Nakit Kalan: ${fmtTRY(d.cashLeft)}\n`+
+    `📊 Durum: ${d.cashLeft<0?'KRİTİK 🚨':d.cashLeft<d.investment?'UYARI⚠️':'SAĞLIKLI✅'}\n`+
+    `📈 Tasarruf: ${fmtPct(d.savingsRate)}`+
     (d.ppfTotal>0?`\n🏦 PPF: ${fmtTRY(d.ppfTotal)}`:'');
 
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
@@ -1575,6 +1599,11 @@ function initApp(){
   buildMonthTabs('gelir-month-tabs','gelir');
   buildMonthTabs('gider-month-tabs','gider');
   buildMonthTabs('harcama-month-tabs','harcama');
+  // Apply saved theme
+  if(S.settings.theme==='light'){
+    document.documentElement.classList.add('light-mode');
+  }
+  // Show dashboard first
   renderDashboard();
   checkDailyNotifications();
   // Scroll current month into view
@@ -1601,3 +1630,4 @@ if(loaded&&S.setupDone){
 </script>
 </body>
 </html>
+
