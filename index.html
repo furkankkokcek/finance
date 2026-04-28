@@ -19,10 +19,30 @@
   --danger:#ef4444;--danger-bg:rgba(239,68,68,.1);
   --info:#3b82f6;--info-bg:rgba(59,130,246,.1);
   --purple:#a855f7;--purple-bg:rgba(168,85,247,.1);
-  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+  --font:'Outfit',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Segoe UI Symbol';--mono:'JetBrains Mono',monospace,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Segoe UI Symbol';
   --r:14px;--r2:10px;--r3:8px;
   --nav:68px;--hdr:56px;
 }
+.light-mode{
+  --bg:#fafafb;--bg2:#f1f1f5;--bg3:#ffffff;--bg4:#e9e9f0;
+  --border:#e2e2ea;--border2:#cdcdd6;
+  --text:#16161c;--muted:#5a5a70;--muted2:#9696a4;
+  --accent-bg:rgba(245,158,11,.14);
+  --success-bg:rgba(34,197,94,.14);
+  --danger-bg:rgba(239,68,68,.14);
+  --info-bg:rgba(59,130,246,.14);
+  --purple-bg:rgba(168,85,247,.14);
+  color-scheme:light;
+}
+.light-mode body{background:var(--bg)}
+.light-mode .overlay{background:rgba(20,20,30,.45)}
+.light-mode .toggle-slider{background:#d4d4dc}
+.light-mode .toggle-slider:before{background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.light-mode .stat-card,.light-mode .chart-wrap,.light-mode .freedom-card,.light-mode .income-item,.light-mode .spending-item,.light-mode .nw-input-wrap{box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.light-mode .header,.light-mode .nav{box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.light-mode .fab{box-shadow:0 4px 16px rgba(245,158,11,.45)}
+.light-mode .header-logo span,.light-mode .setup-logo span{color:#16161c}
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
 input,select,textarea,button{font-family:var(--font)}
@@ -182,17 +202,20 @@ input,select,textarea,button{font-family:var(--font)}
 .fab{position:fixed;bottom:calc(var(--nav) + 16px);right:16px;width:52px;height:52px;background:var(--accent);color:#000;border:none;border-radius:50%;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,158,11,.4);z-index:40}
 
 /* YEAR TABLE MODAL */
-.year-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.year-table{border-collapse:collapse;font-size:12px;white-space:nowrap;width:100%}
-.year-table th{padding:8px 10px;background:var(--bg4);color:var(--muted);font-weight:700;text-align:right;border-bottom:1px solid var(--border);position:sticky;top:0}
+.year-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+.year-table{border-collapse:separate;border-spacing:0;font-size:12px;white-space:nowrap;width:100%}
+.year-table th{padding:10px 12px;background:var(--bg4);color:var(--muted);font-weight:700;text-align:right;border-bottom:1px solid var(--border);position:sticky;top:0}
 .year-table th:first-child{text-align:left;position:sticky;left:0;z-index:2;min-width:130px}
-.year-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)}
+.year-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)}
 .year-table td:first-child{text-align:left;font-family:var(--font);font-weight:600;background:var(--bg3);position:sticky;left:0;z-index:1}
 .year-table tr.total-row td{font-weight:700;background:var(--bg4);color:var(--accent)}
-.year-table tr.cat-row td{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--bg4)}
+.year-table tr.cat-row td{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--bg4);padding-top:14px;padding-bottom:14px}
+.year-table tr.spacer-row td{padding:0;height:10px;background:transparent;border:none}
+.year-table tr.grand-divider td{padding:0;height:14px;background:transparent;border:none}
+.year-table tbody tr:last-child td{border-bottom:none}
 
 /* PPF SUMMARY */
-.ppf-box{background:var(--purple-bg);border:1px solid rgba(168,85,247,.25);border-radius:var(--r2);padding:14px;margin-bottom:12px}
+.ppf-box{background:var(--purple-bg);border:1px solid rgba(168,85,247,.25);border-radius:var(--r2);padding:14px;margin-top:12px;margin-bottom:12px}
 .ppf-title{font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
 .ppf-amount{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--purple)}
 
@@ -276,6 +299,7 @@ input,select,textarea,button{font-family:var(--font)}
         <div class="chart-wrap" id="chart-pie" style="margin-bottom:0"></div>
         <div class="chart-wrap" id="chart-trend" style="margin-bottom:0"></div>
       </div>
+      <div id="dash-yeartable-btn" style="margin-top:16px"></div>
       <div style="height:16px"></div>
     </div>
 
@@ -311,23 +335,23 @@ input,select,textarea,button{font-family:var(--font)}
   <!-- BOTTOM NAV -->
   <nav class="nav">
     <button class="nav-btn active" data-page="dashboard" onclick="showPage('dashboard',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
       Özet
     </button>
     <button class="nav-btn" data-page="gelir" onclick="showPage('gelir',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
       Gelir
     </button>
     <button class="nav-btn" data-page="gider" onclick="showPage('gider',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 4H3a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/><path d="M1 10h22"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
       Gider
     </button>
     <button class="nav-btn" data-page="harcama" onclick="showPage('harcama',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
       Harcama
     </button>
     <button class="nav-btn" data-page="ozgurluk" onclick="showPage('ozgurluk',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 11 19-9-9 19-2-8-8-2z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
       Özgürlük
     </button>
   </nav>
@@ -340,7 +364,7 @@ input,select,textarea,button{font-family:var(--font)}
 
 <!-- MODALS -->
 <div class="overlay" id="overlay-year" onclick="closeModal('overlay-year')">
-  <div class="modal" onclick="e=>e.stopPropagation()">
+  <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-header">
       <div class="modal-title">Yıl Seç</div>
@@ -360,7 +384,10 @@ input,select,textarea,button{font-family:var(--font)}
     <div class="modal-body">
       <input type="hidden" id="inc-id">
       <div class="field"><label>Gelir Adı</label><input type="text" id="inc-name" placeholder="örn: Maaş, Kira"></div>
-      <div class="section-title" style="margin-bottom:10px;font-size:12px;color:var(--muted)">AYLIK TUTARLAR (₺)</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-title" style="font-size:12px;color:var(--muted)">AYLIK TUTARLAR (₺)</div>
+        <button type="button" onclick="pasteFromExcel('inc-amounts')" style="font-size:11px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--muted);cursor:pointer;font-weight:600">📋 Excel'den Yapıştır</button>
+      </div>
       <div class="month-amounts-grid" id="inc-amounts"></div>
       <button class="btn-primary" onclick="saveIncome()">Kaydet</button>
       <button class="btn-danger" id="inc-delete-btn" style="display:none" onclick="deleteIncome()">Sil</button>
@@ -396,7 +423,10 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="field"><label>Sabit Aylık Tutar (tüm aylara yaz)</label>
         <input type="number" id="exp-fixed" placeholder="0,00" oninput="fillAllMonths(this.value)">
       </div>
-      <div class="section-title" style="margin-bottom:10px;font-size:12px;color:var(--muted)">AYLIK TUTARLAR (₺)</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-title" style="font-size:12px;color:var(--muted)">AYLIK TUTARLAR (₺)</div>
+        <button type="button" onclick="pasteFromExcel('exp-amounts')" style="font-size:11px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--muted);cursor:pointer;font-weight:600">📋 Excel'den Yapıştır</button>
+      </div>
       <div class="month-amounts-grid" id="exp-amounts"></div>
       <div style="margin-top:16px">
         <div class="toggle-field">
@@ -440,25 +470,54 @@ input,select,textarea,button{font-family:var(--font)}
     </div>
     <div class="modal-body">
       <input type="hidden" id="spd-id">
-      <div class="field"><label>Açıklama</label><input type="text" id="spd-desc" placeholder="Market, Restoran..."></div>
-      <div class="field-row">
-        <div class="field"><label>Tutar (₺)</label><input type="number" id="spd-amount" placeholder="0.00" step="0.01"></div>
-        <div class="field"><label>Tarih</label><input type="date" id="spd-date"></div>
+
+      <!-- KK harcama read-only görünümü -->
+      <div id="spd-kk-readonly" style="display:none">
+        <div id="spd-kk-readonly-info" style="padding:14px;background:var(--bg4);border-radius:var(--r2);border:1px solid var(--border);font-size:13px;line-height:1.8"></div>
+        <div style="margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--r3);font-size:12px;color:var(--muted)">
+          ⚠️ KK harcamaları düzenlenemez. Silince KK tutarlarından geri çıkarılır.
+        </div>
+        <button class="btn-danger" style="margin-top:14px" onclick="deleteSpending()">Sil ve KK'dan Geri Al</button>
       </div>
-      <div class="field"><label>Kategori</label>
-        <select id="spd-cat">
-          <option value="market">Market / Gıda</option>
-          <option value="restoran">Restoran / Kafe</option>
-          <option value="ulasim">Ulaşım</option>
-          <option value="giyim">Giyim</option>
-          <option value="eglence">Eğlence</option>
-          <option value="saglik">Sağlık</option>
-          <option value="egitim">Eğitim</option>
-          <option value="diger">Diğer</option>
-        </select>
+
+      <!-- Normal harcama formu -->
+      <div id="spd-normal-form">
+        <div class="field"><label>Açıklama</label><input type="text" id="spd-desc" placeholder="Market, Restoran..."></div>
+        <div class="field-row">
+          <div class="field"><label>Tutar (₺)</label><input type="number" id="spd-amount" placeholder="0.00" step="0.01"></div>
+          <div class="field"><label>Tarih</label><input type="date" id="spd-date"></div>
+        </div>
+        <div class="field"><label>Kategori</label>
+          <select id="spd-cat">
+            <option value="market">Market / Gıda</option>
+            <option value="restoran">Restoran / Kafe</option>
+            <option value="ulasim">Ulaşım</option>
+            <option value="giyim">Giyim</option>
+            <option value="eglence">Eğlence</option>
+            <option value="saglik">Sağlık</option>
+            <option value="egitim">Eğitim</option>
+            <option value="diger">Diğer</option>
+          </select>
+        </div>
+        <div style="margin-top:14px">
+          <div class="toggle-field">
+            <div><div class="toggle-label">💳 Kredi Kartından Harcadım</div><div class="toggle-sub">KK ekstresine otomatik ekle</div></div>
+            <label class="toggle"><input type="checkbox" id="spd-kk-toggle" onchange="toggleSpdKK(this)"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div id="spd-kk-section" style="display:none;margin-top:10px;padding:12px;background:var(--bg4);border-radius:var(--r2);border:1px solid var(--border)">
+          <div class="field"><label>Kredi Kartı</label><select id="spd-kk-card"></select></div>
+          <div class="field"><label>Ödeme Tipi</label>
+            <select id="spd-kk-type" onchange="document.getElementById('spd-kk-inst-row').style.display=this.value==='inst'?'block':'none'">
+              <option value="single">Tek Çekim</option>
+              <option value="inst">Taksitli</option>
+            </select>
+          </div>
+          <div class="field" id="spd-kk-inst-row" style="display:none"><label>Taksit Sayısı</label><input type="number" id="spd-kk-inst" min="2" max="36" placeholder="3" step="1"></div>
+        </div>
+        <button class="btn-primary" onclick="saveSpending()">Kaydet</button>
+        <button class="btn-danger" id="spd-delete-btn" style="display:none" onclick="deleteSpending()">Sil</button>
       </div>
-      <button class="btn-primary" onclick="saveSpending()">Kaydet</button>
-      <button class="btn-danger" id="spd-delete-btn" style="display:none" onclick="deleteSpending()">Sil</button>
     </div>
   </div>
 </div>
@@ -470,7 +529,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="modal-title" id="yeartable-title">Yıllık Tablo</div>
       <button class="modal-close" onclick="closeModal('overlay-yeartable')">✕</button>
     </div>
-    <div class="modal-body" style="padding:12px 12px 32px">
+    <div class="modal-body" style="padding:12px 12px 56px">
       <div class="year-table-wrap" id="year-table-content"></div>
     </div>
   </div>
@@ -488,7 +547,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="field"><label>Net Servet (₺)</label><input type="number" id="cfg-nw" placeholder="Toplam varlıklarınız"></div>
       <div style="margin-top:12px">
         <div class="toggle-field">
-          <div><div class="toggle-label">Tema</div><div class="toggle-sub">Açık / Koyu modu seç</div></div>
+          <div><div class="toggle-label">Açık Tema</div><div class="toggle-sub">Açık / Koyu modu seç</div></div>
           <label class="toggle"><input type="checkbox" id="cfg-theme" onchange="changeTheme(this)"><span class="toggle-slider"></span></label>
         </div>
       </div>
@@ -526,9 +585,10 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 
 let S = {
   version:3, setupDone:false,
-  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:''},
+  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark'},
   years:{}
 };
+const giderOpenCats = new Set();
 
 function getYear(y){
   y = y || S.settings.currentYear;
@@ -632,6 +692,30 @@ function getTotalDebt(year){
     }
   });
   return total;
+}
+
+// ═══════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════
+function applyTheme(theme){
+  const root=document.documentElement;
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(theme==='light'){
+    root.classList.add('light-mode');
+    if(meta) meta.content='#fafafb';
+  } else {
+    root.classList.remove('light-mode');
+    if(meta) meta.content='#09090c';
+  }
+}
+
+function changeTheme(el){
+  const theme=el.checked?'light':'dark';
+  S.settings.theme=theme;
+  applyTheme(theme);
+  saveS();
+  // Re-render current page so SVG charts pick up new colors
+  if(typeof renderPage==='function'&&currentPage) renderPage(currentPage);
 }
 
 // ═══════════════════════════════════════════════
@@ -787,22 +871,22 @@ function renderDashboard(){
   // Stat cards
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card">
-      <div class="stat-label">Toplam Gelir</div>
+      <div class="stat-label">🤑 Toplam Gelir</div>
       <div class="stat-value pos">${fmtTRY(d.totalIncome)}</div>
       <div class="stat-sub">${MONTHS_FULL[month-1]} ${year}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Toplam Gider</div>
+      <div class="stat-label">💸 Toplam Gider</div>
       <div class="stat-value neg">${fmtTRY(d.totalExpense)}</div>
       <div class="stat-sub">+${fmtTRY(d.investment)} yatırım</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Nakit Kalan</div>
+      <div class="stat-label">💲 Nakit Kalan</div>
       <div class="stat-value ${d.cashLeft>=0?'pos':'neg'}">${fmtTRY(d.cashLeft)}</div>
       <div class="stat-sub">Gelir - Gider - Yatırım</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Tasarruf Oranı</div>
+      <div class="stat-label">📈 Tasarruf Oranı</div>
       <div class="stat-value acc">${fmtPct(d.savingsRate)}</div>
       <div class="stat-sub">Yatırım/Gelir</div>
     </div>`;
@@ -813,8 +897,8 @@ function renderDashboard(){
     ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">Bu Ay PPF Tutarı</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
   } else { ppfBox.innerHTML=''; }
 
-  // Year Table Button
-  document.getElementById('dash-ppf').innerHTML+=`<button style="width:100%;margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>`;
+  // Year Table Button (sayfanın en altında)
+  document.getElementById('dash-yeartable-btn').innerHTML=`<button style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>`;
 
   // Charts
   renderBarChart();
@@ -857,7 +941,7 @@ function renderBarChart(){
     const active=i+1===cm;
     svgBars+=`<rect x="${x-iW-1}" y="${H-PB-iH}" width="${iW}" height="${iH}" rx="2" fill="${active?'#22c55e':'rgba(34,197,94,.35)'}"/>`;
     svgBars+=`<rect x="${x+1}" y="${H-PB-eH}" width="${eW}" height="${eH}" rx="2" fill="${active?'#ef4444':'rgba(239,68,68,.35)'}"/>`;
-    svgBars+=`<text x="${x}" y="${H-PB+14}" text-anchor="middle" fill="${active?'#f0f0f8':'#44445a'}" font-size="8.5" font-family="Outfit">${MONTHS[i]}</text>`;
+    svgBars+=`<text x="${x}" y="${H-PB+14}" text-anchor="middle" fill="${active?'var(--text)':'var(--muted2)'}" font-size="8.5" font-family="Outfit">${MONTHS[i]}</text>`;
     if(active){
       svgBars+=`<rect x="${x-barW/2}" y="${PT}" width="${barW}" height="${H-PT-PB+4}" rx="2" fill="rgba(245,158,11,.06)" stroke="rgba(245,158,11,.2)" stroke-width="1"/>`;
     }
@@ -1063,15 +1147,16 @@ function renderGider(){
     const items=yd.expenses.filter(e=>e.category===cat);
     const catTotal=items.reduce((s,e)=>s+parseFloat(e.amounts[month]||0),0);
 
-    html+=`<div class="exp-accordion">
+    const isOpen=giderOpenCats.has(cat);
+    html+=`<div class="exp-accordion" data-cat="${cat}">
       <div class="acc-header" onclick="toggleAcc(this)">
         <div class="acc-title">${CAT_LABELS[cat]}</div>
         <div class="acc-right">
           <div class="acc-total">${fmtTRY(catTotal)}</div>
-          <div class="acc-arrow">›</div>
+          <div class="acc-arrow${isOpen?' open':''}">›</div>
         </div>
       </div>
-      <div class="acc-body">`;
+      <div class="acc-body${isOpen?' open':''}">`;
 
     if(items.length===0){
       html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Kayıt yok</div>`;
@@ -1116,6 +1201,8 @@ function toggleAcc(hdr){
   const arrow=hdr.querySelector('.acc-arrow');
   body.classList.toggle('open');
   arrow.classList.toggle('open');
+  const cat=hdr.closest('[data-cat]')?.dataset.cat;
+  if(cat){ body.classList.contains('open')?giderOpenCats.add(cat):giderOpenCats.delete(cat); }
 }
 
 function openAddExpense(id=null, defaultCat=null){
@@ -1196,6 +1283,7 @@ function openStatusModal(expId, month){
     const el=document.getElementById('sopt-'+s);
     el.classList.toggle('sel',s===status);
   });
+  _selectedStatus=status;
   openModal('overlay-status');
 }
 
@@ -1231,6 +1319,7 @@ function openYearTable(){
   let rows='';
 
   const addSection=(label,items,color)=>{
+    if(rows) rows+=`<tr class="spacer-row"><td colspan="14"></td></tr>`;
     rows+=`<tr class="cat-row"><td>${label}</td>${MONTHS.map(()=>`<td></td>`).join('')}<td></td></tr>`;
     let secTotals=Array(12).fill(0);
     items.forEach(exp=>{
@@ -1266,9 +1355,10 @@ function openYearTable(){
     iTotals[m-1]=d.totalIncome;
     cashTotals[m-1]=d.cashLeft;
   }
-  rows+=`<tr class="total-row"><td>TOPLAM GELİR</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  rows+=`<tr class="total-row"><td>TOPLAM GİDER</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  rows+=`<tr class="total-row"><td>NAKİT KALAN</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="grand-divider"><td colspan="14"></td></tr>`;
+  rows+=`<tr class="total-row"><td>🤑 TOPLAM GELİR</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>💸 TOPLAM GİDER</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>💲 NAKİT KALAN</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
 
   document.getElementById('year-table-content').innerHTML=`<table class="year-table"><thead>${header}</thead><tbody>${rows}</tbody></table>`;
   openModal('overlay-yeartable');
@@ -1284,31 +1374,85 @@ function renderHarcama(){
   const yd=getYear(year);
   const el=document.getElementById('harcama-content');
 
+  // Gerçek harcamalar (satın alma ayı)
   const items=yd.spending.filter(s=>{
     const d=new Date(s.date);
     return d.getFullYear()===year&&d.getMonth()+1===month;
   }).sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  const total=items.reduce((s,i)=>s+parseFloat(i.amount||0),0);
+  // KK taksit sanal kayıtları (ödeme ayı)
+  const kkInsts=[];
+  yd.spending.forEach(s=>{
+    if(!s.kk) return;
+    const dateObj=new Date(s.date);
+    const pm0=dateObj.getMonth()+1; // satın alma ayı
+    const py=dateObj.getFullYear();
+    for(let i=0;i<s.kk.n;i++){
+      let pm=pm0+1+i;
+      let pyr=py;
+      if(pm>12){pm-=12;pyr++;}
+      if(pm===month&&pyr===year){
+        kkInsts.push({s, instIdx:i, instNum:i+1, total:s.kk.n, perInst:s.kk.perInst});
+      }
+    }
+  });
+
+  const total=items.reduce((acc,i)=>acc+parseFloat(i.amount||0),0);
 
   let html=`<div class="section-hdr"><div class="section-title">Harcamalar — ${MONTHS_FULL[month-1]}</div><div class="section-badge neg" style="color:var(--danger);background:var(--danger-bg)">${fmtTRY(total)}</div></div>`;
 
-  if(items.length===0){
+  if(items.length===0&&kkInsts.length===0){
     html+=`<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-text">Bu ay harcama kaydı yok</div><div class="empty-sub">Sağ alttaki + butonuna bas</div></div>`;
   } else {
     items.forEach(s=>{
       const d=new Date(s.date);
+      const kkBadge=s.kk?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:var(--purple);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">💳 ${s.kk.n} taksit</span>`:'';
       html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')">
         <div class="spending-left">
-          <div class="spending-desc">${s.description}</div>
+          <div class="spending-desc">${s.description}${kkBadge}</div>
           <div class="spending-meta">${SPD_CATS[s.category]||s.category} · ${d.getDate()} ${MONTHS[d.getMonth()]}</div>
         </div>
         <div class="spending-amount">-${fmtTRY(parseFloat(s.amount))}</div>
       </div>`;
     });
+
+    if(kkInsts.length>0){
+      if(items.length>0) html+=`<div style="height:6px"></div>`;
+      html+=`<div class="section-hdr" style="margin-top:4px"><div class="section-title" style="font-size:12px">💳 KK Taksitleri</div></div>`;
+      kkInsts.forEach(({s,instNum,total,perInst})=>{
+        const d=new Date(s.date);
+        html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')" style="background:rgba(168,85,247,.05);border-left:3px solid rgba(168,85,247,.4)">
+          <div class="spending-left">
+            <div class="spending-desc">${s.description}</div>
+            <div class="spending-meta">${instNum}/${total} taksit · alış ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s.kk.cardId)}</div>
+          </div>
+          <div class="spending-amount" style="color:var(--purple)">-${fmtTRY(perInst)}</div>
+        </div>`;
+      });
+    }
   }
 
   el.innerHTML=html;
+}
+
+function resetSpdKK(){
+  document.getElementById('spd-normal-form').style.display='block';
+  document.getElementById('spd-kk-readonly').style.display='none';
+  document.getElementById('spd-kk-toggle').checked=false;
+  document.getElementById('spd-kk-section').style.display='none';
+  document.getElementById('spd-kk-type').value='single';
+  document.getElementById('spd-kk-inst-row').style.display='none';
+  document.getElementById('spd-kk-inst').value='';
+}
+
+function toggleSpdKK(cb){
+  document.getElementById('spd-kk-section').style.display=cb.checked?'block':'none';
+  if(cb.checked){
+    const cards=getYear(S.settings.currentYear).expenses.filter(e=>e.category==='kk');
+    document.getElementById('spd-kk-card').innerHTML=cards.length
+      ?cards.map(k=>`<option value="${k.id}">${k.name}</option>`).join('')
+      :'<option value="">— KK tanımlanmamış —</option>';
+  }
 }
 
 function openAddSpending(){
@@ -1319,6 +1463,7 @@ function openAddSpending(){
   document.getElementById('spd-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('spd-cat').value='market';
   document.getElementById('spd-delete-btn').style.display='none';
+  resetSpdKK();
   openModal('overlay-spending');
 }
 
@@ -1326,14 +1471,42 @@ function openEditSpending(id){
   const yd=getYear(S.settings.currentYear);
   const s=yd.spending.find(x=>x.id===id);
   if(!s) return;
-  document.getElementById('spending-modal-title').textContent='Harcama Düzenle';
   document.getElementById('spd-id').value=id;
-  document.getElementById('spd-desc').value=s.description;
-  document.getElementById('spd-amount').value=s.amount;
-  document.getElementById('spd-date').value=s.date;
-  document.getElementById('spd-cat').value=s.category;
-  document.getElementById('spd-delete-btn').style.display='block';
+
+  if(s.kk){
+    // KK harcaması — sadece sil izni
+    document.getElementById('spending-modal-title').textContent='KK Harcaması';
+    document.getElementById('spd-normal-form').style.display='none';
+    document.getElementById('spd-kk-readonly').style.display='block';
+    const cardName=findKKCardName(s.kk.cardId);
+    const typeLabel=s.kk.n>1?`${s.kk.n} Taksit (aylık ${fmtTRY(s.kk.perInst)})`:'Tek Çekim';
+    document.getElementById('spd-kk-readonly-info').innerHTML=
+      `<div style="font-weight:700;font-size:14px;margin-bottom:6px">${s.description}</div>`+
+      `<div>💳 ${cardName}</div>`+
+      `<div>💰 ${fmtTRY(s.amount)} · ${typeLabel}</div>`+
+      `<div>📅 ${s.date}</div>`+
+      `<div style="color:var(--muted);font-size:12px;margin-top:6px">${SPD_CATS[s.category]||s.category}</div>`;
+  } else {
+    // Normal harcama — düzenlenebilir
+    document.getElementById('spending-modal-title').textContent='Harcama Düzenle';
+    document.getElementById('spd-normal-form').style.display='block';
+    document.getElementById('spd-kk-readonly').style.display='none';
+    document.getElementById('spd-desc').value=s.description;
+    document.getElementById('spd-amount').value=s.amount;
+    document.getElementById('spd-date').value=s.date;
+    document.getElementById('spd-cat').value=s.category;
+    document.getElementById('spd-delete-btn').style.display='block';
+    resetSpdKK();
+  }
   openModal('overlay-spending');
+}
+
+function findKKCardName(cardId){
+  for(const y of Object.values(S.years)){
+    const exp=(y.expenses||[]).find(e=>e.id===cardId);
+    if(exp) return exp.name;
+  }
+  return 'Bilinmeyen KK';
 }
 
 function saveSpending(){
@@ -1345,7 +1518,35 @@ function saveSpending(){
   const date=document.getElementById('spd-date').value;
   const cat=document.getElementById('spd-cat').value;
   if(!desc||!amount||!date){alert('Tüm alanları doldurun');return;}
+
+  const kkActive=document.getElementById('spd-kk-toggle').checked;
+  let kkMeta=null;
+  if(kkActive){
+    const kkId=document.getElementById('spd-kk-card').value;
+    if(!kkId){alert('Kredi kartı seçin');return;}
+    const type=document.getElementById('spd-kk-type').value;
+    const n=type==='inst'?(parseInt(document.getElementById('spd-kk-inst').value)||1):1;
+    if(type==='inst'&&n<2){alert('Taksit sayısı en az 2 olmalı');return;}
+    const perInst=Math.round(amount/n*100)/100;
+    const dateObj=new Date(date);
+    const purchaseMonth=dateObj.getMonth()+1;
+    const purchaseYear=dateObj.getFullYear();
+    let skipped=0;
+    for(let i=0;i<n;i++){
+      let pm=purchaseMonth+1+i;
+      let py=purchaseYear;
+      if(pm>12){pm-=12;py++;}
+      const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===kkId);
+      if(!kkExp){skipped++;continue;}
+      kkExp.amounts=kkExp.amounts||{};
+      kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
+    }
+    if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdığı için eklenemedi. Gider sekmesinden manuel ekleyebilirsin.`);
+    kkMeta={cardId:kkId, n, perInst};
+  }
+
   const obj={id:id||uid('spd'),description:desc,amount,date,category:cat};
+  if(kkMeta) obj.kk=kkMeta;
   if(id){
     const idx=yd.spending.findIndex(s=>s.id===id);
     if(idx>=0) yd.spending[idx]=obj;
@@ -1355,17 +1556,42 @@ function saveSpending(){
   saveS();
   closeModal('overlay-spending');
   renderHarcama();
+  if(kkActive) renderGider();
 }
 
 function deleteSpending(){
-  if(!confirm('Bu harcamayı silmek istiyor musunuz?')) return;
+  const id=document.getElementById('spd-id').value;
   const year=S.settings.currentYear;
   const yd=getYear(year);
-  const id=document.getElementById('spd-id').value;
-  yd.spending=yd.spending.filter(s=>s.id!==id);
+  const s=yd.spending.find(x=>x.id===id);
+  if(!s) return;
+
+  const confirmMsg=s.kk
+    ?'Bu KK harcaması silinecek ve ilgili KK tutarlarından geri çıkarılacak. Onaylıyor musun?'
+    :'Bu harcamayı silmek istiyor musun?';
+  if(!confirm(confirmMsg)) return;
+
+  if(s.kk){
+    const {cardId,n,perInst}=s.kk;
+    const dateObj=new Date(s.date);
+    const purchaseMonth=dateObj.getMonth()+1;
+    const purchaseYear=dateObj.getFullYear();
+    for(let i=0;i<n;i++){
+      let pm=purchaseMonth+1+i;
+      let py=purchaseYear;
+      if(pm>12){pm-=12;py++;}
+      const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===cardId);
+      if(!kkExp) continue;
+      kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)-perInst)*100)/100;
+      if(kkExp.amounts[pm]<0) kkExp.amounts[pm]=0;
+    }
+  }
+
+  yd.spending=yd.spending.filter(x=>x.id!==id);
   saveS();
   closeModal('overlay-spending');
   renderHarcama();
+  if(s.kk) renderGider();
 }
 
 // ═══════════════════════════════════════════════
@@ -1481,16 +1707,6 @@ function openSettingsModal(){
 function saveSettings(){
   S.settings.salaryDay=parseInt(document.getElementById('cfg-salary').value)||1;
   S.settings.netWorth=parseFloat(document.getElementById('cfg-nw').value)||0;
-  const newTheme=document.getElementById('cfg-theme').checked?'light':'dark';
-  if(newTheme!==S.settings.theme){
-    S.settings.theme=newTheme;
-    const root=document.documentElement;
-    if(newTheme==='light'){
-      root.classList.add('light-mode');
-    } else {
-      root.classList.remove('light-mode');
-    }
-  }
   saveS();
   closeModal('overlay-settings');
   renderPage(currentPage);
@@ -1522,6 +1738,7 @@ function importData(e){
       if(confirm('Tüm veriler bu dosyayla değiştirilecek. Devam?')){
         S=data;
         saveS();
+        applyTheme(S.settings.theme||'dark');
         closeModal('overlay-settings');
         document.getElementById('year-btn').textContent=S.settings.currentYear;
         renderPage(currentPage);
@@ -1561,6 +1778,18 @@ function shareWhatsApp(){
 // ═══════════════════════════════════════════════
 // AMOUNTS GRID HELPERS
 // ═══════════════════════════════════════════════
+function pasteFromExcel(gridId){
+  navigator.clipboard.readText().then(text=>{
+    const values=text.trim().split(/\t|\n/).map(v=>v.trim()).filter(v=>v);
+    const inputs=document.querySelectorAll(`#${gridId} input[data-month]`);
+    inputs.forEach((inp,i)=>{
+      if(i>=values.length) return;
+      const num=parseFloat(values[i].replace(/\./g,'').replace(',','.'));
+      inp.value=isNaN(num)?'':num;
+    });
+  }).catch(()=>alert('Pano erişimi reddedildi. Önce Excel\'den kopyalayıp tekrar deneyin.'));
+}
+
 function buildAmountsGrid(containerId, amounts){
   const el=document.getElementById(containerId);
   if(!el) return;
@@ -1600,9 +1829,7 @@ function initApp(){
   buildMonthTabs('gider-month-tabs','gider');
   buildMonthTabs('harcama-month-tabs','harcama');
   // Apply saved theme
-  if(S.settings.theme==='light'){
-    document.documentElement.classList.add('light-mode');
-  }
+  applyTheme(S.settings.theme||'dark');
   // Show dashboard first
   renderDashboard();
   checkDailyNotifications();
@@ -1630,4 +1857,3 @@ if(loaded&&S.setupDone){
 </script>
 </body>
 </html>
-
