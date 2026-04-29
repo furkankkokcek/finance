@@ -1,92 +1,88 @@
-# FinTrack - Kişisel Finansal Yönetim Sistemi 💰
+# FinTrack - Kişisel Finansal Yönetim Sistemi
 
 Aylık gelir, gider, harcama ve finansal özgürlük hedeflerini takip etmeye yönelik Progressive Web App (PWA).
 
-## Özellikler ✨
+## Özellikler
 
 - **PWA Desteği** - İnternetsiz çalışır, uygulama gibi kurulabilir
-- **Gelir Takibi** - Aylık gelir kaynakları kalem kalem
-- **Gider Yönetimi** - Sabit giderler, krediler, kredi kartları
-- **Harcama Kaydı** - Günlük harcamaları kategorize et
+- **Gelir Takibi** - Aylık gelir kaynakları kalem kalem, Excel'den yapıştırma desteği
+- **Gider Yönetimi** - Sabit giderler, krediler, kredi kartları; accordion açık kalır
+- **KK Harcama Entegrasyonu** - Harcama eklerken KK'ya bağla, tek çekim veya taksitli; ilgili ayların KK tutarına otomatik eklenir, silinince geri alınır
+- **Harcama Takibi** - Günlük harcamalar + KK taksit görünümü (1/4, 2/4...)
 - **Grafikler** - Bar, pie ve trend grafikleriyle görselleştir
 - **Finansal Özgürlük** - 5 seviye hedef takibi
 - **Bildirimler** - Ödeme günü ve PPF hatırlatmaları
-- **WhatsApp Paylaşım** - Aylık mali özeti paylaş
+- **WhatsApp Paylaşım** - Aylık mali özeti paylaş (nakit kalan ÷2 ÷3 ÷4 dahil)
 - **Import/Export** - JSON ile veri yedekleme
 - **Yıllık Tablo** - Tüm yıl verilerini tablo halinde
 
-## Kurulum 🚀
+## Kurulum
 
-### GitHub Pages'de Deploy Etme
+### GitHub Pages'de Deploy
 
 1. Bu repoyu fork et
 2. Reponun settings'ine git → Pages
 3. Deploy from: **GitHub Actions** seç
-4. Yapıldı! `https://kullaniciadin.github.io/finance` adresinde çalışacak
+4. `https://kullaniciadin.github.io/finance` adresinde çalışacak
 
 ### Yerel Çalıştırma
 
-Herhangi bir HTTP sunucusu ile çalıştır:
 ```bash
 python3 -m http.server 8000
 # veya
 npx http-server
 ```
 
-## Kullanım 📖
-
-### Setup
-İlk açılışta maaş gün, başlangıç yılı ve net servet gir.
+## Kullanım
 
 ### Gelir Sekmesi
 - Gelir kaynakları ekle (Maaş, Bonus vb.)
-- Her ay için tutarları gir
+- Her ay için tutarları gir veya **Excel'den Yapıştır** butonuyla tab-separated veriyi yapıştır
 - Yatırım tutarı belirle (tasarruf oranı otomatik hesaplanır)
 
 ### Gider Sekmesi
-- **Sabit Giderler**: Aidat, internet, elektrik vb.
-- **Krediler**: Konut, araba, kişisel krediler
-- **Kredi Kartları**: Tüm kredi kartı ödemeleri
-- Her giderde:
-  - Ödeme günü (hafta sonu otomatik pazartesi'ye alınır)
-  - Taksit sayısı ve ödenen taksit (krediler için)
-  - Ödeme durumu: Ödendi/Kısmen/Ödenmedi
-  - PPF seçeneği (bu gideri PPF bildirimine dahil et)
+- **Sabit Giderler** — Aidat, internet, elektrik vb.
+- **Krediler** — Konut, araba, kişisel krediler
+- **Kredi Kartları** — Tüm kredi kartı ödemeleri
+- Ödeme günü, taksit sayısı, ödeme durumu (Ödendi/Kısmen/Ödenmedi), PPF seçeneği
+- O ay tutarı 0 olan kalemler gizlenir
+- Açık bırakılan accordion ay/durum değişiminde açık kalır
 
 ### Harcama Sekmesi
 - Günlük harcamaları kaydet (Market, Restoran vb.)
-- Otomatik kategorize
+- **KK'dan Harcadım** seçeneğiyle kredi kartına bağla:
+  - Tek çekim → sonraki ayın KK tutarına eklenir
+  - Taksitli → ilgili aylara eşit taksit olarak dağıtılır
+- KK harcamaları ödeme aylarında `1/4 taksit`, `2/4 taksit`... şeklinde görünür
+- KK harcaması silinemez düzenlenemez, sadece silinebilir (KK tutarları otomatik geri alınır)
 
 ### Özet (Dashboard)
-- Aylık gelir, gider, nakit kalan göstergesi
-- Gider dağılımı pie chart
-- Aylık trend grafiği
-- Nakit kalan WhatsApp'ta paylaş
+- Aylık gelir, gider, nakit kalan, tasarruf oranı
+- Gider dağılımı pie chart, aylık bar ve trend grafiği
+- PPF kutusu ve yıllık tablo butonu
+- WhatsApp paylaşım (başlıklar kalın, nakit kalan ÷2 ÷3 ÷4 değerleriyle)
 
 ### Finansal Özgürlük
-- Net Servet gir
-- 5 seviye hedef:
-  1. **Finansal Bağımlı** - Toplam borçları bitir
-  2. **Finansal Stabilite** - 3 ay aylık gider
-  3. **Portföy Sahibi** - 5 yıllık gider
-  4. **Finansal Güvenlik** - 15 yıllık gider
-  5. **Finansal Özgür** - 25 yıllık gider
+Net Servet girerek 5 seviyede ilerleme takibi:
+1. **Finansal Bağımlı** — Toplam borçları bitir
+2. **Finansal Stabilite** — 3× aylık gider
+3. **Portföy Sahibi** — 5 yıllık gider
+4. **Finansal Güvenlik** — 15 yıllık gider
+5. **Finansal Özgür** — 25 yıllık gider
 
-## Bildirimler 📬
+## Bildirimler
 
-Bildirim açtıktan sonra:
-- **Saat 9:00** - Bugün ödemesi olan giderlere hatırlatma
-- **Maaş Günü (9:00)** - PPF tutarı ve aylık mali özet
+Bildirim açıldığında:
+- **Saat 9:00** — Bugün ödemesi olan giderlere hatırlatma
+- **Maaş Günü 9:00** — PPF tutarı ve aylık mali özet
 
-## Veri Gizliliği 🔒
+## Veri Gizliliği
 
-- Tüm veriler tarayıcında (localStorage) tutulur
-- Sunucuya gönderilmez
-- Export ederek yedekle
+Tüm veriler tarayıcıda (localStorage) tutulur, sunucuya gönderilmez. Export ile yedekle.
 
-## Teknik 🛠️
+## Teknik
 
-- **Framework**: Vanilla JS (bağımlılık yok)
+- **Framework**: Vanilla JS — sıfır bağımlılık
 - **Storage**: Browser localStorage
 - **PWA**: Service Worker + manifest.json
 - **Deploy**: GitHub Pages
