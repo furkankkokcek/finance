@@ -857,7 +857,8 @@ function renderDashboard(){
       const status=exp.status?.[month]||'unpaid';
       if(status!=='paid'){
         const amt=parseFloat(exp.amounts[month]||0);
-        banners.innerHTML+=`<div class="notif-banner"><div class="notif-icon">⏰</div><div class="notif-text">${diff===0?'<b>Bugün</b>':diff===1?'<b>Yarın</b>':`<b>${diff} gün sonra`}:</b> ${exp.name} — <b>${fmtTRY(amt)}</b> ödemesi</div></div>`;
+        const dayLbl=diff===0?'Bugün':diff===1?'Yarın':`${diff} gün sonra`;
+        banners.innerHTML+=`<div class="notif-banner"><div class="notif-icon">⏰</div><div class="notif-text"><b>${dayLbl}:</b> ${exp.name} — <b>${fmtTRY(amt)}</b> ödemesi</div></div>`;
       }
     }
   });
@@ -866,7 +867,8 @@ function renderDashboard(){
   const sd=S.settings.salaryDay;
   const daysToSalary=sd-today.getDate();
   if(daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
-    banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text">${daysToSalary===0?'<b>Bugün</b>':daysToSalary===1?'<b>Yarın</b>':`<b>${daysToSalary} gün sonra`}</b> maaş günü! PPF: <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
+    const salaryLbl=daysToSalary===0?'Bugün':daysToSalary===1?'Yarın':`${daysToSalary} gün sonra`;
+    banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text"><b>${salaryLbl}</b> maaş günü! PPF: <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
   }
 
   // Stat cards
@@ -1162,9 +1164,11 @@ function renderGider(){
     if(items.length===0){
       html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Kayıt yok</div>`;
     } else {
+      let anyRendered=false;
       items.forEach(exp=>{
         const amt=parseFloat(exp.amounts[month]||0);
         if(amt===0) return;
+        anyRendered=true;
         const status=exp.status?.[month]||'unpaid';
         const adj=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
         const isDue=adj&&isPaymentDueToday(year,month,exp.dueDay);
@@ -1189,8 +1193,11 @@ function renderGider(){
           </div>
         </div>`;
       });
+      if(!anyRendered){
+        html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Bu ay için tutar girilmemiş</div>`;
+      }
     }
-
+    html+=`<button class="add-item-btn" onclick="openAddExpense(null,'${cat}')"><span style="font-size:16px;line-height:1;margin-right:4px">+</span> Ekle</button>`;
     html+=`</div>
     </div>`;
   });
@@ -1360,6 +1367,8 @@ function openYearTable(){
   rows+=`<tr class="grand-divider"><td colspan="14"></td></tr>`;
   rows+=`<tr class="total-row"><td>🤑 TOPLAM GELİR</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   rows+=`<tr class="total-row"><td>💸 TOPLAM GİDER</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  const invTotals=Array.from({length:12},(_,i)=>parseFloat(getYear(year).investments[i+1]||0));
+  rows+=`<tr class="total-row"><td>💼 YATIRIM</td>${invTotals.map(v=>`<td style="color:var(--info)">${v>0?v.toLocaleString('tr-TR',{maximumFractionDigits:0}):'-'}</td>`).join('')}<td>${invTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   rows+=`<tr class="total-row"><td>💲 NAKİT KALAN</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
 
   document.getElementById('year-table-content').innerHTML=`<table class="year-table"><thead>${header}</thead><tbody>${rows}</tbody></table>`;
@@ -1763,9 +1772,9 @@ function shareWhatsApp(){
   const text=`*${MONTHS_FULL[month-1]} ${year} — Mali Özet*\n\n`+
     `🤑 *Gelir:* ${fmtTRY(d.totalIncome)}\n\n`+
     `*Harcamalar*\n`+
-    `🏠 Sabit: ${fmtTRY(d.sabitTotal)}\n`+
-    `🪙 Krediler: ${fmtTRY(d.krediTotal)}\n`+
-    `💳 Kredi Kartı: ${fmtTRY(d.kkTotal)}\n`+
+    (d.sabitTotal>0?`🏠 Sabit: ${fmtTRY(d.sabitTotal)}\n`:'')+
+    (d.krediTotal>0?`🪙 Krediler: ${fmtTRY(d.krediTotal)}\n`:'')+
+    (d.kkTotal>0?`💳 Kredi Kartı: ${fmtTRY(d.kkTotal)}\n`:'')+
     `💸 *Toplam Gider:* ${fmtTRY(d.totalExpense)}\n\n`+
     `💼 *Yatırım:* ${fmtTRY(d.investment)}\n\n`+
     `${d.cashLeft<0?'🚨':d.cashLeft<d.investment?'⚠️':'✅'} *NAKİT KALAN: ${fmtTRY(d.cashLeft)}*\n`+
