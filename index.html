@@ -685,14 +685,11 @@ function getTotalDebt(year){
   let total=0;
   yd.expenses.forEach(exp=>{
     if(exp.category==='kredi'||exp.category==='kk'){
-      const remaining = (exp.installments>0)
-        ? Math.max(0,exp.installments-(exp.installmentPaid||0))
-        : 12; // assume 12 months if ongoing
-      // Use average monthly amount for remaining
-      let avg=0,cnt=0;
-      for(let m=1;m<=12;m++){if(exp.amounts[m]>0){avg+=exp.amounts[m];cnt++;}}
-      if(cnt>0) avg/=cnt;
-      total+=avg*remaining;
+      for(let m=1;m<=12;m++){
+        const amt=parseFloat(exp.amounts[m]||0);
+        const status=exp.status?.[m]||'unpaid';
+        if(amt>0&&status!=='paid') total+=amt;
+      }
     }
   });
   return total;
