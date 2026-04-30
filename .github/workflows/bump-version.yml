@@ -1,0 +1,40 @@
+name: Bump Version
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'chore: bump version')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bump patch version
+        run: |
+          python3 << 'PYEOF'
+          import re
+          with open('index.html', 'r', encoding='utf-8') as f:
+              content = f.read()
+          m = re.search(r'(\d+\.\d+\.\d+)</div>', content)
+          if not m:
+              print("Version not found")
+              exit(0)
+          old = m.group(1)
+          major, minor, patch = old.split('.')
+          new = f"{major}.{minor}.{int(patch)+1}"
+          content = content.replace(f'Sürüm {old}', f'Sürüm {new}', 1)
+          with open('index.html', 'w', encoding='utf-8') as f:
+              f.write(content)
+          print(f"Bumped: {old} -> {new}")
+          PYEOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet && echo "No version change" || git commit -m "chore: bump version"
+          git push
