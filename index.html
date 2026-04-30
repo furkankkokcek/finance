@@ -714,7 +714,18 @@ function getTotalDebt(year){
   const yd=getYear(year);
   let total=0;
   yd.expenses.forEach(exp=>{
-    if(exp.category==='kredi'||exp.category==='kk'){
+    if(exp.category==='kredi'){
+      const totalInst=parseInt(exp.installments)||0;
+      if(totalInst===0) return; // continuous, no defined end
+      const paidInst=Math.max(0,parseInt(exp.installmentPaid)||0);
+      const remaining=Math.max(0,totalInst-paidInst);
+      if(remaining===0) return;
+      // monthly payment: first non-zero amount entry
+      const amounts=Object.values(exp.amounts||{}).map(v=>parseFloat(v)||0).filter(v=>v>0);
+      const monthlyAmt=amounts.length>0?amounts[0]:0;
+      total+=remaining*monthlyAmt;
+    } else if(exp.category==='kk'){
+      // only current year, only unpaid
       for(let m=1;m<=12;m++){
         const amt=parseFloat(exp.amounts[m]||0);
         const status=exp.status?.[m]||'unpaid';
