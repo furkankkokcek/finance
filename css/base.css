@@ -1,0 +1,37 @@
+:root{
+  --bg:#09090c;--bg2:#101014;--bg3:#16161c;--bg4:#1e1e28;
+  --border:#252530;--border2:#2e2e3c;
+  --text:#eeeef8;--muted:#68687e;--muted2:#44445a;
+  --accent:#f59e0b;--accent-d:#d97706;--accent-bg:rgba(245,158,11,.1);
+  --success:#22c55e;--success-bg:rgba(34,197,94,.1);
+  --danger:#ef4444;--danger-bg:rgba(239,68,68,.1);
+  --info:#3b82f6;--info-bg:rgba(59,130,246,.1);
+  --purple:#a855f7;--purple-bg:rgba(168,85,247,.1);
+  --font:'Outfit',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Segoe UI Symbol';--mono:'JetBrains Mono',monospace,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Segoe UI Symbol';
+  --r:14px;--r2:10px;--r3:8px;
+  --nav:68px;--hdr:56px;
+}
+.light-mode{
+  --bg:#fafafb;--bg2:#f1f1f5;--bg3:#ffffff;--bg4:#e9e9f0;
+  --border:#e2e2ea;--border2:#cdcdd6;
+  --text:#16161c;--muted:#5a5a70;--muted2:#9696a4;
+  --accent-bg:rgba(245,158,11,.14);
+  --success-bg:rgba(34,197,94,.14);
+  --danger-bg:rgba(239,68,68,.14);
+  --info-bg:rgba(59,130,246,.14);
+  --purple-bg:rgba(168,85,247,.14);
+  color-scheme:light;
+}
+.light-mode body{background:var(--bg)}
+.light-mode .overlay{background:rgba(20,20,30,.45)}
+.light-mode .toggle-slider{background:#d4d4dc}
+.light-mode .toggle-slider:before{background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.light-mode .stat-card,.light-mode .chart-wrap,.light-mode .freedom-card,.light-mode .income-item,.light-mode .spending-item,.light-mode .nw-input-wrap{box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.light-mode .header,.light-mode .nav{box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.light-mode .fab{box-shadow:0 4px 16px rgba(245,158,11,.45)}
+.light-mode .header-logo span,.light-mode .setup-logo span{color:#16161c}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+input,select,textarea,button{font-family:var(--font)}
+::-webkit-scrollbar{width:0;height:0}

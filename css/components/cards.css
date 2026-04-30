@@ -1,0 +1,34 @@
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.stat-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.stat-value{font-family:var(--mono);font-size:17px;font-weight:600;line-height:1.2}
+.stat-value.pos{color:var(--success)}
+.stat-value.neg{color:var(--danger)}
+.stat-value.acc{color:var(--accent)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* SECTION HEADERS */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:20px}
+.section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.section-badge{background:var(--accent-bg);color:var(--accent);font-size:11px;font-family:var(--mono);font-weight:600;padding:3px 8px;border-radius:50px}
+
+/* FREEDOM CARDS */
+.freedom-card{padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px}
+.freedom-level{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.freedom-name{font-size:17px;font-weight:700;margin-bottom:8px}
+.freedom-target{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:10px}
+.progress-bar{height:6px;background:var(--bg4);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;border-radius:99px;transition:width .5s}
+.freedom-status{font-size:12px;color:var(--muted);margin-top:6px;display:flex;justify-content:space-between}
+
+/* PPF SUMMARY */
+.ppf-box{background:var(--purple-bg);border:1px solid rgba(168,85,247,.25);border-radius:var(--r2);padding:14px;margin-top:12px;margin-bottom:12px}
+.ppf-title{font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.ppf-amount{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--purple)}
+
+/* NET WORTH INPUT */
+.nw-input-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.nw-label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.nw-input{width:100%;background:transparent;border:none;border-bottom:2px solid var(--border2);color:var(--text);font-size:24px;font-weight:700;font-family:var(--mono);padding:6px 0;outline:none}
+.nw-input:focus{border-color:var(--accent)}
