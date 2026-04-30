@@ -245,6 +245,19 @@ input,select,textarea,button{font-family:var(--font)}
 .empty-icon{font-size:40px;margin-bottom:12px}
 .empty-text{font-size:15px;font-weight:500}
 .empty-sub{font-size:13px;margin-top:6px;color:var(--muted2)}
+
+/* AMOUNTS HIDDEN */
+body.amounts-hidden .stat-value,
+body.amounts-hidden .ppf-amount,
+body.amounts-hidden .income-item-amount,
+body.amounts-hidden .acc-total,
+body.amounts-hidden .exp-item-amount,
+body.amounts-hidden .spending-amount,
+body.amounts-hidden .section-badge,
+body.amounts-hidden .freedom-target,
+body.amounts-hidden .nw-input,
+body.amounts-hidden .year-table td:not(:first-child),
+body.amounts-hidden .notif-text b{filter:blur(6px);user-select:none;cursor:default;transition:filter .2s}
 </style>
 </head>
 <body>
@@ -286,6 +299,9 @@ input,select,textarea,button{font-family:var(--font)}
       <button class="year-btn" id="year-btn" onclick="openYearModal()">2026</button>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="visibility-btn" onclick="toggleAmountsVisibility()" title="Tutarları Gizle/Göster">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
       <button class="icon-btn" onclick="openSettingsModal()" title="Ayarlar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -603,7 +619,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 
 let S = {
   version:3, setupDone:false,
-  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true},
+  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true, amountsHidden:false},
   years:{}
 };
 const giderOpenCats = new Set();
@@ -1721,6 +1737,27 @@ function addNewYear(){
 }
 
 // ═══════════════════════════════════════════════
+// AMOUNTS VISIBILITY
+function toggleAmountsVisibility(){
+  S.settings.amountsHidden=!S.settings.amountsHidden;
+  applyAmountsVisibility();
+  saveS();
+}
+
+function applyAmountsVisibility(){
+  const hidden=S.settings.amountsHidden;
+  document.body.classList.toggle('amounts-hidden',hidden);
+  const btn=document.getElementById('visibility-btn');
+  if(!btn) return;
+  if(hidden){
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    btn.style.color='var(--accent)';
+  } else {
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    btn.style.color='';
+  }
+}
+
 // SETTINGS
 // ═══════════════════════════════════════════════
 function openSettingsModal(){
@@ -1876,6 +1913,8 @@ function initApp(){
   buildMonthTabs('harcama-month-tabs','harcama');
   // Apply saved theme
   applyTheme(S.settings.theme||'dark');
+  // Apply saved amounts visibility
+  applyAmountsVisibility();
   // Show dashboard first
   renderDashboard();
   checkDailyNotifications();
