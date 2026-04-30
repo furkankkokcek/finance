@@ -266,6 +266,13 @@ input,select,textarea,button{font-family:var(--font)}
       <label>Başlangıç Net Servet (₺) - isteğe bağlı</label>
       <input type="number" id="s-nw" value="0" placeholder="0">
     </div>
+    <div class="setup-field" style="flex-direction:row;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">PPF Özelliği</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Harcamaları PPF'ye dahil etme</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="s-ppf" checked><span class="toggle-slider"></span></label>
+    </div>
     <button class="btn-setup" onclick="doSetup()">Başla →</button>
   </div>
 </div>
@@ -428,7 +435,7 @@ input,select,textarea,button{font-family:var(--font)}
         <button type="button" onclick="pasteFromExcel('exp-amounts')" style="font-size:11px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--muted);cursor:pointer;font-weight:600">📋 Excel'den Yapıştır</button>
       </div>
       <div class="month-amounts-grid" id="exp-amounts"></div>
-      <div style="margin-top:16px">
+      <div style="margin-top:16px" id="exp-ppf-field">
         <div class="toggle-field">
           <div><div class="toggle-label">PPF'ye dahil et</div><div class="toggle-sub">Bu gider PPF bildiriminde gösterilsin</div></div>
           <label class="toggle"><input type="checkbox" id="exp-ppf"><span class="toggle-slider"></span></label>
@@ -553,13 +560,20 @@ input,select,textarea,button{font-family:var(--font)}
       </div>
       <div style="margin-top:12px">
         <div class="toggle-field">
-          <div><div class="toggle-label">Bildirimler</div><div class="toggle-sub">Ödeme ve PPF bildirimleri</div></div>
+          <div><div class="toggle-label">PPF Özelliği</div><div class="toggle-sub">Harcamaları PPF'ye dahil etme</div></div>
+          <label class="toggle"><input type="checkbox" id="cfg-ppf" onchange="togglePpf(this)"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="toggle-field">
+          <div><div class="toggle-label">Bildirimler</div><div class="toggle-sub" id="cfg-notif-sub">Ödeme bildirimleri</div></div>
           <label class="toggle"><input type="checkbox" id="cfg-notif" onchange="toggleNotif(this)"><span class="toggle-slider"></span></label>
         </div>
         <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:var(--r2);font-size:12px;color:var(--muted);line-height:1.6">
           <div style="color:var(--accent);font-weight:600;margin-bottom:6px">ℹ️ Bildirim Sistemi</div>
           <div>📬 Sayfayı açık tutarsanız her saat başında otomatik kontrol edilir.</div>
-          <div style="margin-top:4px">🔔 Her gün saat 9:00'de ödeme ve PPF bildirimleri gönderilir.</div>
+          <div style="margin-top:4px" id="notif-info-ppf">🔔 Her gün saat 9:00'de ödeme ve PPF bildirimleri gönderilir.</div>
+          <div style="margin-top:4px" id="notif-info-noppf" style="display:none">🔔 Her gün saat 9:00'de ödeme bildirimleri gönderilir.</div>
           <div style="margin-top:4px">⚙️ Hafta sonu ödemeler otomatik pazartesi'ye alınır.</div>
         </div>
       </div>
@@ -589,7 +603,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 
 let S = {
   version:3, setupDone:false,
-  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark'},
+  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true},
   years:{}
 };
 const giderOpenCats = new Set();
@@ -759,7 +773,7 @@ function checkDailyNotifications(){
   const sd=S.settings.salaryDay;
   if(now.getDate()===sd){
     const d=getMonthlyData(year,month);
-    if(d.ppfTotal>0){
+    if(S.settings.ppfEnabled!==false&&d.ppfTotal>0){
       new Notification('🏦 PPF Hatırlatması',{body:`Bu ay PPF hesabına atılacak tutar: ${fmtTRY(d.ppfTotal)}`,icon:'/icons/icon-192.png'});
     }
     // Cash remaining notification
@@ -778,6 +792,7 @@ function doSetup(){
   S.settings.currentYear=year;
   S.settings.currentMonth=new Date().getMonth()+1;
   S.settings.netWorth=nw;
+  S.settings.ppfEnabled=document.getElementById('s-ppf').checked;
   S.setupDone=true;
   getYear(year); // init year
   saveS();
@@ -866,7 +881,7 @@ function renderDashboard(){
   // Salary day PPF
   const sd=S.settings.salaryDay;
   const daysToSalary=sd-today.getDate();
-  if(daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
+  if(S.settings.ppfEnabled!==false&&daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
     const salaryLbl=daysToSalary===0?'Bugün':daysToSalary===1?'Yarın':`${daysToSalary} gün sonra`;
     banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text"><b>${salaryLbl}</b> maaş günü! PPF: <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
   }
@@ -896,7 +911,7 @@ function renderDashboard(){
 
   // PPF Box
   const ppfBox=document.getElementById('dash-ppf');
-  if(d.ppfTotal>0){
+  if(S.settings.ppfEnabled!==false && d.ppfTotal>0){
     ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">Bu Ay PPF Tutarı</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
   } else { ppfBox.innerHTML=''; }
 
@@ -1177,7 +1192,7 @@ function renderGider(){
         html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
           <div class="exp-item-left" style="flex:1">
             <div class="exp-item-name">
-              ${exp.ppf?'<span class="badge badge-ppf">PPF</span>':''}
+              ${S.settings.ppfEnabled!==false&&exp.ppf?'<span class="badge badge-ppf">PPF</span>':''}
               ${exp.name}
               ${isDue?'<span class="badge badge-due">BUGÜN</span>':''}
               ${instInfo?'<span style="font-size:11px;color:var(--muted)">'+instInfo+'</span>':''}
@@ -1227,6 +1242,7 @@ function openAddExpense(id=null, defaultCat=null){
   document.getElementById('exp-detail').value=exp?exp.detail||'':'';
   document.getElementById('exp-fixed').value='';
   document.getElementById('exp-ppf').checked=exp?!!exp.ppf:false;
+  document.getElementById('exp-ppf-field').style.display=S.settings.ppfEnabled!==false?'':'none';
   document.getElementById('exp-delete-btn').style.display=exp?'block':'none';
   buildAmountsGrid('exp-amounts',exp?exp.amounts:{});
   openModal('overlay-expense');
@@ -1333,7 +1349,7 @@ function openYearTable(){
     let secTotals=Array(12).fill(0);
     items.forEach(exp=>{
       let itemTotal=0;
-      rows+=`<tr><td>${exp.name}${exp.ppf?' 🟣':''}</td>`;
+      rows+=`<tr><td>${exp.name}${S.settings.ppfEnabled!==false&&exp.ppf?' 🟣':''}</td>`;
       MONTHS.forEach((_,i)=>{
         const m=i+1;
         const amt=parseFloat(exp.amounts[m]||0);
@@ -1712,12 +1728,31 @@ function openSettingsModal(){
   document.getElementById('cfg-nw').value=S.settings.netWorth||0;
   document.getElementById('cfg-theme').checked=S.settings.theme==='light';
   document.getElementById('cfg-notif').checked=S.settings.notifEnabled&&Notification.permission==='granted';
+  document.getElementById('cfg-ppf').checked=S.settings.ppfEnabled!==false;
+  updatePpfInfoTexts();
   openModal('overlay-settings');
+}
+
+function togglePpf(el){
+  S.settings.ppfEnabled=el.checked;
+  saveS();
+  updatePpfInfoTexts();
+}
+
+function updatePpfInfoTexts(){
+  const enabled=S.settings.ppfEnabled!==false;
+  const ppfInfoEl=document.getElementById('notif-info-ppf');
+  const noPpfInfoEl=document.getElementById('notif-info-noppf');
+  if(ppfInfoEl) ppfInfoEl.style.display=enabled?'':'none';
+  if(noPpfInfoEl) noPpfInfoEl.style.display=enabled?'none':'';
+  const subEl=document.getElementById('cfg-notif-sub');
+  if(subEl) subEl.textContent=enabled?'Ödeme ve PPF bildirimleri':'Ödeme bildirimleri';
 }
 
 function saveSettings(){
   S.settings.salaryDay=parseInt(document.getElementById('cfg-salary').value)||1;
   S.settings.netWorth=parseFloat(document.getElementById('cfg-nw').value)||0;
+  S.settings.ppfEnabled=document.getElementById('cfg-ppf').checked;
   saveS();
   closeModal('overlay-settings');
   renderPage(currentPage);
@@ -1781,7 +1816,7 @@ function shareWhatsApp(){
     `   ÷2 → ${fmtTRY(d.cashLeft/2)}   ÷3 → ${fmtTRY(d.cashLeft/3)}   ÷4 → ${fmtTRY(d.cashLeft/4)}\n`+
     `📊 Durum: ${d.cashLeft<0?'KRİTİK 🚨':d.cashLeft<d.investment?'UYARI ⚠️':'SAĞLIKLI ✅'}\n`+
     `📈 Tasarruf: ${fmtPct(d.savingsRate)}`+
-    (d.ppfTotal>0?`\n🏦 PPF: ${fmtTRY(d.ppfTotal)}`:'');
+    (S.settings.ppfEnabled!==false&&d.ppfTotal>0?`\n🏦 PPF: ${fmtTRY(d.ppfTotal)}`:'');
 
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
