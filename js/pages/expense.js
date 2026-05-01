@@ -60,7 +60,6 @@ function renderGider(){
         html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Bu ay için tutar girilmemiş</div>`;
       }
     }
-    html+=`<button class="add-item-btn" onclick="openAddExpense(null,'${cat}')"><span style="font-size:16px;line-height:1;margin-right:4px">+</span> Ekle</button>`;
     html+=`</div>
     </div>`;
   });
@@ -87,7 +86,7 @@ function openAddExpense(id=null, defaultCat=null){
   document.getElementById('exp-due').value=exp?exp.dueDay||'':'';
   document.getElementById('exp-inst').value=exp?exp.installments||0:0;
   document.getElementById('exp-inst-paid').value=exp?exp.installmentPaid||0:0;
-  document.getElementById('exp-detail').value=exp?exp.detail||'':'';
+  document.getElementById('exp-detail').value=exp?exp.detail||':'';
   document.getElementById('exp-fixed').value='';
   document.getElementById('exp-ppf').checked=exp?!!exp.ppf:false;
   document.getElementById('exp-ppf-field').style.display=S.settings.ppfEnabled!==false?'':'none';
@@ -121,10 +120,10 @@ function saveExpense(){
   } else {
     yd.expenses.push(obj);
   }
-  saveS();
   closeModal('overlay-expense');
   renderGider();
   renderDashboard();
+  trackChange();
 }
 
 function deleteExpense(){
@@ -133,10 +132,10 @@ function deleteExpense(){
   const yd=getYear(year);
   const id=document.getElementById('exp-id').value;
   yd.expenses=yd.expenses.filter(e=>e.id!==id);
-  saveS();
   closeModal('overlay-expense');
   renderGider();
   renderDashboard();
+  trackChange();
 }
 
 function openStatusModal(expId, month){
@@ -169,8 +168,8 @@ function saveStatus(){
   if(!exp) return;
   if(!exp.status) exp.status={};
   exp.status[month]=_selectedStatus;
-  saveS();
   closeModal('overlay-status');
   renderGider();
   renderDashboard();
+  trackChange();
 }

@@ -186,10 +186,10 @@ function saveSpending(){
   } else {
     yd.spending.push(obj);
   }
-  saveS();
   closeModal('overlay-spending');
   renderHarcama();
   if(kkActive) renderGider();
+  trackChange();
 }
 
 function deleteSpending(){
@@ -221,8 +221,8 @@ function deleteSpending(){
   }
 
   yd.spending=yd.spending.filter(x=>x.id!==id);
-  saveS();
   closeModal('overlay-spending');
   renderHarcama();
   if(s.kk) renderGider();
+  trackChange();
 }

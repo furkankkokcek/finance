@@ -6,14 +6,11 @@ function initApp(){
   buildMonthTabs('gelir-month-tabs','gelir');
   buildMonthTabs('gider-month-tabs','gider');
   buildMonthTabs('harcama-month-tabs','harcama');
-  // Apply saved theme
   applyTheme(S.settings.theme||'dark');
-  // Apply saved amounts visibility
   applyAmountsVisibility();
-  // Show dashboard first
   renderDashboard();
   checkDailyNotifications();
-  // Scroll current month into view
+  checkDailyBackupPrompt();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);
