@@ -43,9 +43,9 @@ function editInvestment(){
   const val=prompt(`${MONTHS_FULL[month-1]} ${year} yatırım tutarı (₺):`, cur);
   if(val!==null){
     yd.investments[month]=parseFloat(val)||0;
-    saveS();
     renderGelir();
     renderDashboard();
+    trackChange();
   }
 }
 
@@ -84,10 +84,10 @@ function saveIncome(){
   } else {
     yd.income.push({id:uid('inc'),name,amounts});
   }
-  saveS();
   closeModal('overlay-income');
   renderGelir();
   renderDashboard();
+  trackChange();
 }
 
 function deleteIncome(){
@@ -96,8 +96,8 @@ function deleteIncome(){
   const yd=getYear(year);
   const id=document.getElementById('inc-id').value;
   yd.income=yd.income.filter(i=>i.id!==id);
-  saveS();
   closeModal('overlay-income');
   renderGelir();
   renderDashboard();
+  trackChange();
 }

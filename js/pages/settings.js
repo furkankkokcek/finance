@@ -37,14 +37,32 @@ function saveSettings(){
 }
 
 function exportData(){
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const ts=`${todayStr()}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
   const json=JSON.stringify(S,null,2);
   const blob=new Blob([json],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`fintrack_${S.settings.currentYear}_${todayStr()}.json`;
+  a.download=`fintrack_${ts}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function showBackupDialog(){
+  if(confirm('💾 Veri yedeği almanız önerilir. Şimdi dışa aktarmak ister misiniz?')){
+    exportData();
+  }
+}
+
+function checkDailyBackupPrompt(){
+  const today=todayStr();
+  if((S.settings.lastOpenDate||'')!==today){
+    S.settings.lastOpenDate=today;
+    saveS();
+    showBackupDialog();
+  }
 }
 
 function importData(e){

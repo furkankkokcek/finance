@@ -7,7 +7,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 
 let S = {
   version:3, setupDone:false,
-  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true, amountsHidden:false},
+  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true, amountsHidden:false, changeCount:0, lastOpenDate:''},
   years:{}
 };
 const giderOpenCats = new Set();
@@ -26,4 +26,10 @@ function loadS(){
     if(d){ S = JSON.parse(d); return true; }
   }catch(e){}
   return false;
+}
+
+function trackChange(){
+  S.settings.changeCount=(S.settings.changeCount||0)+1;
+  saveS();
+  if(S.settings.changeCount%5===0) showBackupDialog();
 }

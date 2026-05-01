@@ -36,7 +36,8 @@ function renderGider(){
         const adj=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
         const isDue=adj&&isPaymentDueToday(year,month,exp.dueDay);
         const dueStr=adj?`${adj.getDate()} ${MONTHS[adj.getMonth()]}`:'-';
-        const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';        const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
+        const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';
+        const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
         html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
           <div class="exp-item-left" style="flex:1">
             <div class="exp-item-name">
@@ -60,7 +61,6 @@ function renderGider(){
         html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Bu ay için tutar girilmemiş</div>`;
       }
     }
-    html+=`<button class="add-item-btn" onclick="openAddExpense(null,'${cat}')"><span style="font-size:16px;line-height:1;margin-right:4px">+</span> Ekle</button>`;
     html+=`</div>
     </div>`;
   });
@@ -121,10 +121,10 @@ function saveExpense(){
   } else {
     yd.expenses.push(obj);
   }
-  saveS();
   closeModal('overlay-expense');
   renderGider();
   renderDashboard();
+  trackChange();
 }
 
 function deleteExpense(){
@@ -133,10 +133,10 @@ function deleteExpense(){
   const yd=getYear(year);
   const id=document.getElementById('exp-id').value;
   yd.expenses=yd.expenses.filter(e=>e.id!==id);
-  saveS();
   closeModal('overlay-expense');
   renderGider();
   renderDashboard();
+  trackChange();
 }
 
 function openStatusModal(expId, month){
@@ -169,8 +169,8 @@ function saveStatus(){
   if(!exp) return;
   if(!exp.status) exp.status={};
   exp.status[month]=_selectedStatus;
-  saveS();
   closeModal('overlay-status');
   renderGider();
   renderDashboard();
+  trackChange();
 }
