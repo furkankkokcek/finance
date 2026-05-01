@@ -36,7 +36,8 @@ function renderGider(){
         const adj=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
         const isDue=adj&&isPaymentDueToday(year,month,exp.dueDay);
         const dueStr=adj?`${adj.getDate()} ${MONTHS[adj.getMonth()]}`:'-';
-        const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';        const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
+        const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';
+        const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
         html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
           <div class="exp-item-left" style="flex:1">
             <div class="exp-item-name">
@@ -86,7 +87,7 @@ function openAddExpense(id=null, defaultCat=null){
   document.getElementById('exp-due').value=exp?exp.dueDay||'':'';
   document.getElementById('exp-inst').value=exp?exp.installments||0:0;
   document.getElementById('exp-inst-paid').value=exp?exp.installmentPaid||0:0;
-  document.getElementById('exp-detail').value=exp?exp.detail||':'';
+  document.getElementById('exp-detail').value=exp?exp.detail||'':'';
   document.getElementById('exp-fixed').value='';
   document.getElementById('exp-ppf').checked=exp?!!exp.ppf:false;
   document.getElementById('exp-ppf-field').style.display=S.settings.ppfEnabled!==false?'':'none';
