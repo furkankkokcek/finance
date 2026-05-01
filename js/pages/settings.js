@@ -45,7 +45,7 @@ function exportData(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`fintrack_${S.settings.currentYear}_${ts}.json`;
+  a.download=`fintrack_${ts}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
