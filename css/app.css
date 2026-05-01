@@ -1,0 +1,43 @@
+/* BOTTOM NAV */
+.nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav);background:var(--bg2);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);z-index:50}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;background:none;border:none;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:0;transition:color .2s}
+.nav-btn.active{color:var(--accent)}
+.nav-btn svg{width:22px;height:22px;flex-shrink:0}
+
+/* PAGES */
+.pages{position:fixed;top:var(--hdr);left:0;right:0;bottom:var(--nav);overflow-y:auto;overflow-x:hidden}
+.page{display:none;padding:16px;padding-bottom:8px}
+.page.active{display:block}
+
+/* MONTH TABS */
+.month-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;margin-bottom:16px;scroll-behavior:smooth}
+.month-tab{flex-shrink:0;padding:7px 14px;border-radius:50px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s}
+.month-tab.active{background:var(--accent);border-color:var(--accent);color:#000}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:14px;background:var(--accent);color:#000;font-weight:700;font-size:16px;border:none;border-radius:var(--r2);cursor:pointer;margin-top:8px}
+.btn-secondary{width:100%;padding:12px;background:var(--bg4);color:var(--text);font-weight:600;font-size:15px;border:1px solid var(--border2);border-radius:var(--r2);cursor:pointer;margin-top:8px}
+.btn-danger{width:100%;padding:12px;background:var(--danger-bg);color:var(--danger);font-weight:700;font-size:15px;border:1px solid var(--danger);border-radius:var(--r2);cursor:pointer;margin-top:8px}
+.fab{position:fixed;bottom:calc(var(--nav) + 16px);right:16px;width:52px;height:52px;background:var(--accent);color:#000;border:none;border-radius:50%;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,158,11,.4);z-index:40}
+
+/* SHARE BUTTON */
+.share-btn{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--success-bg);border:1px solid var(--success);border-radius:var(--r2);color:var(--success);font-weight:700;font-size:14px;cursor:pointer;width:100%;justify-content:center;margin-top:12px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:15px;font-weight:500}
+.empty-sub{font-size:13px;margin-top:6px;color:var(--muted2)}
+
+/* AMOUNTS HIDDEN */
+body.amounts-hidden .stat-value,
+body.amounts-hidden .ppf-amount,
+body.amounts-hidden .income-item-amount,
+body.amounts-hidden .acc-total,
+body.amounts-hidden .exp-item-amount,
+body.amounts-hidden .spending-amount,
+body.amounts-hidden .section-badge,
+body.amounts-hidden .freedom-target,
+body.amounts-hidden .nw-input,
+body.amounts-hidden .year-table td:not(:first-child),
+body.amounts-hidden .notif-text b{filter:blur(6px);user-select:none;cursor:default;transition:filter .2s}

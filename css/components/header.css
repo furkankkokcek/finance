@@ -1,0 +1,8 @@
+/* HEADER */
+.header{position:fixed;top:0;left:0;right:0;height:var(--hdr);background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:50}
+.header-logo{font-size:20px;font-weight:800;letter-spacing:-1px;color:var(--accent)}
+.header-logo span{color:var(--text)}
+.header-center{display:flex;align-items:center;gap:8px}
+.year-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer}
+.header-actions{display:flex;gap:8px}
+.icon-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);width:36px;height:36px;border-radius:var(--r3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}

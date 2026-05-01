@@ -1,0 +1,38 @@
+/* EXPENSE ITEMS */
+.exp-accordion{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.acc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;background:var(--bg3);user-select:none}
+.acc-title{font-size:15px;font-weight:600}
+.acc-right{display:flex;align-items:center;gap:10px}
+.acc-total{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent)}
+.acc-arrow{color:var(--muted);font-size:18px;transition:transform .2s;flex-shrink:0}
+.acc-arrow.open{transform:rotate(90deg)}
+.acc-body{display:none;background:var(--bg2)}
+.acc-body.open{display:block}
+.exp-item{display:flex;align-items:center;padding:12px 16px;border-top:1px solid var(--border);gap:12px;cursor:pointer;transition:background .15s}
+.exp-item:active{background:var(--bg3)}
+.exp-item-left{flex:1;min-width:0}
+.exp-item-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.exp-item-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.exp-item-right{text-align:right;flex-shrink:0}
+.exp-item-amount{font-family:var(--mono);font-size:14px;font-weight:600}
+.exp-item-status{margin-top:3px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;letter-spacing:.04em}
+.badge-paid{background:var(--success-bg);color:var(--success)}
+.badge-partial{background:var(--accent-bg);color:var(--accent)}
+.badge-unpaid{background:var(--danger-bg);color:var(--danger)}
+.badge-ppf{background:var(--purple-bg);color:var(--purple)}
+.badge-due{background:var(--info-bg);color:var(--info)}
+.add-item-btn{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;background:none;width:100%;border-radius:0}
+.add-item-btn:hover{background:var(--accent-bg)}
+
+/* INCOME ITEMS */
+.income-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:8px;cursor:pointer}
+.income-item-name{font-size:14px;font-weight:600}
+.income-item-amount{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--success)}
+
+/* SPENDING */
+.spending-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:8px}
+.spending-left{}
+.spending-desc{font-size:14px;font-weight:600}
+.spending-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.spending-amount{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--danger)}
