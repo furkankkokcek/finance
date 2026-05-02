@@ -19,6 +19,7 @@ function renderDashboard(){
       const status=exp.status?.[month]||'unpaid';
       if(status!=='paid'){
         const amt=parseFloat(exp.amounts[month]||0);
+        if(amt===0) return;
         const dayLbl=diff===0?'Bugün':diff===1?'Yarın':`${diff} gün sonra`;
         banners.innerHTML+=`<div class="notif-banner"><div class="notif-icon">⏰</div><div class="notif-text"><b>${dayLbl}:</b> ${exp.name} — <b>${fmtTRY(amt)}</b> ödemesi</div></div>`;
       }
@@ -30,7 +31,7 @@ function renderDashboard(){
   const daysToSalary=sd-today.getDate();
   if(S.settings.ppfEnabled!==false&&daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
     const salaryLbl=daysToSalary===0?'Bugün':daysToSalary===1?'Yarın':`${daysToSalary} gün sonra`;
-    banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text"><b>${salaryLbl}</b> maaş günü! PPF: <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
+    banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text"><b>${salaryLbl}</b> maş günü! PPF: <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
   }
 
   // Stat cards
@@ -62,13 +63,14 @@ function renderDashboard(){
     ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">Bu Ay PPF Tutarı</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
   } else { ppfBox.innerHTML=''; }
 
-  // Year Table Button (sayfanın en altında)
+  // Year Table Button
   document.getElementById('dash-yeartable-btn').innerHTML=`<button style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>`;
 
   // Charts
   renderBarChart();
   renderPieChart(d);
   renderTrendChart();
+  renderSpendingPieChart();
 
   // Share button
   const statsEl=document.getElementById('dash-stats');
@@ -104,7 +106,7 @@ function renderBarChart(){
     const iH=(d.totalIncome/maxVal)*(H-PT-PB);
     const eH=(d.totalExpense/maxVal)*(H-PT-PB);
     const active=i+1===cm;
-    svgBars+=`<rect x="${x-iW-1}" y="${H-PB-iH}" width="${iW}" height="${iH}" rx="2" fill="${active?'#22c55e':'rgba(34,197,94,.35)'}"/>`;
+    svgBars+=`<rect x="${x-iW-1}" y="${H-PB-iH}" width="${iW}" height="${iH}" rx="2" fill="${active?'#22c55e':'rgba(34,197,94,.35)'}}"/>`;
     svgBars+=`<rect x="${x+1}" y="${H-PB-eH}" width="${eW}" height="${eH}" rx="2" fill="${active?'#ef4444':'rgba(239,68,68,.35)'}"/>`;
     svgBars+=`<text x="${x}" y="${H-PB+14}" text-anchor="middle" fill="${active?'var(--text)':'var(--muted2)'}" font-size="8.5" font-family="Outfit">${MONTHS[i]}</text>`;
     if(active){
@@ -188,5 +190,68 @@ function renderTrendChart(){
       <line x1="0" y1="${Math.min(H-PB,Math.max(PT,zeroY))}" x2="${W}" y2="${Math.min(H-PB,Math.max(PT,zeroY))}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>
       <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       ${vals.map((v,i)=>{const x=i*(W-10)/(11)+5;const y=PT+(1-(v-minV)/range)*(H-PT-PB);return `<circle cx="${x}" cy="${y}" r="${i+1===S.settings.currentMonth?4:2}" fill="${v>=0?'var(--success)':'var(--danger)'}" opacity="${i+1===S.settings.currentMonth?1:.6}"/>`;}).join('')}
+    </svg>`;
+}
+
+function renderSpendingPieChart(){
+  const year=S.settings.currentYear;
+  const month=S.settings.currentMonth;
+  const yd=getYear(year);
+  const el=document.getElementById('chart-spending-pie');
+  if(!el) return;
+
+  const items=yd.spending.filter(s=>{
+    const d=new Date(s.date);
+    return d.getFullYear()===year&&d.getMonth()+1===month;
+  });
+
+  if(items.length===0){
+    el.innerHTML=`<div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div><div style="text-align:center;color:var(--muted);font-size:12px;padding:16px 0">Bu ay harcama kaydı yok</div>`;
+    return;
+  }
+
+  const catColors={market:'#22c55e',restoran:'#f59e0b',ulasim:'#3b82f6',giyim:'#ec4899',eglence:'#a855f7',saglik:'#06b6d4',egitim:'#f97316',diger:'#6b7280'};
+  const totals={};
+  items.forEach(s=>{
+    const cat=s.category||'diger';
+    totals[cat]=(totals[cat]||0)+parseFloat(s.amount||0);
+  });
+  const grandTotal=Object.values(totals).reduce((a,b)=>a+b,0);
+  const segs=Object.entries(totals)
+    .filter(([,v])=>v>0)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([cat,val])=>({cat,val,color:catColors[cat]||'#6b7280',label:SPD_CATS[cat]||cat}));
+
+  const W=300,cx=78,cy=82,R=65,ri=40;
+  let startAngle=-Math.PI/2;
+  let paths='';
+  segs.forEach(seg=>{
+    const angle=(seg.val/grandTotal)*Math.PI*2;
+    const endAngle=startAngle+angle;
+    const x1=cx+R*Math.cos(startAngle);
+    const y1=cy+R*Math.sin(startAngle);
+    const x2=cx+R*Math.cos(endAngle);
+    const y2=cy+R*Math.sin(endAngle);
+    const la=angle>Math.PI?1:0;
+    paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${la},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${seg.color}" opacity=".9"/>`;
+    startAngle=endAngle;
+  });
+  paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
+  paths+=`<text x="${cx}" y="${cy-5}" text-anchor="middle" fill="var(--muted)" font-size="8" font-family="Outfit">TOPLAM</text>`;
+  paths+=`<text x="${cx}" y="${cy+9}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit">${fmtTRY(grandTotal)}</text>`;
+
+  let legend='';
+  const lx=160;
+  segs.slice(0,7).forEach((seg,i)=>{
+    const ly=12+i*22;
+    legend+=`<rect x="${lx}" y="${ly}" width="11" height="11" rx="2" fill="${seg.color}"/>`;
+    legend+=`<text x="${lx+15}" y="${ly+9}" fill="var(--text)" font-size="10" font-family="Outfit" font-weight="500">${seg.label}</text>`;
+    legend+=`<text x="${W-4}" y="${ly+9}" text-anchor="end" fill="var(--muted)" font-size="9" font-family="Outfit">${Math.round(seg.val/grandTotal*100)}% · ${fmtTRY(seg.val)}</text>`;
+  });
+
+  el.innerHTML=`<div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div>
+    <svg class="chart-svg" viewBox="0 0 ${W} 165" height="165" style="width:100%;display:block">
+      ${paths}
+      ${legend}
     </svg>`;
 }

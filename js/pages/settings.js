@@ -65,6 +65,13 @@ function checkDailyBackupPrompt(){
   }
 }
 
+function clearAllData(){
+  if(!confirm('⚠️ Tüm veriler silinecek!\nBu işlem geri alınamaz.')) return;
+  if(!confirm('Son onay: Tüm yıllara ait gelir, gider ve harcama verileri silinecek. Emin misiniz?')) return;
+  localStorage.removeItem('fintrack_v3');
+  location.reload();
+}
+
 function importData(e){
   const file=e.target.files[0];
   if(!file) return;
