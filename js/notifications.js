@@ -17,6 +17,7 @@ function checkDailyNotifications(){
     const adj=getAdjustedDueDate(year,month,exp.dueDay);
     if(adj.toDateString()===now.toDateString()){
       const amt=parseFloat(exp.amounts[month]||0);
+      if(amt===0) return;
       new Notification('💳 Ödeme Günü!',{body:`${exp.name} — ${fmtTRY(amt)} bugün ödenmeli.`,icon:'/icons/icon-192.png'});
     }
   });

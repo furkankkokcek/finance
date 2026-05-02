@@ -80,6 +80,7 @@
         <div class="chart-wrap" id="chart-pie" style="margin-bottom:0"></div>
         <div class="chart-wrap" id="chart-trend" style="margin-bottom:0"></div>
       </div>
+      <div class="chart-wrap" id="chart-spending-pie" style="margin-top:10px"></div>
       <div id="dash-yeartable-btn" style="margin-top:16px"></div>
       <div style="height:16px"></div>
     </div>
@@ -357,6 +358,7 @@
         <button class="btn-secondary" onclick="exportData()">📤 Dışa Aktar</button>
         <button class="btn-secondary" onclick="document.getElementById('import-file').click()">📥 İçe Aktar</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        <button class="btn-danger" onclick="clearAllData()">🗑️ Tüm Verileri Sil</button>
       </div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
         <div style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:.04em">FinTrack</div>
