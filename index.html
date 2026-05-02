@@ -30,7 +30,7 @@
       <input type="number" id="s-year" value="2026" min="2020" max="2040">
     </div>
     <div class="setup-field">
-      <label>Maç Günü (Ayın kaçında?)</label>
+      <label>Maaş Günü (Ayın kaçında?)</label>
       <input type="number" id="s-salary" value="1" min="1" max="31" placeholder="1-31">
     </div>
     <div class="setup-field">
@@ -165,7 +165,7 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="inc-id">
-      <div class="field"><label>Gelir Adı</label><input type="text" id="inc-name" placeholder="örn: Maç, Kira"></div>
+      <div class="field"><label>Gelir Adı</label><input type="text" id="inc-name" placeholder="örn: Maaş, Kira"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="section-title" style="font-size:12px;color:var(--muted)">AYLIK TUTARLAR (₺)</div>
         <button type="button" onclick="pasteFromExcel('inc-amounts')" style="font-size:11px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--muted);cursor:pointer;font-weight:600">📋 Excel'den Yapıştır</button>
@@ -234,7 +234,7 @@
       <input type="hidden" id="status-month">
       <div class="section-title" style="margin-bottom:10px">ÖDEME DURUMU</div>
       <div class="status-row">
-        <div class="status-opt unpaid" id="sopt-unpaid" onclick="selectStatus('unpaid')"Ödenmedi</div>
+        <div class="status-opt unpaid" id="sopt-unpaid" onclick="selectStatus('unpaid')">Ödenmedi</div>
         <div class="status-opt partial" id="sopt-partial" onclick="selectStatus('partial')">Kısmen</div>
         <div class="status-opt paid" id="sopt-paid" onclick="selectStatus('paid')">Ödendi</div>
       </div>
@@ -325,7 +325,7 @@
       <button class="modal-close" onclick="closeModal('overlay-settings')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field"><label>Maş / Gelir Günü</label><input type="number" id="cfg-salary" min="1" max="31"></div>
+      <div class="field"><label>Maaş / Gelir Günü</label><input type="number" id="cfg-salary" min="1" max="31"></div>
       <div class="field"><label>Net Servet (₺)</label><input type="number" id="cfg-nw" placeholder="Toplam varlıklarınız"></div>
       <div style="margin-top:12px">
         <div class="toggle-field">
