@@ -19,6 +19,7 @@ function renderDashboard(){
       const status=exp.status?.[month]||'unpaid';
       if(status!=='paid'){
         const amt=parseFloat(exp.amounts[month]||0);
+        if(amt===0) return;
         const dayLbl=diff===0?'Bugün':diff===1?'Yarın':`${diff} gün sonra`;
         banners.innerHTML+=`<div class="notif-banner"><div class="notif-icon">⏰</div><div class="notif-text"><b>${dayLbl}:</b> ${exp.name} — <b>${fmtTRY(amt)}</b> ödemesi</div></div>`;
       }
@@ -62,13 +63,14 @@ function renderDashboard(){
     ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">Bu Ay PPF Tutarı</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
   } else { ppfBox.innerHTML=''; }
 
-  // Year Table Button (sayfanın en altında)
+  // Year Table Button
   document.getElementById('dash-yeartable-btn').innerHTML=`<button style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>`;
 
   // Charts
   renderBarChart();
   renderPieChart(d);
   renderTrendChart();
+  renderSpendingPieChart();
 
   // Share button
   const statsEl=document.getElementById('dash-stats');
@@ -78,6 +80,62 @@ function renderDashboard(){
     wrap.innerHTML=`<button class="share-btn" onclick="shareWhatsApp()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>WhatsApp'ta Paylaş</button>`;
     statsEl.after(wrap);
   }
+}
+
+function renderSpendingPieChart(){
+  const year=S.settings.currentYear;
+  const month=S.settings.currentMonth;
+  const el=document.getElementById('chart-spending-pie');
+  if(!el) return;
+  const items=getYear(year).spending.filter(s=>{
+    const d=new Date(s.date);
+    return d.getFullYear()===year&&d.getMonth()+1===month;
+  });
+  if(items.length===0){
+    el.innerHTML=`<div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Bu ay harcama yok</div></div>`;
+    return;
+  }
+  const catColors={market:'#22c55e',restoran:'#f59e0b',ulasim:'#3b82f6',giyim:'#ec4899',eglence:'#a855f7',saglik:'#06b6d4',egitim:'#f97316',diger:'#6b7280'};
+  const groups={};
+  let total=0;
+  items.forEach(s=>{
+    const cat=s.category||'diger';
+    groups[cat]=(groups[cat]||0)+parseFloat(s.amount||0);
+    total+=parseFloat(s.amount||0);
+  });
+  if(total===0){
+    el.innerHTML=`<div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Bu ay harcama yok</div></div>`;
+    return;
+  }
+  const segs=Object.entries(groups).map(([cat,val])=>({cat,val,color:catColors[cat]||'#6b7280',label:SPD_CATS[cat]||cat})).sort((a,b)=>b.val-a.val);
+  const cx=78,cy=82,R=65,ri=40;
+  let angle=-Math.PI/2;
+  let paths='';
+  segs.forEach(seg=>{
+    const sweep=(seg.val/total)*Math.PI*2;
+    const endAngle=angle+sweep;
+    const x1=cx+R*Math.cos(angle);
+    const y1=cy+R*Math.sin(angle);
+    const x2=cx+R*Math.cos(endAngle);
+    const y2=cy+R*Math.sin(endAngle);
+    const x3=cx+ri*Math.cos(endAngle);
+    const y3=cy+ri*Math.sin(endAngle);
+    const x4=cx+ri*Math.cos(angle);
+    const y4=cy+ri*Math.sin(angle);
+    const la=sweep>Math.PI?1:0;
+    paths+=`<path d="M${x4.toFixed(2)},${y4.toFixed(2)} A${ri},${ri} 0 ${la},1 ${x3.toFixed(2)},${y3.toFixed(2)} L${x2.toFixed(2)},${y2.toFixed(2)} A${R},${R} 0 ${la},0 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${seg.color}" opacity=".9"/>`;
+    angle=endAngle;
+  });
+  paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
+  paths+=`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Outfit">Toplam</text>`;
+  paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit">${fmtTRY(total)}</text>`;
+  const legendRows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0"></div><span style="font-size:12px;color:var(--muted)">${s.label}</span></div><div style="text-align:right"><span style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(s.val)}</span><span style="font-size:11px;color:var(--muted2);margin-left:4px">${Math.round(s.val/total*100)}%</span></div></div>`).join('');
+  el.innerHTML=`
+    <div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div>
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <svg viewBox="0 0 156 164" width="156" height="164" style="flex-shrink:0">${paths}</svg>
+      <div style="flex:1;padding-top:8px">${legendRows}</div>
+    </div>`;
 }
 
 function renderBarChart(){
