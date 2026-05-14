@@ -168,9 +168,15 @@ function saveStatus(){
   const exp=yd.expenses.find(e=>e.id===expId);
   if(!exp) return;
   if(!exp.status) exp.status={};
+  const prev=exp.status[month]||'unpaid';
   exp.status[month]=_selectedStatus;
   closeModal('overlay-status');
   renderGider();
   renderDashboard();
   trackChange();
+  if(prev!==_selectedStatus){
+    const statusLabel={paid:'Ödendi',partial:'Kısmi Ödendi',unpaid:'Ödenmedi'}[_selectedStatus]||_selectedStatus;
+    const icon=_selectedStatus==='paid'?'✅':_selectedStatus==='partial'?'⚠️':'↩️';
+    addNotifEntry('status_change',icon,'Durum Güncellendi',`${exp.name} — ${MONTHS_FULL[month-1]}: ${statusLabel}`);
+  }
 }

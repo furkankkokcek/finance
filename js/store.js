@@ -8,7 +8,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 let S = {
   version:3, setupDone:false,
   settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true, amountsHidden:false, changeCount:0, lastOpenDate:''},
-  years:{}
+  years:{}, notifLog:[]
 };
 const giderOpenCats = new Set();
 
@@ -18,7 +18,7 @@ function getYear(y){
   return S.years[y];
 }
 
-function saveS(){ localStorage.setItem('fintrack_v3', JSON.stringify(S)); }
+function saveS(){ localStorage.setItem('fintrack_v3', JSON.stringify(S)); if(typeof syncNotifSchedule==='function') syncNotifSchedule(); }
 
 function loadS(){
   try{

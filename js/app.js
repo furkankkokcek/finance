@@ -1,6 +1,7 @@
 // App init + boot + service worker
 
 function initApp(){
+  if(!S.notifLog) S.notifLog=[];
   document.getElementById('year-btn').textContent=S.settings.currentYear;
   buildMonthTabs('month-tabs','');
   buildMonthTabs('gelir-month-tabs','gelir');
@@ -11,6 +12,9 @@ function initApp(){
   renderDashboard();
   checkDailyNotifications();
   checkDailyBackupPrompt();
+  updateNotifBadge();
+  syncNotifSchedule();
+  if(S.settings.notifEnabled&&Notification.permission==='granted') registerPeriodicSync();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);
