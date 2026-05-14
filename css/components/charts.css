@@ -1,0 +1,13 @@
+/* CHARTS */
+.chart-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;overflow:hidden}
+.chart-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.chart-svg{width:100%;overflow:visible}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* NOTIFICATION BANNER */
+.notif-banner{background:var(--accent-bg);border:1px solid rgba(245,158,11,.25);border-radius:var(--r2);padding:12px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px}
+.notif-icon{font-size:18px;flex-shrink:0;margin-top:-1px}
+.notif-text{font-size:13px;line-height:1.5}
+.notif-text b{color:var(--accent)}
