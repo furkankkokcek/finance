@@ -286,6 +286,10 @@ input,select,textarea,button{font-family:var(--font)}
       <button class="year-btn" id="year-btn" onclick="openYearModal()">2026</button>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" onclick="openNotifCenter()" title="Bildirimler" style="position:relative">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;line-height:16px;text-align:center;padding:0 3px"></span>
+      </button>
       <button class="icon-btn" onclick="openSettingsModal()" title="Ayarlar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -592,6 +596,17 @@ input,select,textarea,button{font-family:var(--font)}
   </div>
 </div>
 
+<div class="overlay" id="overlay-notif" onclick="closeModal('overlay-notif')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">Bildirimler</div>
+      <button class="modal-close" onclick="closeModal('overlay-notif')">✕</button>
+    </div>
+    <div class="modal-body" id="notif-center-body" style="padding-top:8px"></div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════
 // DATA MODEL
@@ -604,7 +619,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 let S = {
   version:3, setupDone:false,
   settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true},
-  years:{}
+  years:{}, notifLog:[]
 };
 const giderOpenCats = new Set();
 
@@ -614,7 +629,7 @@ function getYear(y){
   return S.years[y];
 }
 
-function saveS(){ localStorage.setItem('fintrack_v3', JSON.stringify(S)); }
+function saveS(){ localStorage.setItem('fintrack_v3', JSON.stringify(S)); syncNotifSchedule(); }
 function loadS(){
   try{
     const d = localStorage.getItem('fintrack_v3');
@@ -742,10 +757,13 @@ async function toggleNotif(el){
     const perm = await Notification.requestPermission();
     if(perm!=='granted'){el.checked=false;return;}
     S.settings.notifEnabled=true;
+    saveS();
+    registerPeriodicSync();
   } else {
     S.settings.notifEnabled=false;
+    saveS();
+    unregisterPeriodicSync();
   }
-  saveS();
 }
 
 function checkDailyNotifications(){
@@ -765,7 +783,9 @@ function checkDailyNotifications(){
     const adj=getAdjustedDueDate(year,month,exp.dueDay);
     if(adj.toDateString()===now.toDateString()){
       const amt=parseFloat(exp.amounts[month]||0);
-      new Notification('💳 Ödeme Günü!',{body:`${exp.name} — ${fmtTRY(amt)} bugün ödenmeli.`,icon:'/icons/icon-192.png'});
+      const body=`${exp.name} — ${fmtTRY(amt)} bugün ödenmeli.`;
+      new Notification('💳 Ödeme Günü!',{body,icon:'/icons/icon-192.png'});
+      addNotifEntry('payment_due','💳','Ödeme Günü!',body);
     }
   });
 
@@ -774,11 +794,104 @@ function checkDailyNotifications(){
   if(now.getDate()===sd){
     const d=getMonthlyData(year,month);
     if(S.settings.ppfEnabled!==false&&d.ppfTotal>0){
-      new Notification('🏦 PPF Hatırlatması',{body:`Bu ay PPF hesabına atılacak tutar: ${fmtTRY(d.ppfTotal)}`,icon:'/icons/icon-192.png'});
+      const body=`Bu ay PPF hesabına atılacak tutar: ${fmtTRY(d.ppfTotal)}`;
+      new Notification('🏦 PPF Hatırlatması',{body,icon:'/icons/icon-192.png'});
+      addNotifEntry('ppf','🏦','PPF Hatırlatması',body);
     }
     // Cash remaining notification
+    const body=`${MONTHS_FULL[month-1]} ${year} — Gelir: ${fmtTRY(d.totalIncome)}, Gider: ${fmtTRY(d.totalExpense)}, Nakit: ${fmtTRY(d.cashLeft)}`;
     new Notification('💵 Aylık Mali Özet',{body:`${MONTHS_FULL[month-1]} ${year}\nGelir: ${fmtTRY(d.totalIncome)}\nGider: ${fmtTRY(d.totalExpense)}\nNakit Kalan: ${fmtTRY(d.cashLeft)}`,icon:'/icons/icon-192.png'});
+    addNotifEntry('monthly_summary','💵','Aylık Mali Özet',body);
   }
+}
+
+// ═══════════════════════════════════════════════
+// NOTIFICATION CENTER
+// ═══════════════════════════════════════════════
+function addNotifEntry(type, icon, title, body){
+  if(!S.notifLog) S.notifLog=[];
+  S.notifLog.unshift({id:Date.now()+'-'+Math.random().toString(36).slice(2),type,icon,title,body,ts:Date.now(),seen:false});
+  if(S.notifLog.length>50) S.notifLog.length=50;
+  saveS();
+  updateNotifBadge();
+}
+
+function updateNotifBadge(){
+  const count=(S.notifLog||[]).filter(n=>!n.seen).length;
+  const el=document.getElementById('notif-badge');
+  if(!el) return;
+  if(count>0){el.textContent=count>99?'99+':count;el.style.display='';}
+  else el.style.display='none';
+}
+
+function openNotifCenter(){
+  (S.notifLog||[]).forEach(n=>n.seen=true);
+  saveS();
+  updateNotifBadge();
+  renderNotifCenter();
+  openModal('overlay-notif');
+}
+
+function renderNotifCenter(){
+  const body=document.getElementById('notif-center-body');
+  if(!body) return;
+  if(!S.notifLog||!S.notifLog.length){
+    body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:14px">Henüz bildirim yok</div>';
+    return;
+  }
+  body.innerHTML=S.notifLog.map(n=>`
+    <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px;line-height:1;padding-top:2px">${n.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;color:var(--text);font-size:14px">${n.title}</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:2px;line-height:1.4">${n.body}</div>
+        <div style="color:var(--muted2);font-size:11px;margin-top:4px">${fmtRelTime(n.ts)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function fmtRelTime(ts){
+  const diff=Date.now()-ts;
+  if(diff<60000) return 'Az önce';
+  if(diff<3600000) return Math.floor(diff/60000)+' dk önce';
+  if(diff<86400000) return Math.floor(diff/3600000)+' saat önce';
+  return Math.floor(diff/86400000)+' gün önce';
+}
+
+// ═══════════════════════════════════════════════
+// BACKGROUND SYNC (IndexedDB bridge for SW)
+// ═══════════════════════════════════════════════
+function syncNotifSchedule(){
+  if(!window.indexedDB) return;
+  const now=new Date(); const year=now.getFullYear(); const month=now.getMonth()+1;
+  const d=getMonthlyData(year,month);
+  const dueDayExpenses=getYear(year).expenses
+    .filter(exp=>exp.dueDay&&exp.dueDay>0)
+    .map(exp=>({name:exp.name,dueDay:exp.dueDay,amount:parseFloat(exp.amounts[month]||0),isPaid:!!(exp.status&&exp.status[month]==='paid')}));
+  const schedule={id:'current',notifEnabled:S.settings.notifEnabled,salaryDay:S.settings.salaryDay,
+    lastNotifDate:S.settings.lastNotifDate,year,month,
+    monthSummary:{totalIncome:d.totalIncome,totalExpense:d.totalExpense,investment:d.investment,cashLeft:d.cashLeft,ppfTotal:d.ppfTotal,monthName:MONTHS_FULL[month-1]},
+    dueDayExpenses};
+  const req=indexedDB.open('fintrack_notif',1);
+  req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('schedule'))db.createObjectStore('schedule',{keyPath:'id'});};
+  req.onsuccess=e=>{const db=e.target.result;const tx=db.transaction('schedule','readwrite');tx.objectStore('schedule').put(schedule);tx.oncomplete=()=>db.close();};
+  req.onerror=()=>{};
+}
+
+async function registerPeriodicSync(){
+  if(!('serviceWorker' in navigator)) return;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    if(!('periodicSync' in reg)) return;
+    const status=await navigator.permissions.query({name:'periodic-background-sync'});
+    if(status.state==='denied') return;
+    await reg.periodicSync.register('daily-notif',{minInterval:24*60*60*1000});
+  }catch(e){}
+}
+
+async function unregisterPeriodicSync(){
+  if(!('serviceWorker' in navigator)) return;
+  try{const reg=await navigator.serviceWorker.ready;if('periodicSync' in reg)await reg.periodicSync.unregister('daily-notif');}catch(e){}
 }
 
 // ═══════════════════════════════════════════════
@@ -1328,7 +1441,10 @@ function saveStatus(){
   if(!exp) return;
   if(!exp.status) exp.status={};
   exp.status[month]=_selectedStatus;
+  const statusLabel={paid:'Ödendi',partial:'Kısmi Ödendi',unpaid:'Ödenmedi'}[_selectedStatus]||_selectedStatus;
+  const icon=_selectedStatus==='paid'?'✅':_selectedStatus==='partial'?'⚠️':'↩️';
   saveS();
+  addNotifEntry('status_change',icon,'Durum Güncellendi',`${exp.name} — ${MONTHS_FULL[month-1]}: ${statusLabel}`);
   closeModal('overlay-status');
   renderGider();
   renderDashboard();
@@ -1869,17 +1985,18 @@ function closeModal(id){
 // INIT
 // ═══════════════════════════════════════════════
 function initApp(){
+  if(!S.notifLog) S.notifLog=[];
   document.getElementById('year-btn').textContent=S.settings.currentYear;
   buildMonthTabs('month-tabs','');
   buildMonthTabs('gelir-month-tabs','gelir');
   buildMonthTabs('gider-month-tabs','gider');
   buildMonthTabs('harcama-month-tabs','harcama');
-  // Apply saved theme
   applyTheme(S.settings.theme||'dark');
-  // Show dashboard first
   renderDashboard();
   checkDailyNotifications();
-  // Scroll current month into view
+  updateNotifBadge();
+  syncNotifSchedule();
+  if(S.settings.notifEnabled&&Notification.permission==='granted') registerPeriodicSync();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);
