@@ -140,3 +140,79 @@ async function unregisterPeriodicSync(){
   if(!('serviceWorker' in navigator)) return;
   try{const reg=await navigator.serviceWorker.ready;if('periodicSync' in reg)await reg.periodicSync.unregister('daily-notif');}catch(e){}
 }
+
+// ── Test Mode (10-min interval, foreground only) ──────────────────────────
+
+let _testNotifIntervalId = null;
+
+function startTestNotifMode(){
+  stopTestNotifMode();
+  if(Notification.permission!=='granted') return;
+  _testNotifIntervalId = setInterval(()=>{
+    const ts = new Date().toLocaleTimeString('tr-TR');
+    const body = `Test bildirimi: ${ts}`;
+    new Notification('🧪 Test Bildirimi',{body,icon:'/icons/icon-192.png'});
+    addNotifEntry('test','🧪','Test Bildirimi',body);
+  }, 10*60*1000);
+}
+
+function stopTestNotifMode(){
+  if(_testNotifIntervalId){ clearInterval(_testNotifIntervalId); _testNotifIntervalId=null; }
+}
+
+async function toggleTestNotif(el){
+  if(el.checked){
+    if(!('Notification' in window)){el.checked=false;alert('Tarayıcınız bildirimleri desteklemiyor.');return;}
+    if(Notification.permission!=='granted'){
+      const p = await Notification.requestPermission();
+      if(p!=='granted'){el.checked=false;return;}
+    }
+    S.settings.testNotifEnabled=true;
+    saveS();
+    startTestNotifMode();
+    const body = 'Her 10 dakikada bir test bildirimi gelecek (uygulama açıkken).';
+    new Notification('🧪 Test Modu Aktif',{body,icon:'/icons/icon-192.png'});
+    addNotifEntry('test','🧪','Test Modu Aktif',body);
+  } else {
+    S.settings.testNotifEnabled=false;
+    saveS();
+    stopTestNotifMode();
+  }
+}
+
+function sendTestNotificationNow(){
+  if(!('Notification' in window)){alert('Tarayıcınız bildirimleri desteklemiyor.');return;}
+  if(Notification.permission!=='granted'){
+    alert('Önce bildirim izni vermelisiniz. Bildirimler toggle\'ını açın.');
+    return;
+  }
+  const ts = new Date().toLocaleTimeString('tr-TR');
+  const body = `Anlık test bildirimi — ${ts}`;
+  new Notification('🔔 Anlık Test',{body,icon:'/icons/icon-192.png'});
+  addNotifEntry('test','🔔','Anlık Test',body);
+}
+
+// ── Diagnostic ────────────────────────────────────────────────────────────
+
+function getNotifDiagnostic(){
+  const lines = [];
+  if(!('Notification' in window)){
+    lines.push('❌ Tarayıcı bildirimleri desteklemiyor');
+  } else {
+    const p = Notification.permission;
+    lines.push(`İzin durumu: ${p==='granted'?'✅ İzinli':p==='denied'?'❌ Reddedildi':'⚠️ Sorulmadı'}`);
+  }
+  lines.push(`Uygulama içi bildirim: ${S.settings.notifEnabled?'✅ Açık':'❌ Kapalı'}`);
+  const installed = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  lines.push(`PWA yüklü: ${installed?'✅ Evet':'⚠️ Hayır (sadece tarayıcıda — arka plan bildirimi için yüklü olmalı)'}`);
+  lines.push(`Servis Worker: ${'serviceWorker' in navigator?'✅ Destekleniyor':'❌ Desteklenmiyor'}`);
+  const periodicSupport = 'PeriodicSyncManager' in window;
+  lines.push(`Arka plan sync: ${periodicSupport?'Tarayıcı destekliyor':'⚠️ Desteklenmiyor (sadece Chrome Android yüklü PWA)'}`);
+  lines.push(`Son bildirim tarihi: ${S.settings.lastNotifDate||'—'}`);
+  lines.push(`Test Modu: ${S.settings.testNotifEnabled?'✅ Aktif':'Kapalı'}`);
+  return lines.join('\n');
+}
+
+function showNotifDiagnostic(){
+  alert('Bildirim Durumu:\n\n' + getNotifDiagnostic());
+}

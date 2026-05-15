@@ -350,11 +350,24 @@
         </div>
         <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:var(--r2);font-size:12px;color:var(--muted);line-height:1.6">
           <div style="color:var(--accent);font-weight:600;margin-bottom:6px">ℹ️ Bildirim Sistemi</div>
-          <div>📬 Sayfayı açık tutarsanız her saat başında otomatik kontrol edilir.</div>
-          <div style="margin-top:4px" id="notif-info-ppf">🔔 Her gün saat 9:00'de ödeme ve PPF bildirimleri gönderilir.</div>
-          <div style="margin-top:4px" id="notif-info-noppf" style="display:none">🔔 Her gün saat 9:00'de ödeme bildirimleri gönderilir.</div>
+          <div>📬 Uygulamayı açtığınızda günlük kontrol yapılır.</div>
+          <div style="margin-top:4px" id="notif-info-ppf">🔔 Maaş günü PPF ve aylık özet bildirimi gönderilir.</div>
+          <div style="margin-top:4px" id="notif-info-noppf" style="display:none">🔔 Maaş günü aylık özet bildirimi gönderilir.</div>
+          <div style="margin-top:4px">💳 Ödeme günleri tutarı ve hatırlatma bildirimi gönderilir.</div>
+          <div style="margin-top:4px">📱 PWA olarak yüklendiyse arka planda da çalışabilir (Chrome Android).</div>
           <div style="margin-top:4px">⚙️ Hafta sonu ödemeler otomatik pazartesi'ye alınır.</div>
         </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="toggle-field">
+          <div>
+            <div class="toggle-label">🧪 Test Modu</div>
+            <div class="toggle-sub">Her 10 dakikada bir test bildirimi (uygulama açıkken)</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="cfg-test-notif" onchange="toggleTestNotif(this)"><span class="toggle-slider"></span></label>
+        </div>
+        <button class="btn-secondary" style="margin-top:8px" onclick="sendTestNotificationNow()">🔔 Şimdi Test Bildirimi Gönder</button>
+        <button class="btn-secondary" style="margin-top:8px" onclick="showNotifDiagnostic()">🔍 Bildirim Durumunu Göster</button>
       </div>
       <button class="btn-primary" onclick="saveSettings()">Kaydet</button>
       <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">

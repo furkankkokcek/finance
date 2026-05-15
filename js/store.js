@@ -7,7 +7,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 
 let S = {
   version:3, setupDone:false,
-  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true, amountsHidden:false, changeCount:0, lastOpenDate:''},
+  settings:{salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1, netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true, amountsHidden:false, changeCount:0, lastOpenDate:'', testNotifEnabled:false},
   years:{}, notifLog:[]
 };
 const giderOpenCats = new Set();
