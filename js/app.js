@@ -15,6 +15,7 @@ function initApp(){
   updateNotifBadge();
   syncNotifSchedule();
   if(S.settings.notifEnabled&&Notification.permission==='granted') registerPeriodicSync();
+  if(S.settings.testNotifEnabled&&Notification.permission==='granted') startTestNotifMode();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);
