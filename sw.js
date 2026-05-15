@@ -1,4 +1,4 @@
-const CACHE = 'fintrack-v2';
+const CACHE = 'fintrack-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -43,10 +43,20 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Stale-while-revalidate: serve from cache fast, refresh in background for next load
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/index.html')))
-  );
+  if (e.request.method !== 'GET') return;
+  e.respondWith((async () => {
+    const cache  = await caches.open(CACHE);
+    const cached = await cache.match(e.request);
+    const fetchPromise = fetch(e.request).then(resp => {
+      if (resp && resp.status === 200 && resp.type === 'basic') {
+        cache.put(e.request, resp.clone());
+      }
+      return resp;
+    }).catch(() => null);
+    return cached || (await fetchPromise) || cache.match('/index.html');
+  })());
 });
 
 // ── IDB helpers ───────────────────────────────────────────────────────────
