@@ -1,5 +1,17 @@
 // Notifications
 
+// SW-based notification — works on iOS PWA (16.4+) and Android; falls back to Notification API
+async function showPWANotification(title, opts) {
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, opts);
+      return;
+    } catch(e) {}
+  }
+  try { new Notification(title, opts); } catch(e) {}
+}
+
 async function toggleNotif(el){
   if(el.checked){
     if(!('Notification' in window)){el.checked=false;alert('Tarayıcınız bildirimleri desteklemiyor.');return;}
@@ -15,7 +27,7 @@ async function toggleNotif(el){
   }
 }
 
-function checkDailyNotifications(){
+async function checkDailyNotifications(){
   if(!S.settings.notifEnabled||Notification.permission!=='granted') return;
   const today=todayStr();
   if(S.settings.lastNotifDate===today) return;
@@ -27,17 +39,17 @@ function checkDailyNotifications(){
   const month=now.getMonth()+1;
 
   // Payment due today
-  getYear(year).expenses.forEach(exp=>{
-    if(!exp.dueDay) return;
+  for(const exp of getYear(year).expenses){
+    if(!exp.dueDay) continue;
     const adj=getAdjustedDueDate(year,month,exp.dueDay);
     if(adj.toDateString()===now.toDateString()){
       const amt=parseFloat(exp.amounts[month]||0);
-      if(amt===0) return;
+      if(amt===0) continue;
       const body=`${exp.name} — ${fmtTRY(amt)} bugün ödenmeli.`;
-      new Notification('💳 Ödeme Günü!',{body,icon:'/icons/icon-192.png'});
+      await showPWANotification('💳 Ödeme Günü!',{body,icon:'/icons/icon-192.png'});
       addNotifEntry('payment_due','💳','Ödeme Günü!',body);
     }
-  });
+  }
 
   // Salary day
   const sd=S.settings.salaryDay;
@@ -45,11 +57,11 @@ function checkDailyNotifications(){
     const d=getMonthlyData(year,month);
     if(S.settings.ppfEnabled!==false&&d.ppfTotal>0){
       const body=`Bu ay PPF hesabına atılacak tutar: ${fmtTRY(d.ppfTotal)}`;
-      new Notification('🏦 PPF Hatırlatması',{body,icon:'/icons/icon-192.png'});
+      await showPWANotification('🏦 PPF Hatırlatması',{body,icon:'/icons/icon-192.png'});
       addNotifEntry('ppf','🏦','PPF Hatırlatması',body);
     }
     const body=`${MONTHS_FULL[month-1]} ${year} — Gelir: ${fmtTRY(d.totalIncome)}, Gider: ${fmtTRY(d.totalExpense)}, Nakit: ${fmtTRY(d.cashLeft)}`;
-    new Notification('💵 Aylık Mali Özet',{body:`${MONTHS_FULL[month-1]} ${year}\nGelir: ${fmtTRY(d.totalIncome)}\nGider: ${fmtTRY(d.totalExpense)}\nNakit Kalan: ${fmtTRY(d.cashLeft)}`,icon:'/icons/icon-192.png'});
+    await showPWANotification('💵 Aylık Mali Özet',{body:`${MONTHS_FULL[month-1]} ${year}\nGelir: ${fmtTRY(d.totalIncome)}\nGider: ${fmtTRY(d.totalExpense)}\nNakit Kalan: ${fmtTRY(d.cashLeft)}`,icon:'/icons/icon-192.png'});
     addNotifEntry('monthly_summary','💵','Aylık Mali Özet',body);
   }
 }
@@ -148,10 +160,10 @@ let _testNotifIntervalId = null;
 function startTestNotifMode(){
   stopTestNotifMode();
   if(Notification.permission!=='granted') return;
-  _testNotifIntervalId = setInterval(()=>{
+  _testNotifIntervalId = setInterval(async ()=>{
     const ts = new Date().toLocaleTimeString('tr-TR');
     const body = `Test bildirimi: ${ts}`;
-    new Notification('🧪 Test Bildirimi',{body,icon:'/icons/icon-192.png'});
+    await showPWANotification('🧪 Test Bildirimi',{body,icon:'/icons/icon-192.png'});
     addNotifEntry('test','🧪','Test Bildirimi',body);
   }, 10*60*1000);
 }
@@ -171,7 +183,7 @@ async function toggleTestNotif(el){
     saveS();
     startTestNotifMode();
     const body = 'Her 10 dakikada bir test bildirimi gelecek (uygulama açıkken).';
-    new Notification('🧪 Test Modu Aktif',{body,icon:'/icons/icon-192.png'});
+    await showPWANotification('🧪 Test Modu Aktif',{body,icon:'/icons/icon-192.png'});
     addNotifEntry('test','🧪','Test Modu Aktif',body);
   } else {
     S.settings.testNotifEnabled=false;
@@ -180,16 +192,19 @@ async function toggleTestNotif(el){
   }
 }
 
-function sendTestNotificationNow(){
-  if(!('Notification' in window)){alert('Tarayıcınız bildirimleri desteklemiyor.');return;}
+async function sendTestNotificationNow(){
+  if(!('Notification' in window)&&!('serviceWorker' in navigator)){
+    alert('Tarayıcınız bildirimleri desteklemiyor.');return;
+  }
   if(Notification.permission!=='granted'){
     alert('Önce bildirim izni vermelisiniz. Bildirimler toggle\'ını açın.');
     return;
   }
   const ts = new Date().toLocaleTimeString('tr-TR');
   const body = `Anlık test bildirimi — ${ts}`;
-  new Notification('🔔 Anlık Test',{body,icon:'/icons/icon-192.png'});
+  await showPWANotification('🔔 Anlık Test',{body,icon:'/icons/icon-192.png'});
   addNotifEntry('test','🔔','Anlık Test',body);
+  alert('Bildirim gönderildi ✓\nTelefon bildirim çekmecesini kontrol edin.\n\nBildirim gelmezse sistem ayarlarından uygulamaya bildirim izni verildiğini kontrol edin.');
 }
 
 // ── Diagnostic ────────────────────────────────────────────────────────────
@@ -207,9 +222,10 @@ function getNotifDiagnostic(){
   lines.push(`PWA yüklü: ${installed?'✅ Evet':'⚠️ Hayır (sadece tarayıcıda — arka plan bildirimi için yüklü olmalı)'}`);
   lines.push(`Servis Worker: ${'serviceWorker' in navigator?'✅ Destekleniyor':'❌ Desteklenmiyor'}`);
   const periodicSupport = 'PeriodicSyncManager' in window;
-  lines.push(`Arka plan sync: ${periodicSupport?'Tarayıcı destekliyor':'⚠️ Desteklenmiyor (sadece Chrome Android yüklü PWA)'}`);
+  lines.push(`Arka plan sync: ${periodicSupport?'✅ Tarayıcı destekliyor':'⚠️ Desteklenmiyor (sadece Chrome Android yüklü PWA)'}`);
   lines.push(`Son bildirim tarihi: ${S.settings.lastNotifDate||'—'}`);
   lines.push(`Test Modu: ${S.settings.testNotifEnabled?'✅ Aktif':'Kapalı'}`);
+  lines.push(`Bildirim merkezi kayıt sayısı: ${(S.notifLog||[]).length}`);
   return lines.join('\n');
 }
 
