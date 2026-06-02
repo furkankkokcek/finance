@@ -9,7 +9,6 @@ function openSettingsModal(){
   const testEl=document.getElementById('cfg-test-notif');
   if(testEl) testEl.checked=S.settings.testNotifEnabled===true;
   updatePpfInfoTexts();
-  renderSettingsCards();
   renderHolidayList();
   openModal('overlay-settings');
 }
@@ -38,87 +37,6 @@ function saveSettings(){
   closeModal('overlay-settings');
   renderPage(currentPage);
   alert('Ayarlar kaydedildi.');
-}
-
-// ---- Card management ----
-
-function renderSettingsCards(){
-  const el=document.getElementById('settings-cards-list');
-  if(!el) return;
-  if(!S.cards||S.cards.length===0){
-    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Kart eklenmemiş</div>`;
-    return;
-  }
-  const year=S.settings.currentYear,month=S.settings.currentMonth;
-  el.innerHTML=S.cards.map(c=>{
-    const total=cardStatementTotal(year,month,c.id);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--bg4);border-radius:var(--r2);border-left:3px solid ${c.color||'#f59e0b'};margin-bottom:6px;cursor:pointer" onclick="openEditCard('${c.id}')">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${c.name}</div>
-        <div style="font-size:11px;color:var(--muted)">Kesim: ${c.statementDay}. gün · Son ödeme: ${c.dueDay}. gün</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px;font-weight:700;color:var(--accent)">${fmtTRY(total)}</div>
-        <div style="font-size:10px;color:var(--muted)">bu ay ekstre</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function openAddCard(){
-  document.getElementById('card-modal-title').textContent='Kart Ekle';
-  document.getElementById('card-id').value='';
-  document.getElementById('card-name').value='';
-  document.getElementById('card-statement-day').value='';
-  document.getElementById('card-due-day').value='';
-  document.getElementById('card-color').value='#f59e0b';
-  document.getElementById('card-delete-btn').style.display='none';
-  openModal('overlay-card');
-}
-
-function openEditCard(id){
-  const c=(S.cards||[]).find(x=>x.id===id);
-  if(!c) return;
-  document.getElementById('card-modal-title').textContent='Kart Düzenle';
-  document.getElementById('card-id').value=c.id;
-  document.getElementById('card-name').value=c.name;
-  document.getElementById('card-statement-day').value=c.statementDay||'';
-  document.getElementById('card-due-day').value=c.dueDay||'';
-  document.getElementById('card-color').value=c.color||'#f59e0b';
-  document.getElementById('card-delete-btn').style.display='block';
-  openModal('overlay-card');
-}
-
-function saveCard(){
-  const id=document.getElementById('card-id').value;
-  const name=document.getElementById('card-name').value.trim();
-  if(!name){alert('Kart adı girin');return;}
-  const obj={
-    id:id||uid('card'),
-    name,
-    statementDay:parseInt(document.getElementById('card-statement-day').value)||1,
-    dueDay:parseInt(document.getElementById('card-due-day').value)||1,
-    color:document.getElementById('card-color').value||'#f59e0b'
-  };
-  if(!S.cards) S.cards=[];
-  if(id){
-    const idx=S.cards.findIndex(c=>c.id===id);
-    if(idx>=0) S.cards[idx]=obj; else S.cards.push(obj);
-  } else {
-    S.cards.push(obj);
-  }
-  saveS();
-  closeModal('overlay-card');
-  renderSettingsCards();
-}
-
-function deleteCard(){
-  const id=document.getElementById('card-id').value;
-  if(!confirm('Bu kartı silmek istiyor musunuz?')) return;
-  S.cards=(S.cards||[]).filter(c=>c.id!==id);
-  saveS();
-  closeModal('overlay-card');
-  renderSettingsCards();
 }
 
 // ---- Holiday management ----
