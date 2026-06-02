@@ -11,6 +11,7 @@ function shareWhatsApp(){
     (d.sabitTotal>0?`🏠 Sabit: ${fmtTRY(d.sabitTotal)}\n`:'')+
     (d.krediTotal>0?`🪙 Krediler: ${fmtTRY(d.krediTotal)}\n`:'')+
     (d.kkTotal>0?`💳 Kredi Kartı: ${fmtTRY(d.kkTotal)}\n`:'')+
+    (d.abonelikTotal>0?`📱 Abonelikler: ${fmtTRY(d.abonelikTotal)}\n`:'')+
     `💸 *Toplam Gider:* ${fmtTRY(d.totalExpense)}\n\n`+
     `💼 *Yatırım:* ${fmtTRY(d.investment)}\n\n`+
     `${d.cashLeft<0?'🚨':d.cashLeft<d.investment?'⚠️':'✅'} *NAKİT KALAN: ${fmtTRY(d.cashLeft)}*\n`+

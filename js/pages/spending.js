@@ -7,31 +7,28 @@ function renderHarcama(){
   const yd=getYear(year);
   const el=document.getElementById('harcama-content');
 
-  // Gerçek harcamalar (satın alma ayı)
   const items=yd.spending.filter(s=>{
     const d=new Date(s.date);
     return d.getFullYear()===year&&d.getMonth()+1===month;
   }).sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  // KK taksit sanal kayıtları (ödeme ayı)
+  // KK installment virtual records (payment month)
   const kkInsts=[];
   yd.spending.forEach(s=>{
     if(!s.kk) return;
     const dateObj=new Date(s.date);
-    const pm0=dateObj.getMonth()+1; // satın alma ayı
+    const pm0=dateObj.getMonth()+1;
     const py=dateObj.getFullYear();
     for(let i=0;i<s.kk.n;i++){
-      let pm=pm0+1+i;
-      let pyr=py;
+      let pm=pm0+1+i,pyr=py;
       if(pm>12){pm-=12;pyr++;}
       if(pm===month&&pyr===year){
-        kkInsts.push({s, instIdx:i, instNum:i+1, total:s.kk.n, perInst:s.kk.perInst});
+        kkInsts.push({s,instIdx:i,instNum:i+1,total:s.kk.n,perInst:s.kk.perInst});
       }
     }
   });
 
   const total=items.reduce((acc,i)=>acc+parseFloat(i.amount||0),0);
-
   let html=`<div class="section-hdr"><div class="section-title">Harcamalar — ${MONTHS_FULL[month-1]}</div><div class="section-badge neg" style="color:var(--danger);background:var(--danger-bg)">${fmtTRY(total)}</div></div>`;
 
   if(items.length===0&&kkInsts.length===0){
@@ -57,7 +54,7 @@ function renderHarcama(){
         html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')" style="background:rgba(168,85,247,.05);border-left:3px solid rgba(168,85,247,.4)">
           <div class="spending-left">
             <div class="spending-desc">${s.description}</div>
-            <div class="spending-meta">${instNum}/${total} taksit · alış ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s.kk.cardId)}</div>
+            <div class="spending-meta">${instNum}/${total} taksit · alış ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s)}</div>
           </div>
           <div class="spending-amount" style="color:var(--purple)">-${fmtTRY(perInst)}</div>
         </div>`;
@@ -66,6 +63,35 @@ function renderHarcama(){
   }
 
   el.innerHTML=html;
+}
+
+function findKKCardName(s){
+  if(!s.kk) return 'Bilinmeyen';
+  // New format: kk.cardRef = S.cards[] id
+  if(s.kk.cardRef){
+    const card=(S.cards||[]).find(c=>c.id===s.kk.cardRef);
+    if(card) return card.name;
+  }
+  // Legacy: kk.cardId = expense id
+  if(s.kk.cardId){
+    for(const y of Object.values(S.years)){
+      const exp=(y.expenses||[]).find(e=>e.id===s.kk.cardId);
+      if(exp) return exp.name;
+    }
+    // May be a card id in new format stored in cardId field
+    const card=(S.cards||[]).find(c=>c.id===s.kk.cardId);
+    if(card) return card.name;
+  }
+  return 'Bilinmeyen KK';
+}
+
+// Returns note about which statement month a KK purchase will fall into
+function spdCardNote(dateStr, cardId){
+  if(!dateStr||!cardId) return '';
+  const card=(S.cards||[]).find(c=>c.id===cardId);
+  if(!card||!card.statementDay) return '';
+  const per=statementPeriod(dateStr,card.statementDay);
+  return `→ ${MONTHS_FULL[per.month-1]} ${per.year} ekstresi`;
 }
 
 function resetSpdKK(){
@@ -81,10 +107,31 @@ function resetSpdKK(){
 function toggleSpdKK(cb){
   document.getElementById('spd-kk-section').style.display=cb.checked?'block':'none';
   if(cb.checked){
-    const cards=getYear(S.settings.currentYear).expenses.filter(e=>e.category==='kk');
-    document.getElementById('spd-kk-card').innerHTML=cards.length
-      ?cards.map(k=>`<option value="${k.id}">${k.name}</option>`).join('')
-      :'<option value="">— KK tanımlanmamış —</option>';
+    const cardSel=document.getElementById('spd-kk-card');
+    if(S.cards&&S.cards.length>0){
+      cardSel.innerHTML=S.cards.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      cardSel.dataset.mode='cards';
+    } else {
+      // Legacy: use KK expenses
+      const cards=getYear(S.settings.currentYear).expenses.filter(e=>e.category==='kk');
+      cardSel.innerHTML=cards.length
+        ?cards.map(k=>`<option value="${k.id}">${k.name}</option>`).join('')
+        :'<option value="">— KK tanımlanmamış —</option>';
+      cardSel.dataset.mode='expenses';
+    }
+    updateSpdCardNote();
+  }
+}
+
+function updateSpdCardNote(){
+  const noteEl=document.getElementById('spd-card-note');
+  if(!noteEl) return;
+  const cardSel=document.getElementById('spd-kk-card');
+  const dateInp=document.getElementById('spd-date');
+  if(cardSel&&cardSel.dataset.mode==='cards'&&dateInp&&cardSel.value){
+    noteEl.textContent=spdCardNote(dateInp.value,cardSel.value);
+  } else {
+    noteEl.textContent='';
   }
 }
 
@@ -107,11 +154,10 @@ function openEditSpending(id){
   document.getElementById('spd-id').value=id;
 
   if(s.kk){
-    // KK harcaması — sadece sil izni
     document.getElementById('spending-modal-title').textContent='KK Harcaması';
     document.getElementById('spd-normal-form').style.display='none';
     document.getElementById('spd-kk-readonly').style.display='block';
-    const cardName=findKKCardName(s.kk.cardId);
+    const cardName=findKKCardName(s);
     const typeLabel=s.kk.n>1?`${s.kk.n} Taksit (aylık ${fmtTRY(s.kk.perInst)})`:'Tek Çekim';
     document.getElementById('spd-kk-readonly-info').innerHTML=
       `<div style="font-weight:700;font-size:14px;margin-bottom:6px">${s.description}</div>`+
@@ -120,7 +166,6 @@ function openEditSpending(id){
       `<div>📅 ${s.date}</div>`+
       `<div style="color:var(--muted);font-size:12px;margin-top:6px">${SPD_CATS[s.category]||s.category}</div>`;
   } else {
-    // Normal harcama — düzenlenebilir
     document.getElementById('spending-modal-title').textContent='Harcama Düzenle';
     document.getElementById('spd-normal-form').style.display='block';
     document.getElementById('spd-kk-readonly').style.display='none';
@@ -132,14 +177,6 @@ function openEditSpending(id){
     resetSpdKK();
   }
   openModal('overlay-spending');
-}
-
-function findKKCardName(cardId){
-  for(const y of Object.values(S.years)){
-    const exp=(y.expenses||[]).find(e=>e.id===cardId);
-    if(exp) return exp.name;
-  }
-  return 'Bilinmeyen KK';
 }
 
 function saveSpending(){
@@ -155,27 +192,53 @@ function saveSpending(){
   const kkActive=document.getElementById('spd-kk-toggle').checked;
   let kkMeta=null;
   if(kkActive){
-    const kkId=document.getElementById('spd-kk-card').value;
-    if(!kkId){alert('Kredi kartı seçin');return;}
+    const cardSel=document.getElementById('spd-kk-card');
+    const selId=cardSel.value;
+    if(!selId){alert('Kredi kartı seçin');return;}
     const type=document.getElementById('spd-kk-type').value;
     const n=type==='inst'?(parseInt(document.getElementById('spd-kk-inst').value)||1):1;
     if(type==='inst'&&n<2){alert('Taksit sayısı en az 2 olmalı');return;}
     const perInst=Math.round(amount/n*100)/100;
-    const dateObj=new Date(date);
-    const purchaseMonth=dateObj.getMonth()+1;
-    const purchaseYear=dateObj.getFullYear();
-    let skipped=0;
-    for(let i=0;i<n;i++){
-      let pm=purchaseMonth+1+i;
-      let py=purchaseYear;
-      if(pm>12){pm-=12;py++;}
-      const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===kkId);
-      if(!kkExp){skipped++;continue;}
-      kkExp.amounts=kkExp.amounts||{};
-      kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
+
+    if(cardSel.dataset.mode==='cards'){
+      // New S.cards[] mode: find linked KK expense for amount tracking
+      const linkedExp=yd.expenses.find(e=>e.category==='kk'&&e.cardId===selId);
+      const dateObj=new Date(date);
+      const purchaseMonth=dateObj.getMonth()+1;
+      const purchaseYear=dateObj.getFullYear();
+      if(linkedExp){
+        let skipped=0;
+        for(let i=0;i<n;i++){
+          let pm=purchaseMonth+1+i,py=purchaseYear;
+          if(pm>12){pm-=12;py++;}
+          const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===linkedExp.id);
+          if(!kkExp){skipped++;continue;}
+          kkExp.amounts=kkExp.amounts||{};
+          kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
+        }
+        if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdı; manuel ekleyebilirsin.`);
+        kkMeta={cardId:linkedExp.id,cardRef:selId,n,perInst};
+      } else {
+        // No linked KK expense: store only card reference
+        kkMeta={cardId:'',cardRef:selId,n,perInst};
+      }
+    } else {
+      // Legacy expense-ID mode
+      const dateObj=new Date(date);
+      const purchaseMonth=dateObj.getMonth()+1;
+      const purchaseYear=dateObj.getFullYear();
+      let skipped=0;
+      for(let i=0;i<n;i++){
+        let pm=purchaseMonth+1+i,py=purchaseYear;
+        if(pm>12){pm-=12;py++;}
+        const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===selId);
+        if(!kkExp){skipped++;continue;}
+        kkExp.amounts=kkExp.amounts||{};
+        kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
+      }
+      if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdı; manuel ekleyebilirsin.`);
+      kkMeta={cardId:selId,n,perInst};
     }
-    if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdığı için eklenemedi. Gider sekmesinden manuel ekleyebilirsin.`);
-    kkMeta={cardId:kkId, n, perInst};
   }
 
   const obj={id:id||uid('spd'),description:desc,amount,date,category:cat};
@@ -205,18 +268,20 @@ function deleteSpending(){
   if(!confirm(confirmMsg)) return;
 
   if(s.kk){
-    const {cardId,n,perInst}=s.kk;
-    const dateObj=new Date(s.date);
-    const purchaseMonth=dateObj.getMonth()+1;
-    const purchaseYear=dateObj.getFullYear();
-    for(let i=0;i<n;i++){
-      let pm=purchaseMonth+1+i;
-      let py=purchaseYear;
-      if(pm>12){pm-=12;py++;}
-      const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===cardId);
-      if(!kkExp) continue;
-      kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)-perInst)*100)/100;
-      if(kkExp.amounts[pm]<0) kkExp.amounts[pm]=0;
+    const kkExpId=s.kk.cardId||'';
+    if(kkExpId){
+      const {n,perInst}=s.kk;
+      const dateObj=new Date(s.date);
+      const purchaseMonth=dateObj.getMonth()+1;
+      const purchaseYear=dateObj.getFullYear();
+      for(let i=0;i<n;i++){
+        let pm=purchaseMonth+1+i,py=purchaseYear;
+        if(pm>12){pm-=12;py++;}
+        const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===kkExpId);
+        if(!kkExp) continue;
+        kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)-perInst)*100)/100;
+        if(kkExp.amounts[pm]<0) kkExp.amounts[pm]=0;
+      }
     }
   }
 

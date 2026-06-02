@@ -8,11 +8,10 @@ function renderGider(){
   const el=document.getElementById('gider-content');
 
   let html='';
-  
-  ['sabit','kredi','kk'].forEach(cat=>{
+
+  ['sabit','kredi','kk','abonelik'].forEach(cat=>{
     const items=yd.expenses.filter(e=>e.category===cat);
     const catTotal=items.reduce((s,e)=>s+parseFloat(e.amounts[month]||0),0);
-
     const isOpen=giderOpenCats.has(cat);
     html+=`<div class="exp-accordion" data-cat="${cat}">
       <div class="acc-header" onclick="toggleAcc(this)">
@@ -36,6 +35,7 @@ function renderGider(){
         const adj=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
         const isDue=adj&&isPaymentDueToday(year,month,exp.dueDay);
         const dueStr=adj?`${adj.getDate()} ${MONTHS[adj.getMonth()]}`:'-';
+        const dueLabel=cat==='abonelik'?'Yenileme':'Ödeme';
         const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';
         const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
         html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
@@ -46,7 +46,7 @@ function renderGider(){
               ${isDue?'<span class="badge badge-due">BUGÜN</span>':''}
               ${instInfo?'<span style="font-size:11px;color:var(--muted)">'+instInfo+'</span>':''}
             </div>
-            <div class="exp-item-meta">Ödeme: ${dueStr}${exp.detail?' · '+exp.detail:''}</div>
+            <div class="exp-item-meta">${dueLabel}: ${dueStr}${exp.detail?' · '+exp.detail:''}</div>
           </div>
           <div class="exp-item-right" style="display:flex;gap:8px;align-items:center">
             <div style="text-align:right">
@@ -61,8 +61,7 @@ function renderGider(){
         html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Bu ay için tutar girilmemiş</div>`;
       }
     }
-    html+=`</div>
-    </div>`;
+    html+=`</div></div>`;
   });
 
   el.innerHTML=html;
@@ -75,6 +74,35 @@ function toggleAcc(hdr){
   arrow.classList.toggle('open');
   const cat=hdr.closest('[data-cat]')?.dataset.cat;
   if(cat){ body.classList.contains('open')?giderOpenCats.add(cat):giderOpenCats.delete(cat); }
+}
+
+function cardOptionsHtml(selectedId){
+  const opts=['<option value="">— Kart seç —</option>'];
+  (S.cards||[]).forEach(c=>{
+    opts.push(`<option value="${c.id}"${c.id===selectedId?' selected':''}>${c.name}</option>`);
+  });
+  return opts.join('');
+}
+
+function getCard(id){
+  return (S.cards||[]).find(c=>c.id===id)||null;
+}
+
+function onExpCatChange(){
+  const cat=document.getElementById('exp-cat').value;
+  const cardField=document.getElementById('exp-card-field');
+  if(cardField){
+    const show=cat==='kk'||cat==='abonelik';
+    cardField.style.display=show?'block':'none';
+    if(show){
+      const sel=document.getElementById('exp-card-id');
+      if(sel) sel.innerHTML=cardOptionsHtml(sel.value||'');
+    }
+  }
+  const dueLabel=document.getElementById('exp-due-label');
+  if(dueLabel) dueLabel.textContent=cat==='abonelik'?'Yenileme Günü':'Ödeme Günü';
+  const ppfField=document.getElementById('exp-ppf-field');
+  if(ppfField) ppfField.style.display=(S.settings.ppfEnabled!==false&&cat!=='abonelik')?'':'none';
 }
 
 function openAddExpense(id=null, defaultCat=null){
@@ -90,9 +118,11 @@ function openAddExpense(id=null, defaultCat=null){
   document.getElementById('exp-detail').value=exp?exp.detail||'':'';
   document.getElementById('exp-fixed').value='';
   document.getElementById('exp-ppf').checked=exp?!!exp.ppf:false;
-  document.getElementById('exp-ppf-field').style.display=S.settings.ppfEnabled!==false?'':'none';
+  const cardSel=document.getElementById('exp-card-id');
+  if(cardSel) cardSel.innerHTML=cardOptionsHtml(exp?exp.cardId||'':'');
   document.getElementById('exp-delete-btn').style.display=exp?'block':'none';
   buildAmountsGrid('exp-amounts',exp?exp.amounts:{});
+  onExpCatChange();
   openModal('overlay-expense');
 }
 
@@ -103,15 +133,18 @@ function saveExpense(){
   const name=document.getElementById('exp-name').value.trim();
   if(!name){alert('Gider adı girin');return;}
   const amounts=readAmountsGrid('exp-amounts');
+  const cat=document.getElementById('exp-cat').value;
+  const cardSel=document.getElementById('exp-card-id');
   const obj={
     id:id||uid('exp'),
     name,
-    category:document.getElementById('exp-cat').value,
+    category:cat,
     dueDay:parseInt(document.getElementById('exp-due').value)||0,
     installments:parseInt(document.getElementById('exp-inst').value)||0,
     installmentPaid:parseInt(document.getElementById('exp-inst-paid').value)||0,
     detail:document.getElementById('exp-detail').value.trim(),
     ppf:document.getElementById('exp-ppf').checked,
+    cardId:cardSel?cardSel.value||'':'',
     amounts,
     status:{}
   };
@@ -139,7 +172,7 @@ function deleteExpense(){
   trackChange();
 }
 
-function openStatusModal(expId, month){
+function openStatusModal(expId,month){
   document.getElementById('status-exp-id').value=expId;
   document.getElementById('status-month').value=month;
   const yd=getYear(S.settings.currentYear);
@@ -147,8 +180,7 @@ function openStatusModal(expId, month){
   const status=exp?.status?.[month]||'unpaid';
   document.getElementById('status-modal-title').textContent=exp?.name||'Ödeme Durumu';
   ['paid','partial','unpaid'].forEach(s=>{
-    const el=document.getElementById('sopt-'+s);
-    el.classList.toggle('sel',s===status);
+    document.getElementById('sopt-'+s).classList.toggle('sel',s===status);
   });
   _selectedStatus=status;
   openModal('overlay-status');

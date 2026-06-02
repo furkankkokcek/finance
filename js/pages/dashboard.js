@@ -193,6 +193,7 @@ function renderPieChart(d){
     {val:d.sabitTotal,color:'#3b82f6',label:'Sabit'},
     {val:d.krediTotal,color:'#a855f7',label:'Kredi'},
     {val:d.kkTotal,color:'#f59e0b',label:'KK'},
+    {val:d.abonelikTotal||0,color:'#ec4899',label:'Abonelik'},
   ].filter(s=>s.val>0);
   const R=55,cx=70,cy=70,r=40;
   let startAngle=-Math.PI/2;

@@ -8,7 +8,7 @@ function openYearTable(){
   const header=`<tr><th>Kalem</th>${MONTHS.map(m=>`<th>${m}</th>`).join('')}<th>Toplam</th></tr>`;
   let rows='';
 
-  const addSection=(label,items,color)=>{
+  const addSection=(label,items)=>{
     if(rows) rows+=`<tr class="spacer-row"><td colspan="14"></td></tr>`;
     rows+=`<tr class="cat-row"><td>${label}</td>${MONTHS.map(()=>`<td></td>`).join('')}<td></td></tr>`;
     let secTotals=Array(12).fill(0);
@@ -26,7 +26,6 @@ function openYearTable(){
       });
       rows+=`<td style="font-weight:700">${itemTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
     });
-    // Section total row
     const secTotal=secTotals.reduce((a,b)=>a+b,0);
     rows+=`<tr class="total-row"><td>${label} TOPLAM</td>${secTotals.map(v=>`<td>${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${secTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   };
@@ -34,8 +33,8 @@ function openYearTable(){
   addSection('SABİT GİDERLER',yd.expenses.filter(e=>e.category==='sabit'));
   addSection('KREDİLER',yd.expenses.filter(e=>e.category==='kredi'));
   addSection('KREDİ KARTLARI',yd.expenses.filter(e=>e.category==='kk'));
+  addSection('ABONELİKLER',yd.expenses.filter(e=>e.category==='abonelik'));
 
-  // Grand totals
   let gTotals=Array(12).fill(0);
   let iTotals=Array(12).fill(0);
   let cashTotals=Array(12).fill(0);
