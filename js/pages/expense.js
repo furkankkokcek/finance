@@ -34,8 +34,18 @@ function renderGider(){
         const status=exp.status?.[month]||'unpaid';
         const adj=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
         const isDue=adj&&isPaymentDueToday(year,month,exp.dueDay);
-        const dueStr=adj?`${adj.getDate()} ${MONTHS[adj.getMonth()]}`:'-';
-        const dueLabel=cat==='abonelik'?'Yenileme':'Ödeme';
+        let dueStr=adj?`${adj.getDate()} ${MONTHS[adj.getMonth()]}`:'-';
+        if(cat==='kk'&&exp.statementDay){
+          const nomStat=nominalDate(year,month,exp.statementDay);
+          const statIsHol=isHoliday(nomStat);
+          const statNote=statIsHol?'*':'';
+          const nomDue=nominalDate(year,month,exp.dueDay||0);
+          const adjDue=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
+          const extended=adjDue&&(adjDue.getDate()!==nomDue.getDate()||adjDue.getMonth()!==nomDue.getMonth());
+          const dueNote=extended?`→${adjDue.getDate()} ${MONTHS[adjDue.getMonth()]}`:adjDue?`${adjDue.getDate()} ${MONTHS[adjDue.getMonth()]}`:'-';
+          dueStr=`Kesim:${nomStat.getDate()}${statNote} · Ödeme:${dueNote}`;
+        }
+        const dueLabel=cat==='abonelik'?'Yenileme':cat==='kk'?'':'Ödeme';
         const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';
         const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
         html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
@@ -46,7 +56,7 @@ function renderGider(){
               ${isDue?'<span class="badge badge-due">BUGÜN</span>':''}
               ${instInfo?'<span style="font-size:11px;color:var(--muted)">'+instInfo+'</span>':''}
             </div>
-            <div class="exp-item-meta">${dueLabel}: ${dueStr}${exp.detail?' · '+exp.detail:''}</div>
+            <div class="exp-item-meta">${dueLabel?dueLabel+': ':''}${dueStr}${exp.detail?' · '+exp.detail:''}</div>
           </div>
           <div class="exp-item-right" style="display:flex;gap:8px;align-items:center">
             <div style="text-align:right">
@@ -76,33 +86,65 @@ function toggleAcc(hdr){
   if(cat){ body.classList.contains('open')?giderOpenCats.add(cat):giderOpenCats.delete(cat); }
 }
 
-function cardOptionsHtml(selectedId){
+// Build options from KK expense items (used for abonelik card selector)
+function kkExpOptionsHtml(selectedId){
+  const year=S.settings.currentYear;
+  const yd=getYear(year);
+  const kkExps=yd.expenses.filter(e=>e.category==='kk');
   const opts=['<option value="">— Kart seç —</option>'];
-  (S.cards||[]).forEach(c=>{
-    opts.push(`<option value="${c.id}"${c.id===selectedId?' selected':''}>${c.name}</option>`);
+  kkExps.forEach(e=>{
+    opts.push(`<option value="${e.id}"${e.id===selectedId?' selected':''}>${e.name}</option>`);
   });
   return opts.join('');
 }
 
-function getCard(id){
-  return (S.cards||[]).find(c=>c.id===id)||null;
-}
-
 function onExpCatChange(){
   const cat=document.getElementById('exp-cat').value;
+  const statField=document.getElementById('exp-statement-field');
   const cardField=document.getElementById('exp-card-field');
+  const kkInfo=document.getElementById('exp-kk-info');
+  const dueLabel=document.getElementById('exp-due-label');
+  const ppfField=document.getElementById('exp-ppf-field');
+
+  if(statField) statField.style.display=cat==='kk'?'block':'none';
+  if(kkInfo) kkInfo.style.display=cat==='kk'?'block':'none';
+
   if(cardField){
-    const show=cat==='kk'||cat==='abonelik';
-    cardField.style.display=show?'block':'none';
-    if(show){
+    cardField.style.display=cat==='abonelik'?'block':'none';
+    if(cat==='abonelik'){
       const sel=document.getElementById('exp-card-id');
-      if(sel) sel.innerHTML=cardOptionsHtml(sel.value||'');
+      if(sel) sel.innerHTML=kkExpOptionsHtml(sel.value||'');
     }
   }
-  const dueLabel=document.getElementById('exp-due-label');
-  if(dueLabel) dueLabel.textContent=cat==='abonelik'?'Yenileme Günü':'Ödeme Günü';
-  const ppfField=document.getElementById('exp-ppf-field');
+
+  if(dueLabel) dueLabel.textContent=cat==='abonelik'?'Yenileme Günü':cat==='kk'?'Son Ödeme Günü':'Ödeme Günü';
   if(ppfField) ppfField.style.display=(S.settings.ppfEnabled!==false&&cat!=='abonelik')?'':'none';
+
+  if(cat==='kk') updateExpKKInfo();
+}
+
+function updateExpKKInfo(){
+  const infoEl=document.getElementById('exp-kk-info');
+  if(!infoEl) return;
+  const statDay=parseInt(document.getElementById('exp-statement-day')?.value)||0;
+  const dueDay=parseInt(document.getElementById('exp-due').value)||0;
+  const year=S.settings.currentYear;
+  const month=S.settings.currentMonth;
+  const lines=[];
+  if(statDay){
+    const nomStat=nominalDate(year,month,statDay);
+    const isHol=isHoliday(nomStat);
+    const holNote=isHol?' (tatil — banka ertesi iş günü işler)':'';
+    lines.push(`Hesap kesim: ${nomStat.getDate()} ${MONTHS_FULL[nomStat.getMonth()]}${holNote}`);
+  }
+  if(dueDay){
+    const adjDue=getAdjustedDueDate(year,month,dueDay);
+    const nomDue=nominalDate(year,month,dueDay);
+    const extended=adjDue.getDate()!==nomDue.getDate()||adjDue.getMonth()!==nomDue.getMonth();
+    const extNote=extended?` → ${adjDue.getDate()} ${MONTHS_FULL[adjDue.getMonth()]} (uzatıldı)`:'';
+    lines.push(`Son ödeme: ${nomDue.getDate()} ${MONTHS_FULL[nomDue.getMonth()]}${extNote}`);
+  }
+  infoEl.innerHTML=lines.join('<br>');
 }
 
 function openAddExpense(id=null, defaultCat=null){
@@ -118,8 +160,10 @@ function openAddExpense(id=null, defaultCat=null){
   document.getElementById('exp-detail').value=exp?exp.detail||'':'';
   document.getElementById('exp-fixed').value='';
   document.getElementById('exp-ppf').checked=exp?!!exp.ppf:false;
+  const statDayEl=document.getElementById('exp-statement-day');
+  if(statDayEl) statDayEl.value=exp?exp.statementDay||'':'';
   const cardSel=document.getElementById('exp-card-id');
-  if(cardSel) cardSel.innerHTML=cardOptionsHtml(exp?exp.cardId||'':'');
+  if(cardSel) cardSel.innerHTML=kkExpOptionsHtml(exp?exp.cardId||'':'');
   document.getElementById('exp-delete-btn').style.display=exp?'block':'none';
   buildAmountsGrid('exp-amounts',exp?exp.amounts:{});
   onExpCatChange();
@@ -140,6 +184,7 @@ function saveExpense(){
     name,
     category:cat,
     dueDay:parseInt(document.getElementById('exp-due').value)||0,
+    statementDay:cat==='kk'?(parseInt(document.getElementById('exp-statement-day')?.value)||0):0,
     installments:parseInt(document.getElementById('exp-inst').value)||0,
     installmentPaid:parseInt(document.getElementById('exp-inst-paid').value)||0,
     detail:document.getElementById('exp-detail').value.trim(),

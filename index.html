@@ -203,17 +203,26 @@
     <div class="modal-body">
       <input type="hidden" id="exp-id">
       <div class="field"><label>Gider Adı</label><input type="text" id="exp-name" placeholder="örn: Konut Kredisi"></div>
-      <div class="field-row">
-        <div class="field"><label>Kategori</label>
-          <select id="exp-cat" onchange="onExpCatChange()">
-            <option value="sabit">Sabit Gider</option>
-            <option value="kredi">Kredi</option>
-            <option value="kk">Kredi Kartı</option>
-            <option value="abonelik">Abonelik</option>
-          </select>
-        </div>
-        <div class="field"><label id="exp-due-label">Ödeme Günü</label><input type="number" id="exp-due" min="1" max="31" placeholder="1-31"></div>
+      <div class="field">
+        <label>Kategori</label>
+        <select id="exp-cat" onchange="onExpCatChange()">
+          <option value="sabit">Sabit Gider</option>
+          <option value="kredi">Kredi</option>
+          <option value="kk">Kredi Kartı</option>
+          <option value="abonelik">Abonelik</option>
+        </select>
       </div>
+      <div class="field-row">
+        <div class="field" id="exp-statement-field" style="display:none">
+          <label>Hesap Kesim Günü</label>
+          <input type="number" id="exp-statement-day" min="1" max="31" placeholder="1-31" oninput="updateExpKKInfo()">
+        </div>
+        <div class="field">
+          <label id="exp-due-label">Ödeme Günü</label>
+          <input type="number" id="exp-due" min="1" max="31" placeholder="1-31" oninput="updateExpKKInfo()">
+        </div>
+      </div>
+      <div id="exp-kk-info" style="display:none;font-size:11px;color:var(--muted);margin:-4px 0 8px;padding:6px 10px;background:var(--bg4);border-radius:var(--r3);line-height:1.6"></div>
       <div id="exp-card-field" style="display:none" class="field">
         <label>Bağlı Kart</label>
         <select id="exp-card-id"></select>
@@ -339,28 +348,6 @@
   </div>
 </div>
 
-<!-- CARD MODAL -->
-<div class="overlay" id="overlay-card" onclick="closeModal('overlay-card')">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <div class="modal-title" id="card-modal-title">Kart Ekle</div>
-      <button class="modal-close" onclick="closeModal('overlay-card')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="card-id">
-      <div class="field"><label>Kart Adı</label><input type="text" id="card-name" placeholder="örn: Akbank, Garanti BBVA"></div>
-      <div class="field-row">
-        <div class="field"><label>Hesap Kesim Günü</label><input type="number" id="card-statement-day" min="1" max="31" placeholder="1-31"></div>
-        <div class="field"><label>Son Ödeme Günü</label><input type="number" id="card-due-day" min="1" max="31" placeholder="1-31"></div>
-      </div>
-      <div class="field"><label>Renk</label><input type="color" id="card-color" value="#f59e0b" style="width:60px;height:36px;border:none;border-radius:var(--r3);cursor:pointer;background:none"></div>
-      <button class="btn-primary" onclick="saveCard()">Kaydet</button>
-      <button class="btn-danger" id="card-delete-btn" style="display:none" onclick="deleteCard()">Sil</button>
-    </div>
-  </div>
-</div>
-
 <!-- SETTINGS MODAL -->
 <div class="overlay" id="overlay-settings" onclick="closeModal('overlay-settings')">
   <div class="modal" onclick="event.stopPropagation()">
@@ -411,15 +398,6 @@
         <button class="btn-secondary" style="margin-top:8px" onclick="forceRefreshCache()">♻️ Önbelleği Temizle ve Yenile</button>
       </div>
       <button class="btn-primary" onclick="saveSettings()">Kaydet</button>
-
-      <!-- KARTLARIM -->
-      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div class="section-title">KARTLARIM</div>
-          <button onclick="openAddCard()" style="font-size:12px;padding:5px 12px;background:var(--accent);border:none;border-radius:var(--r3);color:#000;font-weight:700;cursor:pointer">+ Kart Ekle</button>
-        </div>
-        <div id="settings-cards-list"></div>
-      </div>
 
       <!-- TATİL GÜNLERİ -->
       <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">

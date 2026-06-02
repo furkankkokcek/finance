@@ -146,9 +146,10 @@ function getMonthEvents(year,month){
     const amt=parseFloat(exp.amounts[month]||0);
     if(amt===0) return;
     const nominal=nominalDate(year,month,exp.dueDay);
-    // Payment on the entered nominal date
-    if(nominal.getMonth()+1===month){
-      events.push({day:nominal.getDate(),name:exp.name,amount:amt,type:exp.category,color:expColor(exp.category),expId:exp.id,isReminder:false});
+    // KK payment due date extends to next business day; all others use nominal date
+    const eventDate=exp.category==='kk'?getAdjustedDueDate(year,month,exp.dueDay):nominal;
+    if(eventDate.getMonth()+1===month){
+      events.push({day:eventDate.getDate(),name:exp.name,amount:amt,type:exp.category,color:expColor(exp.category),expId:exp.id,isReminder:false});
     }
     // PPF prev-business-day reminder — only when nominal falls on a holiday
     if(S.settings.ppfEnabled!==false&&exp.ppf&&isHoliday(nominal)){
