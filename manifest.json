@@ -1,25 +1,41 @@
 {
+  "id": "/finance/",
   "name": "FinTrack - Finansal Yönetim",
   "short_name": "FinTrack",
-  "description": "Kişisel gelir gider ve finansal özgürlük takipçisi",
+  "description": "Gelir, gider, kredi kartı ve finansal özgürlük takipçisi. Takvim, ödeme hatırlatmaları, PPF hesaplamaları ve abonelik takibi ile tam finansal kontrol.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#09090c",
   "theme_color": "#09090c",
   "orientation": "portrait",
+  "lang": "tr",
+  "dir": "ltr",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
