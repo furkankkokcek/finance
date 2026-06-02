@@ -11,17 +11,37 @@ function fmtTRY(n, showSign=false){
 function fmtPct(n){ return isNaN(n)?'%0':'%'+n.toFixed(1); }
 function uid(prefix){ return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
 
-// Turkish public holiday data
+// Turkish public holiday data (source: diyanet.gov.tr / publicholidays.me/turkey)
+// Arefe (eve) days included — official half-day holiday from 13:00
 const FIXED_HOLIDAYS=['01-01','04-23','05-01','05-19','07-15','08-30','10-29'];
 const RELIGIOUS_HOLIDAYS={
-  2024:['04-10','04-11','04-12','04-13','06-16','06-17','06-18','06-19'],
-  2025:['03-30','03-31','04-01','04-02','06-06','06-07','06-08','06-09'],
-  2026:['03-19','03-20','03-21','03-22','05-26','05-27','05-28','05-29'],
-  2027:['03-09','03-10','03-11','03-12','05-15','05-16','05-17','05-18'],
-  2028:['02-26','02-27','02-28','02-29','05-05','05-06','05-07','05-08'],
-  2029:['02-14','02-15','02-16','02-17','04-24','04-25','04-26','04-27'],
-  2030:['02-04','02-05','02-06','02-07','04-13','04-14','04-15','04-16'],
+  // Ramazan Bayramı (3 gün) + Kurban Bayramı (4 gün), arefe dahil
+  2024:['04-09','04-10','04-11','04-12','06-16','06-17','06-18','06-19'],
+  // Ramazan arefe 09 Nis; Ramazan 10-12 Nis; Kurban arefe 15 Haz (Cmt=tatil); Kurban 16-19 Haz
+  2025:['03-30','03-31','04-01','06-05','06-06','06-07','06-08','06-09'],
+  // Ramazan arefe 29 Mar (Cmt=tatil); Ramazan 30 Mar-01 Nis; Kurban arefe 05 Haz; Kurban 06-09 Haz
+  2026:['03-19','03-20','03-21','03-22','05-26','05-27','05-28','05-29','05-30'],
+  // Ramazan arefe 19 Mar; Ramazan 20-22 Mar; Kurban arefe 26 May; Kurban 27-30 May
+  2027:['03-08','03-09','03-10','03-11','05-16','05-17','05-18','05-19'],
+  // Ramazan arefe 08 Mar; Ramazan 09-11 Mar; Kurban arefe 15 May (Cmt=tatil); Kurban 16-19 May
+  2028:['02-27','02-28','02-29','03-01','05-05','05-06','05-07','05-08','05-09'],
+  // Ramazan arefe 27 Şub; Ramazan 28-29 Şub + 01 Mar; Kurban arefe 05 May; Kurban 06-09 May
+  2029:['02-13','02-14','02-15','02-16','04-23','04-24','04-25','04-26','04-27'],
+  2030:['02-03','02-04','02-05','02-06','04-12','04-13','04-14','04-15','04-16'],
 };
+
+// Public holiday check WITHOUT weekend (for calendar coloring)
+function isPublicHoliday(date){
+  const mm=String(date.getMonth()+1).padStart(2,'0');
+  const dd=String(date.getDate()).padStart(2,'0');
+  const mmdd=mm+'-'+dd;
+  if(FIXED_HOLIDAYS.includes(mmdd)) return true;
+  const yr=date.getFullYear();
+  if((RELIGIOUS_HOLIDAYS[yr]||[]).includes(mmdd)) return true;
+  const ymd=`${yr}-${mm}-${dd}`;
+  if((S.settings.customHolidays||[]).includes(ymd)) return true;
+  return false;
+}
 
 function isHoliday(date){
   const dow=date.getDay();
@@ -104,29 +124,31 @@ function cardStatementTotal(year,month,cardId){
 }
 
 // All payment/reminder events for a month (used by calendar)
+// Payments appear on the nominal (entered) due date — only PPF reminders use prevBusinessDay
 function getMonthEvents(year,month){
   const yd=getYear(year);
   const events=[];
-  const expColor=cat=>cat==='sabit'?'#3b82f6':cat==='kredi'?'#a855f7':cat==='kk'?'#f59e0b':cat==='abonelik'?'#ec4899':'#6b7280';
+  const expColor=cat=>cat==='sabit'?'#3b82f6':cat==='kredi'?'#ef4444':cat==='kk'?'#f59e0b':'#6b7280';
 
-  // Income items appear on the (adjusted) salary day
-  const salAdj=getAdjustedDueDate(year,month,S.settings.salaryDay);
-  if(salAdj.getFullYear()===year&&salAdj.getMonth()+1===month){
+  // Income items on nominal salary day
+  const salDay=nominalDate(year,month,S.settings.salaryDay);
+  if(salDay.getMonth()+1===month){
     yd.income.forEach(inc=>{
       const amt=parseFloat(inc.amounts[month]||0);
-      if(amt>0) events.push({day:salAdj.getDate(),name:inc.name,amount:amt,type:'income',color:'#22c55e',isReminder:false});
+      if(amt>0) events.push({day:salDay.getDate(),name:inc.name,amount:amt,type:'income',color:'#22c55e',isReminder:false});
     });
   }
 
-  // Expenses
+  // Expenses (abonelik excluded from calendar)
   yd.expenses.forEach(exp=>{
     if(!exp.dueDay) return;
+    if(exp.category==='abonelik') return;
     const amt=parseFloat(exp.amounts[month]||0);
     if(amt===0) return;
     const nominal=nominalDate(year,month,exp.dueDay);
-    const adj=getAdjustedDueDate(year,month,exp.dueDay);
-    if(adj.getFullYear()===year&&adj.getMonth()+1===month){
-      events.push({day:adj.getDate(),name:exp.name,amount:amt,type:exp.category,color:expColor(exp.category),expId:exp.id,isReminder:false});
+    // Payment on the entered nominal date
+    if(nominal.getMonth()+1===month){
+      events.push({day:nominal.getDate(),name:exp.name,amount:amt,type:exp.category,color:expColor(exp.category),expId:exp.id,isReminder:false});
     }
     // PPF prev-business-day reminder — only when nominal falls on a holiday
     if(S.settings.ppfEnabled!==false&&exp.ppf&&isHoliday(nominal)){
