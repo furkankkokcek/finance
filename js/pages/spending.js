@@ -67,30 +67,27 @@ function renderHarcama(){
 
 function findKKCardName(s){
   if(!s.kk) return 'Bilinmeyen';
-  // New format: kk.cardRef = S.cards[] id
-  if(s.kk.cardRef){
-    const card=(S.cards||[]).find(c=>c.id===s.kk.cardRef);
-    if(card) return card.name;
-  }
-  // Legacy: kk.cardId = expense id
-  if(s.kk.cardId){
+  // Look up by expense ID (kk.cardId is the KK expense id)
+  const expId=s.kk.cardId||'';
+  if(expId){
     for(const y of Object.values(S.years)){
-      const exp=(y.expenses||[]).find(e=>e.id===s.kk.cardId);
+      const exp=(y.expenses||[]).find(e=>e.id===expId);
       if(exp) return exp.name;
     }
-    // May be a card id in new format stored in cardId field
-    const card=(S.cards||[]).find(c=>c.id===s.kk.cardId);
-    if(card) return card.name;
   }
   return 'Bilinmeyen KK';
 }
 
 // Returns note about which statement month a KK purchase will fall into
-function spdCardNote(dateStr, cardId){
-  if(!dateStr||!cardId) return '';
-  const card=(S.cards||[]).find(c=>c.id===cardId);
-  if(!card||!card.statementDay) return '';
-  const per=statementPeriod(dateStr,card.statementDay);
+function spdCardNote(dateStr, expId){
+  if(!dateStr||!expId) return '';
+  let exp=null;
+  for(const y of Object.values(S.years)){
+    exp=(y.expenses||[]).find(e=>e.id===expId&&e.category==='kk');
+    if(exp) break;
+  }
+  if(!exp||!exp.statementDay) return '';
+  const per=statementPeriod(dateStr,exp.statementDay);
   return `→ ${MONTHS_FULL[per.month-1]} ${per.year} ekstresi`;
 }
 
@@ -108,17 +105,11 @@ function toggleSpdKK(cb){
   document.getElementById('spd-kk-section').style.display=cb.checked?'block':'none';
   if(cb.checked){
     const cardSel=document.getElementById('spd-kk-card');
-    if(S.cards&&S.cards.length>0){
-      cardSel.innerHTML=S.cards.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-      cardSel.dataset.mode='cards';
-    } else {
-      // Legacy: use KK expenses
-      const cards=getYear(S.settings.currentYear).expenses.filter(e=>e.category==='kk');
-      cardSel.innerHTML=cards.length
-        ?cards.map(k=>`<option value="${k.id}">${k.name}</option>`).join('')
-        :'<option value="">— KK tanımlanmamış —</option>';
-      cardSel.dataset.mode='expenses';
-    }
+    const cards=getYear(S.settings.currentYear).expenses.filter(e=>e.category==='kk');
+    cardSel.innerHTML=cards.length
+      ?cards.map(k=>`<option value="${k.id}">${k.name}</option>`).join('')
+      :'<option value="">— KK tanımlanmamış —</option>';
+    cardSel.dataset.mode='expenses';
     updateSpdCardNote();
   }
 }
@@ -128,7 +119,7 @@ function updateSpdCardNote(){
   if(!noteEl) return;
   const cardSel=document.getElementById('spd-kk-card');
   const dateInp=document.getElementById('spd-date');
-  if(cardSel&&cardSel.dataset.mode==='cards'&&dateInp&&cardSel.value){
+  if(cardSel&&dateInp&&cardSel.value){
     noteEl.textContent=spdCardNote(dateInp.value,cardSel.value);
   } else {
     noteEl.textContent='';
