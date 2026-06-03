@@ -172,7 +172,11 @@ function getMonthlyData(year,month){
     if(exp.category==='sabit') sabitTotal+=amt;
     else if(exp.category==='kredi') krediTotal+=amt;
     else if(exp.category==='kk') kkTotal+=amt;
-    else if(exp.category==='abonelik') abonelikTotal+=amt;
+    else if(exp.category==='abonelik'){
+      // Only count abonelik items that are NOT linked to a KK card;
+      // linked ones are already embedded in that card's monthly amount.
+      if(!exp.cardId) abonelikTotal+=amt;
+    }
     if(exp.ppf) ppfTotal+=amt;
   });
   const totalExpense=sabitTotal+krediTotal+kkTotal+abonelikTotal;
