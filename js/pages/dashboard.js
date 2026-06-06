@@ -49,7 +49,7 @@ function renderDashboard(){
     <div class="stat-card">
       <div class="stat-label">💲 Nakit Kalan</div>
       <div class="stat-value ${d.cashLeft>=0?'pos':'neg'}">${fmtTRY(d.cashLeft)}</div>
-      <div class="stat-sub">Gelir - Gider - Yatırım</div>
+      <div class="stat-sub">Gelir - Gider</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">📈 Tasarruf Oranı</div>
