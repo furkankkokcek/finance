@@ -2,7 +2,7 @@
 
 const INV_TYPES = {hisse:'Hisse',fon:'Fon',altin:'Altın',btc:'Bitcoin',kripto:'Kripto',diger:'Diğer'};
 const INV_COLORS = {hisse:'#3b82f6',fon:'#8b5cf6',altin:'#f59e0b',btc:'#f97316',kripto:'#ec4899',diger:'#6b7280'};
-const ALTIN_SUBTYPES = {gram:'Gram Altın', ayar22:'22 Ayar Altın', ceyrek:'Çeyrek Altın', sertifika:'Darphane Sertifikası'};
+const ALTIN_SUBTYPES = {gram:'Gram Altın', ayar22:'22 Ayar Altın', ceyrek:'Çeyrek Altın'};
 
 let _currentUsdRate = 0;
 let _fetchingUsdRate = false;
@@ -59,11 +59,11 @@ async function getBistData(){
   return _bistData;
 }
 
-async function fetchBistPrice(ticker){
+async function fetchBistPrice(ticker, cachedBistData){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
 
-  // 1. genelpara bulk borsa data
-  const bistData=await getBistData();
+  // 1. genelpara bulk borsa data (pre-loaded by caller to avoid race conditions)
+  const bistData=cachedBistData||await getBistData();
   if(bistData){
     const s=bistData[code];
     if(s){
@@ -72,7 +72,7 @@ async function fetchBistPrice(ticker){
     }
   }
 
-  // 2. BigPara hisseyuzeysel — covers sertifikalar (ALTINS1) that may not be in borsa.json
+  // 2. BigPara direct
   try{
     const res=await fetch(`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`,{signal:AbortSignal.timeout(6000)});
     if(res.ok){
@@ -83,7 +83,34 @@ async function fetchBistPrice(ticker){
     }
   }catch{}
 
-  // 3. Yahoo Finance proxies
+  // 3. BigPara via allorigins proxy
+  try{
+    const bpUrl=`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`;
+    const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,{signal:AbortSignal.timeout(10000)});
+    if(res.ok){
+      const j=await res.json();
+      const d=JSON.parse(j.contents||'{}');
+      const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
+      const price=parseFloat((raw??'').toString().replace(',','.'));
+      if(price>0) return price;
+    }
+  }catch{}
+
+  // 4. genelpara via corsproxy (if direct was blocked by CORS)
+  try{
+    const gpUrl='https://api.genelpara.com/embed/borsa.json';
+    const res=await fetch(`https://corsproxy.io/?${encodeURIComponent(gpUrl)}`,{signal:AbortSignal.timeout(8000)});
+    if(res.ok){
+      const data=await res.json();
+      const s=data[code];
+      if(s){
+        const price=parseFloat(s.deger||s.son||s.kapanis||s.satis||0);
+        if(price>0) return price;
+      }
+    }
+  }catch{}
+
+  // 5. Yahoo Finance proxies
   return fetchYahooPrice(ticker);
 }
 
@@ -174,32 +201,22 @@ async function fetchAllInvPrices(){
 
   const promises=[];
 
-  // Gold — all subtypes use fetchAltinPrices(); sertifika = gram × 0.01 × 0.995
+  // Gold
   const goldInvs=port.filter(i=>i.type==='altin');
   if(goldInvs.length){
-    const physicalGold=goldInvs.filter(i=>i.goldSubtype!=='sertifika');
-    const sertifikaInvs=goldInvs.filter(i=>i.goldSubtype==='sertifika');
-    const allGoldNeedPrice=[...physicalGold,...sertifikaInvs];
-    if(allGoldNeedPrice.length){
-      promises.push(
-        fetchAltinPrices()
-          .then(prices=>{
-            if(!prices?.gram) throw new Error('no altin data');
-            physicalGold.forEach(i=>{
-              const sub=i.goldSubtype||'gram';
-              const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
-              if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
-              else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
-            });
-            // Darphane Sertifikası = 0.01g × 0.995 purity
-            sertifikaInvs.forEach(i=>{
-              const price=Math.round(prices.gram*0.01*0.995*100)/100;
-              i.currentPrice=price; _priceStatus[i.id]='ok';
-            });
-          })
-          .catch(()=>{ allGoldNeedPrice.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
-      );
-    }
+    promises.push(
+      fetchAltinPrices()
+        .then(prices=>{
+          if(!prices?.gram) throw new Error('no altin data');
+          goldInvs.forEach(i=>{
+            const sub=i.goldSubtype||'gram';
+            const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
+            if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
+            else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
+          });
+        })
+        .catch(()=>{ goldInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+    );
   }
 
   // Bitcoin + XAUT gold fallback — one combined CoinGecko call to avoid rate limiting
@@ -242,15 +259,18 @@ async function fetchAllInvPrices(){
     );
   }
 
-  // Stocks & funds — Yahoo Finance via allorigins proxy
-  const yahooInvs=port.filter(i=>(i.type==='hisse'||i.type==='fon')&&i.ticker);
-  yahooInvs.forEach(inv=>{
-    promises.push(
-      fetchYahooPrice(inv.ticker)
-        .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; })
-        .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; })
-    );
-  });
+  // Stocks & funds — pre-load BIST bulk data once so parallel calls don't race
+  const bistInvs=port.filter(i=>(i.type==='hisse'||i.type==='fon')&&i.ticker);
+  if(bistInvs.length){
+    const bistBulk=await getBistData();
+    bistInvs.forEach(inv=>{
+      promises.push(
+        fetchBistPrice(inv.ticker, bistBulk)
+          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; })
+          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; })
+      );
+    });
+  }
 
   await Promise.allSettled(promises);
   _lastPriceFetch=Date.now();
@@ -390,7 +410,7 @@ function renderYatirim(){
               <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${tc}22;color:${tc};font-weight:700">${INV_TYPES[inv.type]||inv.type}</span>
               ${inv.ticker?`<span style="font-size:10px;color:var(--muted)">${inv.ticker}</span>`:inv.type==='altin'&&inv.goldSubtype?`<span style="font-size:10px;color:var(--muted)">${ALTIN_SUBTYPES[inv.goldSubtype]||inv.goldSubtype}</span>`:''}
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet'}${inv.type==='altin'&&inv.goldSubtype==='sertifika'?` · ${(c.totalQty*0.01).toFixed(2)}g altın`:''}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet'}</div>
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="openAddLot('${inv.id}')" style="padding:5px 10px;background:var(--accent);border:none;border-radius:var(--r3);color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Alım</button>
