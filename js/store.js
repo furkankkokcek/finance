@@ -8,6 +8,7 @@ const SPD_CATS = {market:'Market',restoran:'Restoran',ulasim:'Ulaşım',giyim:'G
 let S = {
   version:4, setupDone:false,
   cards:[],
+  investmentPortfolio:[],
   settings:{
     salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1,
     netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true,
@@ -26,6 +27,7 @@ function getYear(y){
 
 function migrateToV4(data){
   if(!data.cards) data.cards=[];
+  if(!data.investmentPortfolio) data.investmentPortfolio=[];
   if(!data.settings) data.settings={};
   if(!data.settings.customHolidays) data.settings.customHolidays=[];
   if(!data.notifLog) data.notifLog=[];
