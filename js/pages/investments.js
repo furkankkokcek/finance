@@ -128,6 +128,16 @@ function refreshPrices(){
   else fetchCurrentUsdRate();
 }
 
+function updateInvPrice(id, val){
+  const inv=(S.investmentPortfolio||[]).find(x=>x.id===id);
+  if(!inv) return;
+  const price=parseFloat(val)||0;
+  if(price===inv.currentPrice) return;
+  inv.currentPrice=price;
+  saveS();
+  renderYatirim();
+}
+
 // ── Calculations ─────────────────────────────────────────────────────────────
 
 function getPortfolio(){
@@ -254,9 +264,13 @@ function renderYatirim(){
             <div style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
-            <div style="font-size:10px;color:var(--muted)">Güncel Fiyat</div>
-            <div style="font-size:12px;font-weight:600;color:var(--text)">${priceStr}</div>
-            <div style="font-size:11px;color:var(--muted)">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Fiyat</div>
+            <input type="number" min="0" step="any"
+              value="${parseFloat(inv.currentPrice||0)||''}"
+              placeholder="Gir…"
+              onchange="updateInvPrice('${inv.id}',this.value)"
+              style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:2px 0;outline:none">
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
             <div style="font-size:10px;color:var(--muted)">Kâr / Zarar</div>
