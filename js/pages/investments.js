@@ -12,6 +12,13 @@ let _priceStatus = {};     // { invId: 'ok'|'err'|'loading' }
 let _altinCache = null;
 let _altinFetching = false;
 
+function calcAltinFromGram(gramHas){
+  const gram=Math.round(gramHas*100)/100;
+  const ayar22=Math.round(gramHas*(22/24)*100)/100;
+  const ceyrek=Math.round(gramHas*(22/24)*1.752*1.10*100)/100;
+  return {gram,ayar22,ceyrek,ts:Date.now()};
+}
+
 // ── USD rate ────────────────────────────────────────────────────────────────
 
 async function fetchCurrentUsdRate(){
@@ -21,7 +28,15 @@ async function fetchCurrentUsdRate(){
     const res=await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
     const data=await res.json();
     const rate=data?.usd?.try;
-    if(rate>0){ _currentUsdRate=rate; fetchAllInvPrices(); }
+    if(rate>0){
+      _currentUsdRate=rate;
+      // usd.xau = troy oz of gold per 1 USD → free gold price with no extra request
+      const xauPerUsd=data?.usd?.xau;
+      if(xauPerUsd>0&&!_altinCache){
+        _altinCache=calcAltinFromGram((1/xauPerUsd)/31.1035*rate);
+      }
+      fetchAllInvPrices();
+    }
   }catch{}
   _fetchingUsdRate=false;
 }
@@ -78,49 +93,24 @@ async function fetchAltinPrices(){
   _altinFetching=true;
 
   function parseTR(v){ return parseFloat((v||'').toString().replace(/\./g,'').replace(',','.')); }
-  function calcSubtypes(gramHas){
-    // gramHas = 24k (has) gold price per gram in TRY
-    const gram=Math.round(gramHas*100)/100;
-    const ayar22=Math.round(gramHas*(22/24)*100)/100;
-    // Çeyrek altın ≈ 1.752g of 22k gold + market premium (~10%)
-    const ceyrek=Math.round(gramHas*(22/24)*1.752*1.10*100)/100;
-    return {gram,ayar22,ceyrek,ts:Date.now()};
-  }
 
-  // 1. fawazahmed0 XAU API — same CDN we use for USD rates, always works from browser
+  // 1. Already set by fetchCurrentUsdRate via usd.xau — return early if so
+  if(_altinCache){ _altinFetching=false; return _altinCache; }
+
+  // 2. fawazahmed0 XAU endpoint (same CDN as USD)
   try{
-    const urls=[
-      `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json`,
-      `https://latest.currency-api.pages.dev/v1/currencies/xau.json`
-    ];
-    for(const url of urls){
+    for(const url of['https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json','https://latest.currency-api.pages.dev/v1/currencies/xau.json']){
       try{
         const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
         if(!res.ok) continue;
         const data=await res.json();
         const tryPerOz=data?.xau?.try;
-        if(tryPerOz>0){
-          const gramHas=tryPerOz/31.1035;
-          _altinCache=calcSubtypes(gramHas);
-          break;
-        }
+        if(tryPerOz>0){ _altinCache=calcAltinFromGram(tryPerOz/31.1035); break; }
       }catch{}
     }
   }catch{}
 
-  // 2. CoinGecko XAUT — Tether Gold (1 XAUT = 1 troy oz physical gold), same API used for BTC
-  if(!_altinCache){
-    try{
-      const res=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether-gold,pax-gold&vs_currencies=try',{signal:AbortSignal.timeout(8000)});
-      if(res.ok){
-        const data=await res.json();
-        const tryPerOz=data?.['tether-gold']?.try||data?.['pax-gold']?.try;
-        if(tryPerOz>0){ _altinCache=calcSubtypes(tryPerOz/31.1035); }
-      }
-    }catch{}
-  }
-
-  // 3. truncgil — actual Turkish market prices (gram, 22 ayar bilezik, çeyrek)
+  // 3. truncgil — Turkish market prices (gram, 22 ayar bilezik, çeyrek)
   if(!_altinCache){
     try{
       const res=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(8000)});
@@ -214,16 +204,23 @@ async function fetchAllInvPrices(){
     }
   }
 
-  // Bitcoin — CoinGecko
+  // Bitcoin + XAUT gold fallback — one combined CoinGecko call to avoid rate limiting
   const btcInvs=port.filter(i=>i.type==='btc');
-  if(btcInvs.length){
+  const needXaut=physicalGold.length>0&&!_altinCache;
+  if(btcInvs.length||needXaut){
+    const ids=['bitcoin'];
+    if(needXaut) ids.push('tether-gold','pax-gold');
     promises.push(
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try')
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=try`,{signal:AbortSignal.timeout(10000)})
         .then(r=>r.json())
         .then(data=>{
-          const price=data?.bitcoin?.try;
-          if(price) btcInvs.forEach(i=>{ i.currentPrice=price; _priceStatus[i.id]='ok'; });
+          const btcPrice=data?.bitcoin?.try;
+          if(btcPrice) btcInvs.forEach(i=>{ i.currentPrice=btcPrice; _priceStatus[i.id]='ok'; });
           else btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; });
+          if(needXaut&&!_altinCache){
+            const tryPerOz=data?.['tether-gold']?.try||data?.['pax-gold']?.try;
+            if(tryPerOz>0) _altinCache=calcAltinFromGram(tryPerOz/31.1035);
+          }
         })
         .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
     );
