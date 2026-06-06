@@ -193,6 +193,14 @@
         <label id="inv-ticker-label">Yahoo Finance Sembolü</label>
         <input type="text" id="inv-ticker" placeholder="örn: GARAN.IS, THYAO.IS" style="text-transform:uppercase">
       </div>
+      <div class="field" id="inv-gold-subtype-field" style="display:none">
+        <label>Altın Tipi</label>
+        <select id="inv-gold-subtype">
+          <option value="gram">Gram Altın</option>
+          <option value="ayar22">22 Ayar Altın</option>
+          <option value="ceyrek">Çeyrek Altın</option>
+        </select>
+      </div>
       <div id="inv-auto-note" style="display:none;font-size:11px;color:var(--accent);padding:4px 0 8px"></div>
       <div class="field"><label>Güncel Fiyat (₺) <span style="font-size:10px;color:var(--muted);font-weight:400">— sembol girilince otomatik güncellenir</span></label><input type="number" id="inv-cur-price" min="0" step="0.01" placeholder="0.00"></div>
       <button class="btn-primary" onclick="saveInv()">Kaydet</button>
