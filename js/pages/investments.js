@@ -174,32 +174,30 @@ async function fetchAllInvPrices(){
 
   const promises=[];
 
-  // Gold — split: sertifika via BIST (ALTINS1), physical via fawazahmed0 XAU
+  // Gold — all subtypes use fetchAltinPrices(); sertifika = gram × 0.01 × 0.995
   const goldInvs=port.filter(i=>i.type==='altin');
   if(goldInvs.length){
-    // Darphane Sertifikası — BIST-listed, fetch like a stock
-    goldInvs.filter(i=>i.goldSubtype==='sertifika').forEach(inv=>{
-      promises.push(
-        fetchBistPrice('ALTINS1')
-          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; })
-          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; })
-      );
-    });
-    // Physical gold: gram, 22 ayar, çeyrek
     const physicalGold=goldInvs.filter(i=>i.goldSubtype!=='sertifika');
-    if(physicalGold.length){
+    const sertifikaInvs=goldInvs.filter(i=>i.goldSubtype==='sertifika');
+    const allGoldNeedPrice=[...physicalGold,...sertifikaInvs];
+    if(allGoldNeedPrice.length){
       promises.push(
         fetchAltinPrices()
           .then(prices=>{
-            if(!prices) throw new Error('no altin data');
+            if(!prices?.gram) throw new Error('no altin data');
             physicalGold.forEach(i=>{
               const sub=i.goldSubtype||'gram';
               const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
               if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
               else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
             });
+            // Darphane Sertifikası = 0.01g × 0.995 purity
+            sertifikaInvs.forEach(i=>{
+              const price=Math.round(prices.gram*0.01*0.995*100)/100;
+              i.currentPrice=price; _priceStatus[i.id]='ok';
+            });
           })
-          .catch(()=>{ physicalGold.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+          .catch(()=>{ allGoldNeedPrice.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
       );
     }
   }
