@@ -214,8 +214,9 @@ async function fetchAllInvPrices(){
             if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
             else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
           });
+          renderYatirim();
         })
-        .catch(()=>{ goldInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+        .catch(()=>{ goldInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
     );
   }
 
@@ -236,8 +237,9 @@ async function fetchAllInvPrices(){
             const tryPerOz=data?.['tether-gold']?.try||data?.['pax-gold']?.try;
             if(tryPerOz>0) _altinCache=calcAltinFromGram(tryPerOz/31.1035);
           }
+          renderYatirim();
         })
-        .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+        .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
     );
   }
 
@@ -254,20 +256,21 @@ async function fetchAllInvPrices(){
             if(price){ i.currentPrice=price; _priceStatus[i.id]='ok'; }
             else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
           });
+          renderYatirim();
         })
-        .catch(()=>{ kriptoInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+        .catch(()=>{ kriptoInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
     );
   }
 
-  // Stocks & funds — pre-load BIST bulk data once so parallel calls don't race
+  // Stocks & funds — start BIST bulk fetch immediately (parallel with gold/BTC/kripto)
   const bistInvs=port.filter(i=>(i.type==='hisse'||i.type==='fon')&&i.ticker);
   if(bistInvs.length){
-    const bistBulk=await getBistData();
+    const bistBulkP=getBistData();
     bistInvs.forEach(inv=>{
       promises.push(
-        fetchBistPrice(inv.ticker, bistBulk)
-          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; })
-          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; })
+        bistBulkP.then(bistBulk=>fetchBistPrice(inv.ticker, bistBulk))
+          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; renderYatirim(); })
+          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; renderYatirim(); })
       );
     });
   }
@@ -474,8 +477,8 @@ function onInvTypeChange(){
   } else if(type==='hisse'||type==='fon'){
     tickerField.style.display='block';
     autoNote.style.display='none';
-    tickerLabel.textContent='Yahoo Finance Sembolü';
-    tickerEl.placeholder=type==='hisse'?'örn: GARAN.IS, THYAO.IS':'örn: 0P00018M4X.IS';
+    tickerLabel.textContent='Borsa Sembolü';
+    tickerEl.placeholder=type==='hisse'?'örn: GARAN, THYAO':'örn: YFAS';
   } else {
     tickerField.style.display='none';
     autoNote.style.display='none';
