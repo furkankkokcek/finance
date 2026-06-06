@@ -221,7 +221,7 @@ async function fetchAllInvPrices(){
 
   // Bitcoin + XAUT gold fallback — one combined CoinGecko call to avoid rate limiting
   const btcInvs=port.filter(i=>i.type==='btc');
-  const needXaut=physicalGold.length>0&&!_altinCache;
+  const needXaut=goldInvs.length>0&&!_altinCache;
   if(btcInvs.length||needXaut){
     const ids=['bitcoin'];
     if(needXaut) ids.push('tether-gold','pax-gold');
