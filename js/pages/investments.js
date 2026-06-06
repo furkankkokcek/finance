@@ -25,6 +25,37 @@ async function fetchCurrentUsdRate(){
 
 // ── Live price helpers ───────────────────────────────────────────────────────
 
+// genelpara.com bulk BIST data — fetched once, cached in module scope
+let _bistData = null;
+let _bistFetching = false;
+
+async function getBistData(){
+  if(_bistData) return _bistData;
+  if(_bistFetching) return null;
+  _bistFetching=true;
+  try{
+    const res=await fetch('https://api.genelpara.com/embed/borsa.json',{signal:AbortSignal.timeout(8000)});
+    if(res.ok){ _bistData=await res.json(); }
+  }catch{}
+  _bistFetching=false;
+  return _bistData;
+}
+
+async function fetchBistPrice(ticker){
+  const code=ticker.replace(/\.IS$/i,'').toUpperCase();
+  const data=await getBistData();
+  if(data){
+    const s=data[code];
+    if(s){
+      // Try common field names
+      const price=parseFloat(s.deger||s.son||s.kapanis||s.satis||0);
+      if(price>0) return price;
+    }
+  }
+  // Fallback to Yahoo Finance proxies
+  return fetchYahooPrice(ticker);
+}
+
 async function fetchYahooPrice(ticker){
   const sym=ticker.toUpperCase();
   const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
