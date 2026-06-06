@@ -181,7 +181,7 @@ function getMonthlyData(year,month){
   });
   const totalExpense=sabitTotal+krediTotal+kkTotal+abonelikTotal;
   const investment=parseFloat(yd.investments[month]||0);
-  const cashLeft=totalIncome-(totalExpense+investment);
+  const cashLeft=totalIncome-totalExpense;
   const savingsRate=totalIncome>0?(investment/totalIncome)*100:0;
   const spendingTotal=yd.spending.filter(s=>{
     const d=new Date(s.date);
