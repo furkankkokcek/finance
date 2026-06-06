@@ -2,12 +2,15 @@
 
 const INV_TYPES = {hisse:'Hisse',fon:'Fon',altin:'Altın',btc:'Bitcoin',kripto:'Kripto',diger:'Diğer'};
 const INV_COLORS = {hisse:'#3b82f6',fon:'#8b5cf6',altin:'#f59e0b',btc:'#f97316',kripto:'#ec4899',diger:'#6b7280'};
+const ALTIN_SUBTYPES = {gram:'Gram Altın', ayar22:'22 Ayar Altın', ceyrek:'Çeyrek Altın'};
 
 let _currentUsdRate = 0;
 let _fetchingUsdRate = false;
 let _fetchingPrices = false;
 let _lastPriceFetch = 0;   // timestamp ms
 let _priceStatus = {};     // { invId: 'ok'|'err'|'loading' }
+let _altinCache = null;
+let _altinFetching = false;
 
 // ── USD rate ────────────────────────────────────────────────────────────────
 
@@ -56,6 +59,53 @@ async function fetchBistPrice(ticker){
   return fetchYahooPrice(ticker);
 }
 
+async function fetchAltinPrices(){
+  if(_altinCache&&Date.now()-_altinCache.ts<5*60*1000) return _altinCache;
+  if(_altinFetching) return _altinCache;
+  _altinFetching=true;
+  try{
+    const url='https://anlikaltinfiyatlari.com/altin/kapalicarsi';
+    const res=await fetch(
+      `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+      {signal:AbortSignal.timeout(12000)}
+    );
+    const j=await res.json();
+    if(!j||!j.contents) throw new Error('empty');
+    const doc=new DOMParser().parseFromString(j.contents,'text/html');
+
+    function parseNum(s){ return parseFloat(s.replace(/\./g,'').replace(',','.')); }
+    function findPrice(keywords){
+      // Row-based: look for <tr> containing the keyword, extract first price > 500
+      for(const row of doc.querySelectorAll('tr')){
+        const lower=row.textContent.toLowerCase();
+        if(keywords.some(k=>lower.includes(k))){
+          const nums=(row.textContent.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(parseNum).filter(v=>v>500);
+          if(nums.length) return nums[0];
+        }
+      }
+      // Sibling-based: find element whose text equals the keyword, get next sibling price
+      for(const el of doc.querySelectorAll('td,th,div,span,li')){
+        const lower=el.textContent.trim().toLowerCase();
+        if(keywords.some(k=>lower===k||lower.startsWith(k+' '))){
+          let sib=el.nextElementSibling;
+          while(sib){
+            const nums=(sib.textContent.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(parseNum).filter(v=>v>500);
+            if(nums.length) return nums[0];
+            sib=sib.nextElementSibling;
+          }
+        }
+      }
+      return null;
+    }
+    const gram=findPrice(['gram altın','gram altin','has altın','has altin']);
+    const ayar22=findPrice(['22 ayar']);
+    const ceyrek=findPrice(['çeyrek altın','çeyrek altin','çeyrek','ceyrek']);
+    if(gram>0) _altinCache={gram,ayar22:ayar22||0,ceyrek:ceyrek||0,ts:Date.now()};
+  }catch{}
+  _altinFetching=false;
+  return _altinCache;
+}
+
 async function fetchYahooPrice(ticker){
   const sym=ticker.toUpperCase();
   const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
@@ -89,14 +139,19 @@ async function fetchAllInvPrices(){
 
   const promises=[];
 
-  // Gold — GC=F (USD/troy oz) → gram TL
+  // Gold — anlikaltinfiyatlari.com (per subtype)
   const goldInvs=port.filter(i=>i.type==='altin');
-  if(goldInvs.length&&_currentUsdRate>0){
+  if(goldInvs.length){
     promises.push(
-      fetchYahooPrice('GC=F')
-        .then(usdOz=>{
-          const gramTL=(usdOz/31.1035)*_currentUsdRate;
-          goldInvs.forEach(i=>{ i.currentPrice=Math.round(gramTL*100)/100; _priceStatus[i.id]='ok'; });
+      fetchAltinPrices()
+        .then(prices=>{
+          if(!prices) throw new Error('no altin data');
+          goldInvs.forEach(i=>{
+            const sub=i.goldSubtype||'gram';
+            const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
+            if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
+            else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
+          });
         })
         .catch(()=>{ goldInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
     );
@@ -155,6 +210,8 @@ async function fetchAllInvPrices(){
 function refreshPrices(){
   _priceStatus={};
   _lastPriceFetch=0;
+  _altinCache=null;
+  _bistData=null;
   if(_currentUsdRate>0) fetchAllInvPrices();
   else fetchCurrentUsdRate();
 }
@@ -279,9 +336,9 @@ function renderYatirim(){
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span style="font-size:14px;font-weight:700;color:var(--text)">${inv.name}${statusBadge}</span>
               <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${tc}22;color:${tc};font-weight:700">${INV_TYPES[inv.type]||inv.type}</span>
-              ${inv.ticker?`<span style="font-size:10px;color:var(--muted)">${inv.ticker}</span>`:''}
+              ${inv.ticker?`<span style="font-size:10px;color:var(--muted)">${inv.ticker}</span>`:inv.type==='altin'&&inv.goldSubtype?`<span style="font-size:10px;color:var(--muted)">${ALTIN_SUBTYPES[inv.goldSubtype]||inv.goldSubtype}</span>`:''}
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} adet</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet'}</div>
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="openAddLot('${inv.id}')" style="padding:5px 10px;background:var(--accent);border:none;border-radius:var(--r3);color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Alım</button>
@@ -326,10 +383,13 @@ function onInvTypeChange(){
   const autoNote=document.getElementById('inv-auto-note');
   const tickerLabel=document.getElementById('inv-ticker-label');
   const tickerEl=document.getElementById('inv-ticker');
+  const goldSubField=document.getElementById('inv-gold-subtype-field');
+  if(goldSubField) goldSubField.style.display='none';
   if(type==='altin'){
     tickerField.style.display='none';
+    if(goldSubField) goldSubField.style.display='block';
     autoNote.style.display='block';
-    autoNote.textContent='✓ Gram altın fiyatı otomatik çekilir (Yahoo Finance GC=F × USD/TL)';
+    autoNote.textContent='✓ Fiyat anlikaltinfiyatlari.com\'dan otomatik çekilir';
   } else if(type==='btc'){
     tickerField.style.display='none';
     autoNote.style.display='block';
@@ -357,6 +417,7 @@ function openAddInv(){
   document.getElementById('inv-type').value='hisse';
   document.getElementById('inv-cur-price').value='';
   document.getElementById('inv-ticker').value='';
+  document.getElementById('inv-gold-subtype').value='gram';
   document.getElementById('inv-delete-btn').style.display='none';
   document.getElementById('inv-lots-section').style.display='none';
   onInvTypeChange();
@@ -372,6 +433,7 @@ function openEditInv(id){
   document.getElementById('inv-type').value=inv.type||'hisse';
   document.getElementById('inv-cur-price').value=inv.currentPrice||'';
   document.getElementById('inv-ticker').value=inv.ticker||'';
+  document.getElementById('inv-gold-subtype').value=inv.goldSubtype||'gram';
   document.getElementById('inv-delete-btn').style.display='block';
   renderInvLots(inv);
   document.getElementById('inv-lots-section').style.display='block';
@@ -413,11 +475,13 @@ function saveInv(){
   const type=document.getElementById('inv-type').value;
   const rawTicker=document.getElementById('inv-ticker').value.trim();
   const ticker=rawTicker?(type==='kripto'?rawTicker.toLowerCase():rawTicker.toUpperCase()):'';
+  const goldSubtype=type==='altin'?document.getElementById('inv-gold-subtype').value:'';
   const obj={
     id:id||uid('ip'),
     name,
     type,
     ticker:ticker||'',
+    goldSubtype:goldSubtype||'',
     currentPrice:parseFloat(document.getElementById('inv-cur-price').value)||0,
     lots:existing?existing.lots:[]
   };
