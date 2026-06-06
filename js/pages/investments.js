@@ -46,16 +46,29 @@ async function getBistData(){
 
 async function fetchBistPrice(ticker){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
-  const data=await getBistData();
-  if(data){
-    const s=data[code];
+
+  // 1. genelpara bulk borsa data
+  const bistData=await getBistData();
+  if(bistData){
+    const s=bistData[code];
     if(s){
-      // Try common field names
       const price=parseFloat(s.deger||s.son||s.kapanis||s.satis||0);
       if(price>0) return price;
     }
   }
-  // Fallback to Yahoo Finance proxies
+
+  // 2. BigPara hisseyuzeysel — covers sertifikalar (ALTINS1) that may not be in borsa.json
+  try{
+    const res=await fetch(`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`,{signal:AbortSignal.timeout(6000)});
+    if(res.ok){
+      const d=await res.json();
+      const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
+      const price=parseFloat((raw??'').toString().replace(',','.'));
+      if(price>0) return price;
+    }
+  }catch{}
+
+  // 3. Yahoo Finance proxies
   return fetchYahooPrice(ticker);
 }
 
@@ -95,7 +108,19 @@ async function fetchAltinPrices(){
     }
   }catch{}
 
-  // 2. truncgil — actual Turkish market prices (gram, 22 ayar bilezik, çeyrek)
+  // 2. CoinGecko XAUT — Tether Gold (1 XAUT = 1 troy oz physical gold), same API used for BTC
+  if(!_altinCache){
+    try{
+      const res=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether-gold,pax-gold&vs_currencies=try',{signal:AbortSignal.timeout(8000)});
+      if(res.ok){
+        const data=await res.json();
+        const tryPerOz=data?.['tether-gold']?.try||data?.['pax-gold']?.try;
+        if(tryPerOz>0){ _altinCache=calcSubtypes(tryPerOz/31.1035); }
+      }
+    }catch{}
+  }
+
+  // 3. truncgil — actual Turkish market prices (gram, 22 ayar bilezik, çeyrek)
   if(!_altinCache){
     try{
       const res=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(8000)});
@@ -109,7 +134,7 @@ async function fetchAltinPrices(){
     }catch{}
   }
 
-  // 3. genelpara — GA=gram altın, C=çeyrek
+  // 4. genelpara — GA=gram altın, C=çeyrek
   if(!_altinCache){
     try{
       const res=await fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(8000)});
