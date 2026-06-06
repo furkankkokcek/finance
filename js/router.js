@@ -6,7 +6,7 @@ function showPage(page,btn){
   document.getElementById('page-'+page).classList.add('active');
   if(btn) btn.classList.add('active');
   currentPage=page;
-  ['gelir','gider','harcama'].forEach(p=>{ document.getElementById('fab-'+p).style.display=(p===page?'flex':'none'); });
+  ['gelir','gider','harcama','yatirim'].forEach(p=>{ document.getElementById('fab-'+p).style.display=(p===page?'flex':'none'); });
   renderPage(page);
 }
 
@@ -17,6 +17,7 @@ function renderPage(page){
   else if(page==='harcama') renderHarcama();
   else if(page==='ozgurluk') renderOzgurluk();
   else if(page==='takvim') renderTakvim();
+  else if(page==='yatirim') renderYatirim();
 }
 
 function buildMonthTabs(containerId,page){

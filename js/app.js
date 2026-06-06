@@ -3,6 +3,7 @@
 function initApp(){
   if(!S.notifLog) S.notifLog=[];
   if(!S.cards) S.cards=[];
+  if(!S.investmentPortfolio) S.investmentPortfolio=[];
   if(!S.settings.customHolidays) S.settings.customHolidays=[];
   document.getElementById('year-btn').textContent=S.settings.currentYear;
   buildMonthTabs('month-tabs','');
