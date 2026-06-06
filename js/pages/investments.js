@@ -65,22 +65,51 @@ async function fetchAltinPrices(){
   _altinFetching=true;
 
   function parseTR(v){ return parseFloat((v||'').toString().replace(/\./g,'').replace(',','.')); }
+  function calcSubtypes(gramHas){
+    // gramHas = 24k (has) gold price per gram in TRY
+    const gram=Math.round(gramHas*100)/100;
+    const ayar22=Math.round(gramHas*(22/24)*100)/100;
+    // Çeyrek altın ≈ 1.752g of 22k gold + market premium (~10%)
+    const ceyrek=Math.round(gramHas*(22/24)*1.752*1.10*100)/100;
+    return {gram,ayar22,ceyrek,ts:Date.now()};
+  }
 
-  // 1. truncgil — has gram, 22 ayar bilezik, çeyrek as separate keys
+  // 1. fawazahmed0 XAU API — same CDN we use for USD rates, always works from browser
   try{
-    const res=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(8000)});
-    if(res.ok){
-      const data=await res.json();
-      const gram=parseTR(data['Gram Altın']?.['Satış']);
-      const ayar22=parseTR(data['22 Ayar Bilezik']?.['Satış']||data['22 Ayar']?.['Satış']);
-      const ceyrek=parseTR(data['Çeyrek Altın']?.['Satış']);
-      if(gram>0){
-        _altinCache={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-      }
+    const urls=[
+      `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json`,
+      `https://latest.currency-api.pages.dev/v1/currencies/xau.json`
+    ];
+    for(const url of urls){
+      try{
+        const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
+        if(!res.ok) continue;
+        const data=await res.json();
+        const tryPerOz=data?.xau?.try;
+        if(tryPerOz>0){
+          const gramHas=tryPerOz/31.1035;
+          _altinCache=calcSubtypes(gramHas);
+          break;
+        }
+      }catch{}
     }
   }catch{}
 
-  // 2. genelpara embed — GA=gram, C=çeyrek (same domain as borsa.json we already use)
+  // 2. truncgil — actual Turkish market prices (gram, 22 ayar bilezik, çeyrek)
+  if(!_altinCache){
+    try{
+      const res=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(8000)});
+      if(res.ok){
+        const data=await res.json();
+        const gram=parseTR(data['Gram Altın']?.['Satış']);
+        const ayar22=parseTR(data['22 Ayar Bilezik']?.['Satış']||data['22 Ayar']?.['Satış']);
+        const ceyrek=parseTR(data['Çeyrek Altın']?.['Satış']);
+        if(gram>0) _altinCache={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+      }
+    }catch{}
+  }
+
+  // 3. genelpara — GA=gram altın, C=çeyrek
   if(!_altinCache){
     try{
       const res=await fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(8000)});
@@ -88,25 +117,7 @@ async function fetchAltinPrices(){
         const data=await res.json();
         const gram=parseTR(data?.GA?.satis||data?.GA?.alis);
         const ceyrek=parseTR(data?.C?.satis||data?.C?.alis);
-        if(gram>0){
-          _altinCache={gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-        }
-      }
-    }catch{}
-  }
-
-  // 3. via allorigins proxy (last resort for truncgil)
-  if(!_altinCache){
-    try{
-      const url='https://finans.truncgil.com/today.json';
-      const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(12000)});
-      const j=await res.json();
-      const data=JSON.parse(j.contents||'{}');
-      const gram=parseTR(data['Gram Altın']?.['Satış']);
-      const ayar22=parseTR(data['22 Ayar Bilezik']?.['Satış']||data['22 Ayar']?.['Satış']);
-      const ceyrek=parseTR(data['Çeyrek Altın']?.['Satış']);
-      if(gram>0){
-        _altinCache={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+        if(gram>0) _altinCache={gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
       }
     }catch{}
   }
