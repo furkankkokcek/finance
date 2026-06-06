@@ -63,45 +63,54 @@ async function fetchAltinPrices(){
   if(_altinCache&&Date.now()-_altinCache.ts<5*60*1000) return _altinCache;
   if(_altinFetching) return _altinCache;
   _altinFetching=true;
-  try{
-    const url='https://anlikaltinfiyatlari.com/altin/kapalicarsi';
-    const res=await fetch(
-      `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-      {signal:AbortSignal.timeout(12000)}
-    );
-    const j=await res.json();
-    if(!j||!j.contents) throw new Error('empty');
-    const doc=new DOMParser().parseFromString(j.contents,'text/html');
 
-    function parseNum(s){ return parseFloat(s.replace(/\./g,'').replace(',','.')); }
-    function findPrice(keywords){
-      // Row-based: look for <tr> containing the keyword, extract first price > 500
-      for(const row of doc.querySelectorAll('tr')){
-        const lower=row.textContent.toLowerCase();
-        if(keywords.some(k=>lower.includes(k))){
-          const nums=(row.textContent.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(parseNum).filter(v=>v>500);
-          if(nums.length) return nums[0];
-        }
+  function parseTR(v){ return parseFloat((v||'').toString().replace(/\./g,'').replace(',','.')); }
+
+  // 1. truncgil — has gram, 22 ayar bilezik, çeyrek as separate keys
+  try{
+    const res=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(8000)});
+    if(res.ok){
+      const data=await res.json();
+      const gram=parseTR(data['Gram Altın']?.['Satış']);
+      const ayar22=parseTR(data['22 Ayar Bilezik']?.['Satış']||data['22 Ayar']?.['Satış']);
+      const ceyrek=parseTR(data['Çeyrek Altın']?.['Satış']);
+      if(gram>0){
+        _altinCache={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
       }
-      // Sibling-based: find element whose text equals the keyword, get next sibling price
-      for(const el of doc.querySelectorAll('td,th,div,span,li')){
-        const lower=el.textContent.trim().toLowerCase();
-        if(keywords.some(k=>lower===k||lower.startsWith(k+' '))){
-          let sib=el.nextElementSibling;
-          while(sib){
-            const nums=(sib.textContent.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(parseNum).filter(v=>v>500);
-            if(nums.length) return nums[0];
-            sib=sib.nextElementSibling;
-          }
-        }
-      }
-      return null;
     }
-    const gram=findPrice(['gram altın','gram altin','has altın','has altin']);
-    const ayar22=findPrice(['22 ayar']);
-    const ceyrek=findPrice(['çeyrek altın','çeyrek altin','çeyrek','ceyrek']);
-    if(gram>0) _altinCache={gram,ayar22:ayar22||0,ceyrek:ceyrek||0,ts:Date.now()};
   }catch{}
+
+  // 2. genelpara embed — GA=gram, C=çeyrek (same domain as borsa.json we already use)
+  if(!_altinCache){
+    try{
+      const res=await fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(8000)});
+      if(res.ok){
+        const data=await res.json();
+        const gram=parseTR(data?.GA?.satis||data?.GA?.alis);
+        const ceyrek=parseTR(data?.C?.satis||data?.C?.alis);
+        if(gram>0){
+          _altinCache={gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+        }
+      }
+    }catch{}
+  }
+
+  // 3. via allorigins proxy (last resort for truncgil)
+  if(!_altinCache){
+    try{
+      const url='https://finans.truncgil.com/today.json';
+      const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(12000)});
+      const j=await res.json();
+      const data=JSON.parse(j.contents||'{}');
+      const gram=parseTR(data['Gram Altın']?.['Satış']);
+      const ayar22=parseTR(data['22 Ayar Bilezik']?.['Satış']||data['22 Ayar']?.['Satış']);
+      const ceyrek=parseTR(data['Çeyrek Altın']?.['Satış']);
+      if(gram>0){
+        _altinCache={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+      }
+    }catch{}
+  }
+
   _altinFetching=false;
   return _altinCache;
 }
