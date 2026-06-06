@@ -2,7 +2,7 @@
 
 const INV_TYPES = {hisse:'Hisse',fon:'Fon',altin:'Altın',btc:'Bitcoin',kripto:'Kripto',diger:'Diğer'};
 const INV_COLORS = {hisse:'#3b82f6',fon:'#8b5cf6',altin:'#f59e0b',btc:'#f97316',kripto:'#ec4899',diger:'#6b7280'};
-const ALTIN_SUBTYPES = {gram:'Gram Altın', ayar22:'22 Ayar Altın', ceyrek:'Çeyrek Altın'};
+const ALTIN_SUBTYPES = {gram:'Gram Altın', ayar22:'22 Ayar Altın', ceyrek:'Çeyrek Altın', sertifika:'Darphane Sertifikası'};
 
 let _currentUsdRate = 0;
 let _fetchingUsdRate = false;
@@ -159,22 +159,34 @@ async function fetchAllInvPrices(){
 
   const promises=[];
 
-  // Gold — anlikaltinfiyatlari.com (per subtype)
+  // Gold — split: sertifika via BIST (ALTINS1), physical via fawazahmed0 XAU
   const goldInvs=port.filter(i=>i.type==='altin');
   if(goldInvs.length){
-    promises.push(
-      fetchAltinPrices()
-        .then(prices=>{
-          if(!prices) throw new Error('no altin data');
-          goldInvs.forEach(i=>{
-            const sub=i.goldSubtype||'gram';
-            const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
-            if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
-            else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
-          });
-        })
-        .catch(()=>{ goldInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
-    );
+    // Darphane Sertifikası — BIST-listed, fetch like a stock
+    goldInvs.filter(i=>i.goldSubtype==='sertifika').forEach(inv=>{
+      promises.push(
+        fetchBistPrice('ALTINS1')
+          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; })
+          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; })
+      );
+    });
+    // Physical gold: gram, 22 ayar, çeyrek
+    const physicalGold=goldInvs.filter(i=>i.goldSubtype!=='sertifika');
+    if(physicalGold.length){
+      promises.push(
+        fetchAltinPrices()
+          .then(prices=>{
+            if(!prices) throw new Error('no altin data');
+            physicalGold.forEach(i=>{
+              const sub=i.goldSubtype||'gram';
+              const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
+              if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
+              else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
+            });
+          })
+          .catch(()=>{ physicalGold.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+      );
+    }
   }
 
   // Bitcoin — CoinGecko
@@ -358,7 +370,7 @@ function renderYatirim(){
               <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${tc}22;color:${tc};font-weight:700">${INV_TYPES[inv.type]||inv.type}</span>
               ${inv.ticker?`<span style="font-size:10px;color:var(--muted)">${inv.ticker}</span>`:inv.type==='altin'&&inv.goldSubtype?`<span style="font-size:10px;color:var(--muted)">${ALTIN_SUBTYPES[inv.goldSubtype]||inv.goldSubtype}</span>`:''}
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet'}${inv.type==='altin'&&inv.goldSubtype==='sertifika'?` · ${(c.totalQty*0.01).toFixed(2)}g altın`:''}</div>
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="openAddLot('${inv.id}')" style="padding:5px 10px;background:var(--accent);border:none;border-radius:var(--r3);color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Alım</button>
