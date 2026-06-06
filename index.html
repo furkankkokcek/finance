@@ -180,7 +180,7 @@
       <input type="hidden" id="inv-id">
       <div class="field"><label>Varlık Adı</label><input type="text" id="inv-name" placeholder="örn: Garanti BBVA, Altın, BTC"></div>
       <div class="field"><label>Tür</label>
-        <select id="inv-type">
+        <select id="inv-type" onchange="onInvTypeChange()">
           <option value="hisse">Hisse</option>
           <option value="fon">Fon</option>
           <option value="altin">Altın</option>
@@ -189,7 +189,12 @@
           <option value="diger">Diğer</option>
         </select>
       </div>
-      <div class="field"><label>Güncel Fiyat (₺)</label><input type="number" id="inv-cur-price" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field" id="inv-ticker-field">
+        <label id="inv-ticker-label">Yahoo Finance Sembolü</label>
+        <input type="text" id="inv-ticker" placeholder="örn: GARAN.IS, THYAO.IS" style="text-transform:uppercase">
+      </div>
+      <div id="inv-auto-note" style="display:none;font-size:11px;color:var(--accent);padding:4px 0 8px"></div>
+      <div class="field"><label>Güncel Fiyat (₺) <span style="font-size:10px;color:var(--muted);font-weight:400">— sembol girilince otomatik güncellenir</span></label><input type="number" id="inv-cur-price" min="0" step="0.01" placeholder="0.00"></div>
       <button class="btn-primary" onclick="saveInv()">Kaydet</button>
       <button class="btn-danger" id="inv-delete-btn" style="display:none" onclick="deleteInv()">Sil</button>
       <div id="inv-lots-section" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
