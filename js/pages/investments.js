@@ -3,6 +3,119 @@
 const INV_TYPES = {hisse:'Hisse',fon:'Fon',altin:'Altın',btc:'Bitcoin',kripto:'Kripto',diger:'Diğer'};
 const INV_COLORS = {hisse:'#3b82f6',fon:'#8b5cf6',altin:'#f59e0b',btc:'#f97316',kripto:'#ec4899',diger:'#6b7280'};
 
+let _currentUsdRate = 0;
+let _fetchingUsdRate = false;
+let _fetchingPrices = false;
+let _lastPriceFetch = 0;   // timestamp ms
+let _priceStatus = {};     // { invId: 'ok'|'err'|'loading' }
+
+// ── USD rate ────────────────────────────────────────────────────────────────
+
+async function fetchCurrentUsdRate(){
+  if(_fetchingUsdRate) return;
+  _fetchingUsdRate=true;
+  try{
+    const res=await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
+    const data=await res.json();
+    const rate=data?.usd?.try;
+    if(rate>0){ _currentUsdRate=rate; fetchAllInvPrices(); }
+  }catch{}
+  _fetchingUsdRate=false;
+}
+
+// ── Live price helpers ───────────────────────────────────────────────────────
+
+async function fetchYahooPrice(ticker){
+  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+  const proxy=`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  const res=await fetch(proxy);
+  const data=await res.json();
+  const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+  if(!price) throw new Error('no price');
+  return price;
+}
+
+async function fetchAllInvPrices(){
+  if(_fetchingPrices) return;
+  const port=getPortfolio();
+  if(!port.length) return;
+  _fetchingPrices=true;
+  renderYatirim();
+
+  const promises=[];
+
+  // Gold — GC=F (USD/troy oz) → gram TL
+  const goldInvs=port.filter(i=>i.type==='altin');
+  if(goldInvs.length&&_currentUsdRate>0){
+    promises.push(
+      fetchYahooPrice('GC=F')
+        .then(usdOz=>{
+          const gramTL=(usdOz/31.1035)*_currentUsdRate;
+          goldInvs.forEach(i=>{ i.currentPrice=Math.round(gramTL*100)/100; _priceStatus[i.id]='ok'; });
+        })
+        .catch(()=>{ goldInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+    );
+  }
+
+  // Bitcoin — CoinGecko
+  const btcInvs=port.filter(i=>i.type==='btc');
+  if(btcInvs.length){
+    promises.push(
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try')
+        .then(r=>r.json())
+        .then(data=>{
+          const price=data?.bitcoin?.try;
+          if(price) btcInvs.forEach(i=>{ i.currentPrice=price; _priceStatus[i.id]='ok'; });
+          else btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; });
+        })
+        .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+    );
+  }
+
+  // Crypto — CoinGecko by ticker (coinId)
+  const kriptoInvs=port.filter(i=>i.type==='kripto'&&i.ticker);
+  if(kriptoInvs.length){
+    const ids=[...new Set(kriptoInvs.map(i=>i.ticker.toLowerCase()))].join(',');
+    promises.push(
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=try`)
+        .then(r=>r.json())
+        .then(data=>{
+          kriptoInvs.forEach(i=>{
+            const price=data?.[i.ticker.toLowerCase()]?.try;
+            if(price){ i.currentPrice=price; _priceStatus[i.id]='ok'; }
+            else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
+          });
+        })
+        .catch(()=>{ kriptoInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); })
+    );
+  }
+
+  // Stocks & funds — Yahoo Finance via allorigins proxy
+  const yahooInvs=port.filter(i=>(i.type==='hisse'||i.type==='fon')&&i.ticker);
+  yahooInvs.forEach(inv=>{
+    promises.push(
+      fetchYahooPrice(inv.ticker)
+        .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; })
+        .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; })
+    );
+  });
+
+  await Promise.allSettled(promises);
+  _lastPriceFetch=Date.now();
+  _fetchingPrices=false;
+  saveS();
+  renderYatirim();
+}
+
+function refreshPrices(){
+  _priceStatus={};
+  _lastPriceFetch=0;
+  if(_currentUsdRate>0) fetchAllInvPrices();
+  else fetchCurrentUsdRate();
+}
+
+// ── Calculations ─────────────────────────────────────────────────────────────
+
 function getPortfolio(){
   if(!S.investmentPortfolio) S.investmentPortfolio=[];
   return S.investmentPortfolio;
@@ -19,38 +132,42 @@ function calcInv(inv){
   const avgCostTL=totalQty>0?totalCostTL/totalQty:0;
   const avgCostUSD=totalQty>0?totalCostUSD/totalQty:0;
   const cur=parseFloat(inv.currentPrice||0);
-  const curUsd=parseFloat(inv.currentUsdRate||0);
   const currentValueTL=totalQty*cur;
-  const currentValueUSD=curUsd>0?currentValueTL/curUsd:0;
+  const currentValueUSD=_currentUsdRate>0?currentValueTL/_currentUsdRate:0;
   const pnlTL=currentValueTL-totalCostTL;
-  const pnlUSD=totalCostUSD>0&&curUsd>0?currentValueUSD-totalCostUSD:0;
+  const hasUsd=totalCostUSD>0&&_currentUsdRate>0;
+  const pnlUSD=hasUsd?currentValueUSD-totalCostUSD:0;
   const pnlPct=totalCostTL>0?(pnlTL/totalCostTL)*100:0;
-  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,currentValueTL,currentValueUSD,pnlTL,pnlUSD,pnlPct};
+  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,currentValueTL,currentValueUSD,pnlTL,pnlUSD,pnlPct,hasUsd};
 }
 
+// ── Formatters ────────────────────────────────────────────────────────────────
+
 function fmtUSD(n){
-  if(!n&&n!==0||isNaN(n)) return '—';
+  if(n===null||n===undefined||isNaN(n)) return '—';
   const abs=Math.abs(n);
   const str=abs.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   return (n<0?'-':'')+'$'+str;
 }
-
 function pnlColor(v){ return v>=0?'var(--success)':'var(--danger)'; }
 function pnlSign(v){ return v>=0?'+':''; }
+
+// ── Render ────────────────────────────────────────────────────────────────────
 
 function renderYatirim(){
   const el=document.getElementById('yatirim-content');
   if(!el) return;
   const port=getPortfolio();
 
+  // Boot: start USD+price fetch if not yet done
+  if(_currentUsdRate===0&&!_fetchingUsdRate&&!_fetchingPrices) fetchCurrentUsdRate();
+
+  const usdReady=_currentUsdRate>0;
+  const fetchDone=_lastPriceFetch>0&&!_fetchingPrices;
+  const usdNote=usdReady?`$1 = ${_currentUsdRate.toFixed(2)}₺`:'kur yükleniyor...';
+
   let totalCostTL=0,totalCostUSD=0,totalValueTL=0,totalValueUSD=0;
-  port.forEach(inv=>{
-    const c=calcInv(inv);
-    totalCostTL+=c.totalCostTL;
-    totalCostUSD+=c.totalCostUSD;
-    totalValueTL+=c.currentValueTL;
-    totalValueUSD+=c.currentValueUSD;
-  });
+  port.forEach(inv=>{ const c=calcInv(inv); totalCostTL+=c.totalCostTL; totalCostUSD+=c.totalCostUSD; totalValueTL+=c.currentValueTL; totalValueUSD+=c.currentValueUSD; });
   const totalPnlTL=totalValueTL-totalCostTL;
   const totalPnlUSD=totalValueUSD-totalCostUSD;
   const totalPnlPct=totalCostTL>0?(totalPnlTL/totalCostTL)*100:0;
@@ -58,40 +175,56 @@ function renderYatirim(){
   let html='';
 
   if(port.length>0){
+    const lastFetchStr=fetchDone?`Son güncelleme: ${new Date(_lastPriceFetch).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}`:'Fiyatlar yükleniyor...';
     html+=`<div style="padding:14px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
-      <div class="section-title" style="margin-bottom:10px">PORTFÖY ÖZETİ</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-title">PORTFÖY</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:var(--muted)">${lastFetchStr}</span>
+          <button onclick="refreshPrices()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--accent);cursor:pointer" title="Fiyatları yenile">↻</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${usdNote}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam Maliyet</div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalCostTL)}</div>
-          <div style="font-size:11px;color:var(--muted)">${fmtUSD(totalCostUSD)}</div>
+          <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalCostUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Değer</div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalValueTL)}</div>
-          <div style="font-size:11px;color:var(--muted)">${fmtUSD(totalValueUSD)}</div>
+          <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalValueUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3);grid-column:1/-1">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam Kâr / Zarar</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam K/Z</div>
           <div style="font-size:15px;font-weight:700;color:${pnlColor(totalPnlTL)}">${pnlSign(totalPnlTL)}${fmtTRY(totalPnlTL)} (${pnlSign(totalPnlPct)}${totalPnlPct.toFixed(1)}%)</div>
-          <div style="font-size:12px;color:${pnlColor(totalPnlUSD)}">${pnlSign(totalPnlUSD)}${fmtUSD(totalPnlUSD)}</div>
+          <div style="font-size:12px;color:${usdReady?pnlColor(totalPnlUSD):'var(--muted)'}">${usdReady?pnlSign(totalPnlUSD)+fmtUSD(totalPnlUSD):'—'}</div>
         </div>
       </div>
     </div>`;
-  }
 
-  if(port.length===0){
-    html+=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">Henüz yatırım kaydı yok</div><div class="empty-sub">Sağ alttaki + butonuna bas</div></div>`;
-  } else {
     port.forEach(inv=>{
       const c=calcInv(inv);
       const tc=INV_COLORS[inv.type]||'#6b7280';
+      const status=_priceStatus[inv.id];
+      const priceStr=inv.currentPrice
+        ?(inv.type==='btc'||inv.type==='kripto'
+          ?'$'+parseFloat(inv.currentPrice).toLocaleString('en-US',{maximumFractionDigits:2})
+          :fmtTRY(parseFloat(inv.currentPrice)))
+        :'—';
+      const statusBadge=_fetchingPrices&&!status
+        ?`<span style="font-size:9px;color:var(--muted)"> ↻</span>`
+        :status==='err'
+        ?`<span style="font-size:9px;color:var(--danger)" title="Fiyat alınamadı"> !</span>`
+        :'';
       html+=`<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);border-left:3px solid ${tc};margin-bottom:8px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <span style="font-size:14px;font-weight:700;color:var(--text)">${inv.name}</span>
+              <span style="font-size:14px;font-weight:700;color:var(--text)">${inv.name}${statusBadge}</span>
               <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${tc}22;color:${tc};font-weight:700">${INV_TYPES[inv.type]||inv.type}</span>
+              ${inv.ticker?`<span style="font-size:10px;color:var(--muted)">${inv.ticker}</span>`:''}
             </div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} adet</div>
           </div>
@@ -104,27 +237,59 @@ function renderYatirim(){
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted)">Ort. Maliyet</div>
             <div style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.avgCostTL)}</div>
-            <div style="font-size:11px;color:var(--muted)">${fmtUSD(c.avgCostUSD)}</div>
+            <div style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted)">Güncel Fiyat</div>
-            <div style="font-size:12px;font-weight:600;color:var(--text)">${inv.currentPrice?fmtTRY(parseFloat(inv.currentPrice)):'—'}</div>
-            <div style="font-size:11px;color:var(--muted)">${inv.currentUsdRate?'$1 = '+parseFloat(inv.currentUsdRate).toFixed(2)+'₺':'—'}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${priceStr}</div>
+            <div style="font-size:11px;color:var(--muted)">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
             <div style="font-size:10px;color:var(--muted)">Kâr / Zarar</div>
             <div style="font-size:13px;font-weight:700;color:${pnlColor(c.pnlTL)}">${pnlSign(c.pnlTL)}${fmtTRY(c.pnlTL)} (${pnlSign(c.pnlPct)}${c.pnlPct.toFixed(1)}%)</div>
-            <div style="font-size:11px;color:${pnlColor(c.pnlUSD)}">${pnlSign(c.pnlUSD)}${fmtUSD(c.pnlUSD)}</div>
+            <div style="font-size:11px;color:${c.hasUsd?pnlColor(c.pnlUSD):'var(--muted)'}">${c.hasUsd?pnlSign(c.pnlUSD)+fmtUSD(c.pnlUSD):'—'}</div>
           </div>
         </div>
       </div>`;
     });
+  } else {
+    html+=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">Henüz yatırım kaydı yok</div><div class="empty-sub">Sağ alttaki + butonuna bas</div></div>`;
   }
 
   el.innerHTML=html;
 }
 
-// --- Investment CRUD ---
+// ── Investment CRUD ───────────────────────────────────────────────────────────
+
+function onInvTypeChange(){
+  const type=document.getElementById('inv-type').value;
+  const tickerField=document.getElementById('inv-ticker-field');
+  const autoNote=document.getElementById('inv-auto-note');
+  const tickerLabel=document.getElementById('inv-ticker-label');
+  const tickerEl=document.getElementById('inv-ticker');
+  if(type==='altin'){
+    tickerField.style.display='none';
+    autoNote.style.display='block';
+    autoNote.textContent='✓ Gram altın fiyatı otomatik çekilir (Yahoo Finance GC=F × USD/TL)';
+  } else if(type==='btc'){
+    tickerField.style.display='none';
+    autoNote.style.display='block';
+    autoNote.textContent='✓ BTC/TRY fiyatı otomatik çekilir (CoinGecko)';
+  } else if(type==='kripto'){
+    tickerField.style.display='block';
+    autoNote.style.display='none';
+    tickerLabel.textContent='CoinGecko ID';
+    tickerEl.placeholder='örn: ethereum, solana, cardano';
+  } else if(type==='hisse'||type==='fon'){
+    tickerField.style.display='block';
+    autoNote.style.display='none';
+    tickerLabel.textContent='Yahoo Finance Sembolü';
+    tickerEl.placeholder=type==='hisse'?'örn: GARAN.IS, THYAO.IS':'örn: 0P00018M4X.IS';
+  } else {
+    tickerField.style.display='none';
+    autoNote.style.display='none';
+  }
+}
 
 function openAddInv(){
   document.getElementById('inv-modal-title').textContent='Yatırım Ekle';
@@ -132,9 +297,10 @@ function openAddInv(){
   document.getElementById('inv-name').value='';
   document.getElementById('inv-type').value='hisse';
   document.getElementById('inv-cur-price').value='';
-  document.getElementById('inv-cur-usd').value='';
+  document.getElementById('inv-ticker').value='';
   document.getElementById('inv-delete-btn').style.display='none';
   document.getElementById('inv-lots-section').style.display='none';
+  onInvTypeChange();
   openModal('overlay-inv');
 }
 
@@ -146,10 +312,11 @@ function openEditInv(id){
   document.getElementById('inv-name').value=inv.name;
   document.getElementById('inv-type').value=inv.type||'hisse';
   document.getElementById('inv-cur-price').value=inv.currentPrice||'';
-  document.getElementById('inv-cur-usd').value=inv.currentUsdRate||'';
+  document.getElementById('inv-ticker').value=inv.ticker||'';
   document.getElementById('inv-delete-btn').style.display='block';
   renderInvLots(inv);
   document.getElementById('inv-lots-section').style.display='block';
+  onInvTypeChange();
   openModal('overlay-inv');
 }
 
@@ -184,12 +351,14 @@ function saveInv(){
   if(!name){alert('Yatırım adı girin');return;}
   if(!S.investmentPortfolio) S.investmentPortfolio=[];
   const existing=id?S.investmentPortfolio.find(x=>x.id===id):null;
+  const type=document.getElementById('inv-type').value;
+  const ticker=document.getElementById('inv-ticker').value.trim();
   const obj={
     id:id||uid('ip'),
     name,
-    type:document.getElementById('inv-type').value,
+    type,
+    ticker:ticker||'',
     currentPrice:parseFloat(document.getElementById('inv-cur-price').value)||0,
-    currentUsdRate:parseFloat(document.getElementById('inv-cur-usd').value)||0,
     lots:existing?existing.lots:[]
   };
   if(id){
@@ -200,6 +369,9 @@ function saveInv(){
   }
   saveS();
   closeModal('overlay-inv');
+  // Refresh prices for new/updated investment
+  delete _priceStatus[obj.id];
+  if(_currentUsdRate>0) fetchAllInvPrices(); else fetchCurrentUsdRate();
   renderYatirim();
   trackChange();
 }
@@ -208,13 +380,14 @@ function deleteInv(){
   const id=document.getElementById('inv-id').value;
   if(!confirm('Bu yatırımı ve tüm alım geçmişini silmek istiyor musunuz?')) return;
   S.investmentPortfolio=(S.investmentPortfolio||[]).filter(x=>x.id!==id);
+  delete _priceStatus[id];
   saveS();
   closeModal('overlay-inv');
   renderYatirim();
   trackChange();
 }
 
-// --- Lot CRUD ---
+// ── Lot CRUD ──────────────────────────────────────────────────────────────────
 
 function openAddLot(invId){
   document.getElementById('lot-inv-id').value=invId;
@@ -235,15 +408,12 @@ async function fetchUsdRate(date){
   try{
     const url=`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.json`;
     const res=await fetch(url,{cache:'force-cache'});
-    if(!res.ok) throw new Error();
     const data=await res.json();
     const rate=data?.usd?.try;
-    if(rate){
+    if(rate>0){
       if(rateEl) rateEl.value=rate.toFixed(4);
-      if(statusEl) statusEl.textContent=`✓ ${date} günü TCMB kuru`;
-    } else {
-      throw new Error();
-    }
+      if(statusEl) statusEl.textContent=`✓ ${date} kuru`;
+    } else throw new Error();
   }catch{
     if(statusEl) statusEl.textContent='Kur alınamadı — manuel girin';
   }
