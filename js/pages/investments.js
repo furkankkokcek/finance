@@ -26,25 +26,27 @@ async function fetchCurrentUsdRate(){
 // ── Live price helpers ───────────────────────────────────────────────────────
 
 async function fetchYahooPrice(ticker){
-  const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-  const proxies=[
-    `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`
+  const sym=ticker.toUpperCase();
+  const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
+  const attempts=[
+    ()=>fetch(yahooUrl,{signal:AbortSignal.timeout(5000)}),
+    ()=>fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)}),
+    ()=>fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)}),
+    ()=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)})
+      .then(async r=>{ const j=await r.json(); return new Response(j.contents,{status:j.status?.http_code||200}); }),
   ];
-  for(const proxy of proxies){
+  for(const attempt of attempts){
     try{
-      const ctrl=new AbortController();
-      const tid=setTimeout(()=>ctrl.abort(),8000);
-      const res=await fetch(proxy,{signal:ctrl.signal});
-      clearTimeout(tid);
+      const res=await attempt();
       if(!res.ok) continue;
       const text=await res.text();
+      if(!text||text[0]!=='{') continue;
       const data=JSON.parse(text);
       const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
       if(price>0) return price;
     }catch{}
   }
-  throw new Error(`no price: ${ticker}`);
+  throw new Error(`no price: ${sym}`);
 }
 
 async function fetchAllInvPrices(){
@@ -364,7 +366,8 @@ function saveInv(){
   if(!S.investmentPortfolio) S.investmentPortfolio=[];
   const existing=id?S.investmentPortfolio.find(x=>x.id===id):null;
   const type=document.getElementById('inv-type').value;
-  const ticker=document.getElementById('inv-ticker').value.trim();
+  const rawTicker=document.getElementById('inv-ticker').value.trim();
+  const ticker=rawTicker?(type==='kripto'?rawTicker.toLowerCase():rawTicker.toUpperCase()):'';
   const obj={
     id:id||uid('ip'),
     name,
