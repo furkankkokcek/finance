@@ -16,11 +16,26 @@ function initApp(){
   updateNotifBadge();
   syncNotifSchedule();
   setupExitGuard();
+  checkMonthlyCalendarPrompt();
   if(S.settings.notifEnabled&&Notification.permission==='granted') registerPeriodicSync();
   if(S.settings.testNotifEnabled&&Notification.permission==='granted') startTestNotifMode();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);
+}
+
+function checkMonthlyCalendarPrompt(){
+  const today=new Date();
+  if(today.getDate()!==1) return;
+  const key=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  if(S.settings.lastCalExportPrompt===key) return;
+  S.settings.lastCalExportPrompt=key;
+  saveS();
+  setTimeout(()=>{
+    if(confirm(`📅 ${MONTHS_FULL[today.getMonth()]} ayı başladı!\n\nBu ayın ödeme günlerini takvimine görev olarak eklemek ister misin?\n(.ics dosyası indirilecek, takvim uygulamanla açabilirsin)`)){
+      exportICS(today.getFullYear(),today.getMonth()+1);
+    }
+  },800);
 }
 
 // Silent save on tab hide / page unload

@@ -99,7 +99,10 @@ function renderTakvim(){
   html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></div><span style="font-size:11px;color:var(--muted)">Tatil/Haftasonu</span></div>`;
   html+=`</div>`;
 
-  html+=`<button class="btn-secondary" style="margin-top:10px" onclick="exportICS(${displayYear},${displayMonth})">📅 Bu Ayı Takvime Aktar (.ics)</button>`;
+  html+=`<div style="font-size:11px;color:var(--muted);margin-top:12px;padding:8px 10px;background:var(--bg3);border-radius:var(--r2);line-height:1.6">
+    📱 <strong style="color:var(--text)">Takvime Aktar nedir?</strong> Ödeme günlerini telefonunuzun veya bilgisayarınızın takvimine <strong style="color:var(--text)">görev (task)</strong> olarak ekler. İndirilen <code style="font-size:10px;background:var(--bg4);padding:1px 4px;border-radius:3px">.ics</code> dosyasını Google Takvim, Apple Takvim veya Outlook ile açın.
+  </div>`;
+  html+=`<button class="btn-secondary" style="margin-top:8px" onclick="exportICS(${displayYear},${displayMonth})">📅 Bu Ayı Takvime Aktar (.ics)</button>`;
 
   el.innerHTML=html;
 }
@@ -124,18 +127,18 @@ function exportICS(year,month){
     const dateStr=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
     const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatırlatma':(CAT_LABELS[ev.type]||ev.type);
     const evUid=`ft-${year}-${pad(month)}-${pad(ev.day)}-${ev.expId||'inc'}-${Math.random().toString(36).slice(2,7)}@fintrack`;
-    lines.push('BEGIN:VEVENT');
+    lines.push('BEGIN:VTODO');
     lines.push(`UID:${evUid}`);
-    lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
-    lines.push(`DTEND;VALUE=DATE:${dateStr}`);
+    lines.push(`DUE;VALUE=DATE:${dateStr}`);
     lines.push(`SUMMARY:${ev.name}`);
     lines.push(`DESCRIPTION:${fmtTRY(ev.amount)} · ${typeLabel}`);
+    lines.push('STATUS:NEEDS-ACTION');
     lines.push('BEGIN:VALARM');
     lines.push('TRIGGER;VALUE=DURATION:PT9H');
     lines.push('ACTION:DISPLAY');
     lines.push(`DESCRIPTION:${ev.name}`);
     lines.push('END:VALARM');
-    lines.push('END:VEVENT');
+    lines.push('END:VTODO');
   });
 
   lines.push('END:VCALENDAR');
