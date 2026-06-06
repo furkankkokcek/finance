@@ -3,6 +3,22 @@
 const INV_TYPES = {hisse:'Hisse',fon:'Fon',altin:'Altın',btc:'Bitcoin',kripto:'Kripto',diger:'Diğer'};
 const INV_COLORS = {hisse:'#3b82f6',fon:'#8b5cf6',altin:'#f59e0b',btc:'#f97316',kripto:'#ec4899',diger:'#6b7280'};
 
+let _currentUsdRate = 0;
+let _fetchingUsdRate = false;
+
+async function fetchCurrentUsdRate(){
+  if(_fetchingUsdRate) return;
+  _fetchingUsdRate=true;
+  try{
+    const res=await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
+    if(!res.ok) throw new Error();
+    const data=await res.json();
+    const rate=data?.usd?.try;
+    if(rate&&rate>0){ _currentUsdRate=rate; renderYatirim(); }
+  }catch{}
+  _fetchingUsdRate=false;
+}
+
 function getPortfolio(){
   if(!S.investmentPortfolio) S.investmentPortfolio=[];
   return S.investmentPortfolio;
@@ -19,13 +35,13 @@ function calcInv(inv){
   const avgCostTL=totalQty>0?totalCostTL/totalQty:0;
   const avgCostUSD=totalQty>0?totalCostUSD/totalQty:0;
   const cur=parseFloat(inv.currentPrice||0);
-  const curUsd=parseFloat(inv.currentUsdRate||0);
   const currentValueTL=totalQty*cur;
-  const currentValueUSD=curUsd>0?currentValueTL/curUsd:0;
+  const currentValueUSD=_currentUsdRate>0?currentValueTL/_currentUsdRate:0;
   const pnlTL=currentValueTL-totalCostTL;
-  const pnlUSD=totalCostUSD>0&&curUsd>0?currentValueUSD-totalCostUSD:0;
+  const hasUsd=totalCostUSD>0&&_currentUsdRate>0;
+  const pnlUSD=hasUsd?currentValueUSD-totalCostUSD:0;
   const pnlPct=totalCostTL>0?(pnlTL/totalCostTL)*100:0;
-  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,currentValueTL,currentValueUSD,pnlTL,pnlUSD,pnlPct};
+  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,currentValueTL,currentValueUSD,pnlTL,pnlUSD,pnlPct,hasUsd};
 }
 
 function fmtUSD(n){
@@ -43,6 +59,14 @@ function renderYatirim(){
   if(!el) return;
   const port=getPortfolio();
 
+  // Kick off USD rate fetch if not yet loaded
+  if(_currentUsdRate===0&&!_fetchingUsdRate) fetchCurrentUsdRate();
+
+  const usdReady=_currentUsdRate>0;
+  const usdNote=usdReady
+    ?`$1 = ${_currentUsdRate.toFixed(2)}₺ (güncel, otomatik)`
+    :'Dolar kuru yükleniyor...';
+
   let totalCostTL=0,totalCostUSD=0,totalValueTL=0,totalValueUSD=0;
   port.forEach(inv=>{
     const c=calcInv(inv);
@@ -59,22 +83,25 @@ function renderYatirim(){
 
   if(port.length>0){
     html+=`<div style="padding:14px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
-      <div class="section-title" style="margin-bottom:10px">PORTFÖY ÖZETİ</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-title">PORTFÖY ÖZETİ</div>
+        <div style="font-size:10px;color:var(--muted)">${usdNote}</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam Maliyet</div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalCostTL)}</div>
-          <div style="font-size:11px;color:var(--muted)">${fmtUSD(totalCostUSD)}</div>
+          <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalCostUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Değer</div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalValueTL)}</div>
-          <div style="font-size:11px;color:var(--muted)">${fmtUSD(totalValueUSD)}</div>
+          <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalValueUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3);grid-column:1/-1">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam Kâr / Zarar</div>
           <div style="font-size:15px;font-weight:700;color:${pnlColor(totalPnlTL)}">${pnlSign(totalPnlTL)}${fmtTRY(totalPnlTL)} (${pnlSign(totalPnlPct)}${totalPnlPct.toFixed(1)}%)</div>
-          <div style="font-size:12px;color:${pnlColor(totalPnlUSD)}">${pnlSign(totalPnlUSD)}${fmtUSD(totalPnlUSD)}</div>
+          <div style="font-size:12px;color:${usdReady?pnlColor(totalPnlUSD):'var(--muted)'}">${usdReady?pnlSign(totalPnlUSD)+fmtUSD(totalPnlUSD):'USD yükleniyor...'}</div>
         </div>
       </div>
     </div>`;
@@ -109,12 +136,12 @@ function renderYatirim(){
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted)">Güncel Fiyat</div>
             <div style="font-size:12px;font-weight:600;color:var(--text)">${inv.currentPrice?fmtTRY(parseFloat(inv.currentPrice)):'—'}</div>
-            <div style="font-size:11px;color:var(--muted)">${inv.currentUsdRate?'$1 = '+parseFloat(inv.currentUsdRate).toFixed(2)+'₺':'—'}</div>
+            <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(parseFloat(inv.currentPrice||0)/_currentUsdRate):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
             <div style="font-size:10px;color:var(--muted)">Kâr / Zarar</div>
             <div style="font-size:13px;font-weight:700;color:${pnlColor(c.pnlTL)}">${pnlSign(c.pnlTL)}${fmtTRY(c.pnlTL)} (${pnlSign(c.pnlPct)}${c.pnlPct.toFixed(1)}%)</div>
-            <div style="font-size:11px;color:${pnlColor(c.pnlUSD)}">${pnlSign(c.pnlUSD)}${fmtUSD(c.pnlUSD)}</div>
+            <div style="font-size:11px;color:${c.hasUsd?pnlColor(c.pnlUSD):'var(--muted)'}">${c.hasUsd?pnlSign(c.pnlUSD)+fmtUSD(c.pnlUSD):'—'}</div>
           </div>
         </div>
       </div>`;
@@ -132,7 +159,6 @@ function openAddInv(){
   document.getElementById('inv-name').value='';
   document.getElementById('inv-type').value='hisse';
   document.getElementById('inv-cur-price').value='';
-  document.getElementById('inv-cur-usd').value='';
   document.getElementById('inv-delete-btn').style.display='none';
   document.getElementById('inv-lots-section').style.display='none';
   openModal('overlay-inv');
@@ -146,7 +172,6 @@ function openEditInv(id){
   document.getElementById('inv-name').value=inv.name;
   document.getElementById('inv-type').value=inv.type||'hisse';
   document.getElementById('inv-cur-price').value=inv.currentPrice||'';
-  document.getElementById('inv-cur-usd').value=inv.currentUsdRate||'';
   document.getElementById('inv-delete-btn').style.display='block';
   renderInvLots(inv);
   document.getElementById('inv-lots-section').style.display='block';
@@ -189,7 +214,6 @@ function saveInv(){
     name,
     type:document.getElementById('inv-type').value,
     currentPrice:parseFloat(document.getElementById('inv-cur-price').value)||0,
-    currentUsdRate:parseFloat(document.getElementById('inv-cur-usd').value)||0,
     lots:existing?existing.lots:[]
   };
   if(id){
