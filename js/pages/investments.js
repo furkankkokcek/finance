@@ -26,13 +26,25 @@ async function fetchCurrentUsdRate(){
 // ── Live price helpers ───────────────────────────────────────────────────────
 
 async function fetchYahooPrice(ticker){
-  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-  const proxy=`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-  const res=await fetch(proxy);
-  const data=await res.json();
-  const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-  if(!price) throw new Error('no price');
-  return price;
+  const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+  const proxies=[
+    `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`
+  ];
+  for(const proxy of proxies){
+    try{
+      const ctrl=new AbortController();
+      const tid=setTimeout(()=>ctrl.abort(),8000);
+      const res=await fetch(proxy,{signal:ctrl.signal});
+      clearTimeout(tid);
+      if(!res.ok) continue;
+      const text=await res.text();
+      const data=JSON.parse(text);
+      const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if(price>0) return price;
+    }catch{}
+  }
+  throw new Error(`no price: ${ticker}`);
 }
 
 async function fetchAllInvPrices(){
