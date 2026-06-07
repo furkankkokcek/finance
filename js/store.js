@@ -11,7 +11,7 @@ let S = {
   investmentPortfolio:[],
   settings:{
     salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1,
-    netWorth:0, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true,
+    netWorth:0, invGoal:{amount:0,currency:'usd'}, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true,
     amountsHidden:false, changeCount:0, lastOpenDate:'', testNotifEnabled:false,
     customHolidays:[]
   },
