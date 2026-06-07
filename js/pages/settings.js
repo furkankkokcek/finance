@@ -2,7 +2,6 @@
 
 function openSettingsModal(){
   document.getElementById('cfg-salary').value=S.settings.salaryDay;
-  document.getElementById('cfg-nw').value=S.settings.netWorth||0;
   document.getElementById('cfg-theme').checked=S.settings.theme==='light';
   document.getElementById('cfg-notif').checked=S.settings.notifEnabled&&Notification.permission==='granted';
   document.getElementById('cfg-ppf').checked=S.settings.ppfEnabled!==false;
@@ -31,7 +30,6 @@ function updatePpfInfoTexts(){
 
 function saveSettings(){
   S.settings.salaryDay=parseInt(document.getElementById('cfg-salary').value)||1;
-  S.settings.netWorth=parseFloat(document.getElementById('cfg-nw').value)||0;
   S.settings.ppfEnabled=document.getElementById('cfg-ppf').checked;
   saveS();
   closeModal('overlay-settings');

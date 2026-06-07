@@ -15,7 +15,6 @@ function renderPage(page){
   else if(page==='gelir') renderGelir();
   else if(page==='gider') renderGider();
   else if(page==='harcama') renderHarcama();
-  else if(page==='ozgurluk') renderOzgurluk();
   else if(page==='takvim') renderTakvim();
   else if(page==='yatirim') renderYatirim();
 }

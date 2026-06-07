@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="css/components/charts.css">
 <link rel="stylesheet" href="css/app.css">
 <style>
-.nav{grid-template-columns:repeat(7,1fr)}
+.nav{grid-template-columns:repeat(6,1fr)}
 </style>
 </head>
 <body>
@@ -60,10 +60,7 @@
       <button class="year-btn" id="year-btn" onclick="openYearModal()">2026</button>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" onclick="openNotifCenter()" title="Bildirimler" style="position:relative">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;line-height:16px;text-align:center;padding:0 3px"></span>
-      </button>
+      <button class="icon-btn" id="goal-progress-btn" onclick="showPage('yatirim',document.querySelector('[data-page=yatirim]'))" title="Yatırım Hedefi" style="display:none"></button>
       <button class="icon-btn" id="visibility-btn" onclick="toggleAmountsVisibility()" title="Tutarları Gizle/Göster">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
@@ -113,12 +110,6 @@
       <div style="height:80px"></div>
     </div>
 
-    <!-- FİNANSAL ÖZGÜRLÜK -->
-    <div class="page" id="page-ozgurluk">
-      <div id="ozgurluk-content"></div>
-      <div style="height:16px"></div>
-    </div>
-
     <!-- TAKVİM -->
     <div class="page" id="page-yatirim">
       <div id="yatirim-content" style="padding:12px"></div>
@@ -146,10 +137,6 @@
     <button class="nav-btn" data-page="harcama" onclick="showPage('harcama',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
       Harcama
-    </button>
-    <button class="nav-btn" data-page="ozgurluk" onclick="showPage('ozgurluk',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      Özgürlük
     </button>
     <button class="nav-btn" data-page="takvim" onclick="showPage('takvim',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -439,7 +426,6 @@
     </div>
     <div class="modal-body">
       <div class="field"><label>Maaş / Gelir Günü</label><input type="number" id="cfg-salary" min="1" max="31"></div>
-      <div class="field"><label>Net Servet (₺)</label><input type="number" id="cfg-nw" placeholder="Toplam varlıklarınız"></div>
       <div style="margin-top:12px">
         <div class="toggle-field">
           <div><div class="toggle-label">Açık Tema</div><div class="toggle-sub">Açık / Koyu modu seç</div></div>
@@ -529,7 +515,6 @@
 <script src="js/pages/income.js" defer></script>
 <script src="js/pages/expense.js" defer></script>
 <script src="js/pages/spending.js" defer></script>
-<script src="js/pages/freedom.js" defer></script>
 <script src="js/pages/yeartable.js" defer></script>
 <script src="js/pages/year.js" defer></script>
 <script src="js/pages/settings.js" defer></script>

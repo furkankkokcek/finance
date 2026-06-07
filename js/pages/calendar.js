@@ -84,7 +84,7 @@ function renderTakvim(){
             <div style="font-size:13px;font-weight:600;color:${ev.color}">${ev.name}</div>
             <div style="font-size:11px;color:var(--muted)">${typeLabel}</div>
           </div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(ev.amount)}</div>
+          <div class="inv-amount" style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(ev.amount)}</div>
         </div>`;
       });
     }

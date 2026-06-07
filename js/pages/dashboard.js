@@ -44,7 +44,7 @@ function renderDashboard(){
     <div class="stat-card">
       <div class="stat-label">💸 Toplam Gider</div>
       <div class="stat-value neg">${fmtTRY(d.totalExpense)}</div>
-      <div class="stat-sub">+${fmtTRY(d.investment)} yatırım</div>
+      <div class="stat-sub inv-amount">+${fmtTRY(d.investment)} yatırım</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">💲 Nakit Kalan</div>
@@ -129,7 +129,7 @@ function renderSpendingPieChart(){
   paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
   paths+=`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Outfit">Toplam</text>`;
   paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit">${fmtTRY(total)}</text>`;
-  const legendRows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0"></div><span style="font-size:12px;color:var(--muted)">${s.label}</span></div><div style="text-align:right"><span style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(s.val)}</span><span style="font-size:11px;color:var(--muted2);margin-left:4px">${Math.round(s.val/total*100)}%</span></div></div>`).join('');
+  const legendRows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0"></div><span style="font-size:12px;color:var(--muted)">${s.label}</span></div><div style="text-align:right"><span class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(s.val)}</span><span style="font-size:11px;color:var(--muted2);margin-left:4px">${Math.round(s.val/total*100)}%</span></div></div>`).join('');
   el.innerHTML=`
     <div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div>
     <div style="display:flex;align-items:flex-start;gap:8px">

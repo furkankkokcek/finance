@@ -341,6 +341,92 @@ function pnlSign(v){ return v>=0?'+':''; }
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
+function renderInvGoal(port){
+  const goal=S.settings.invGoal||{};
+  const goalAmt=parseFloat(goal.amount||0);
+  const goalCur=goal.currency||'usd';
+
+  let totalValueTL=0;
+  port.forEach(inv=>{ const c=calcInv(inv); totalValueTL+=c.currentValueTL; });
+
+  const goalInTL=goalCur==='usd'&&_currentUsdRate>0?goalAmt*_currentUsdRate:goalCur==='try'?goalAmt:0;
+  const pct=goalInTL>0?Math.min(100,(totalValueTL/goalInTL)*100):0;
+  const remaining=Math.max(0,goalInTL-totalValueTL);
+  const reached=goalAmt>0&&goalInTL>0&&totalValueTL>=goalInTL;
+  const progressColor=reached?'var(--success)':'var(--accent)';
+  const usdActive=goalCur==='usd';
+
+  let progressHtml='';
+  if(goalAmt>0){
+    const goalLabel=usdActive
+      ?'$'+goalAmt.toLocaleString('en-US')+(_currentUsdRate>0?' ('+fmtTRY(goalAmt*_currentUsdRate)+')':'')
+      :fmtTRY(goalAmt);
+    const remainLabel=usdActive&&_currentUsdRate>0
+      ?fmtTRY(remaining)+' ('+fmtUSD(remaining/_currentUsdRate)+')'
+      :fmtTRY(remaining);
+    progressHtml=`
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px">
+        <span>Mevcut: <span class="inv-amount" style="font-weight:600;color:var(--text)">${fmtTRY(totalValueTL)}</span></span>
+        <span>Hedef: <span class="inv-amount">${goalLabel}</span></span>
+      </div>
+      <div style="background:var(--bg4);border-radius:4px;height:10px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${progressColor};border-radius:4px;transition:width .3s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px">
+        <span style="color:var(--muted)">${reached?'🎯 Hedefe ulaşıldı!':'Kalan: <span class="inv-amount">'+remainLabel+'</span>'}</span>
+        <span style="color:${progressColor};font-weight:700">${pct.toFixed(1)}% tamamlandı</span>
+      </div>`;
+  }
+
+  return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:10px">HEDEF</div>
+    <div style="display:flex;gap:6px;align-items:stretch;margin-bottom:${goalAmt>0?'10':'0'}px">
+      <input id="inv-goal-input" type="number" min="0" step="any" value="${goalAmt||''}" placeholder="Hedef tutarı girin…"
+        onchange="saveInvGoal(this.value,'${goalCur}')"
+        style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--text);font-size:14px;font-weight:700;padding:8px 10px;outline:none">
+      <button onclick="saveInvGoal(document.getElementById('inv-goal-input').value,'usd')"
+        style="padding:6px 12px;border-radius:var(--r3);font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:${usdActive?'var(--accent)':'var(--bg4)'};color:${usdActive?'#000':'var(--text)'}">$</button>
+      <button onclick="saveInvGoal(document.getElementById('inv-goal-input').value,'try')"
+        style="padding:6px 12px;border-radius:var(--r3);font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:${!usdActive?'var(--accent)':'var(--bg4)'};color:${!usdActive?'#000':'var(--text)'}">₺</button>
+    </div>
+    ${progressHtml}
+  </div>`;
+}
+
+function saveInvGoal(amount, currency){
+  if(!S.settings.invGoal) S.settings.invGoal={};
+  S.settings.invGoal.amount=parseFloat(amount)||0;
+  S.settings.invGoal.currency=currency||'usd';
+  saveS();
+  renderYatirim();
+}
+
+function updateGoalProgressBtn(){
+  const btn=document.getElementById('goal-progress-btn');
+  if(!btn) return;
+  const goal=S.settings.invGoal||{};
+  const goalAmt=parseFloat(goal.amount||0);
+  if(!goalAmt){ btn.style.display='none'; return; }
+  const port=getPortfolio();
+  let totalValueTL=0;
+  port.forEach(inv=>{ const c=calcInv(inv); totalValueTL+=c.currentValueTL; });
+  const goalCur=goal.currency||'usd';
+  const goalInTL=goalCur==='usd'&&_currentUsdRate>0?goalAmt*_currentUsdRate:goalCur==='try'?goalAmt:0;
+  const pct=goalInTL>0?Math.min(100,(totalValueTL/goalInTL)*100):0;
+  const C=56.55;
+  const dashLen=(pct/100)*C;
+  const color=pct>=100?'var(--success)':'var(--accent)';
+  const pctRnd=Math.round(pct);
+  btn.style.display='flex';
+  btn.innerHTML=`<svg viewBox="0 0 24 24" width="22" height="22">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="var(--border2)" stroke-width="2.5"/>
+    <circle cx="12" cy="12" r="9" fill="none" stroke="${color}" stroke-width="2.5"
+      stroke-dasharray="${dashLen.toFixed(1)} ${C}"
+      transform="rotate(-90 12 12)" stroke-linecap="round"/>
+    <text x="12" y="15" text-anchor="middle" font-size="${pctRnd>=100?5:6}" fill="var(--text)" font-weight="700" font-family="Outfit,sans-serif">${pctRnd}%</text>
+  </svg>`;
+}
+
 function renderAllocationChart(port){
   const groups={};
   port.forEach(inv=>{
@@ -439,6 +525,7 @@ function renderYatirim(){
       </div>
     </div>`;
 
+    html+=renderInvGoal(port);
     html+=renderAllocationChart(port);
 
     port.forEach(inv=>{
@@ -493,6 +580,7 @@ function renderYatirim(){
   }
 
   el.innerHTML=html;
+  updateGoalProgressBtn();
 }
 
 // ── Investment CRUD ───────────────────────────────────────────────────────────
