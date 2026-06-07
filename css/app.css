@@ -39,5 +39,6 @@ body.amounts-hidden .spending-amount,
 body.amounts-hidden .section-badge,
 body.amounts-hidden .freedom-target,
 body.amounts-hidden .nw-input,
+body.amounts-hidden .inv-amount,
 body.amounts-hidden .year-table td:not(:first-child),
 body.amounts-hidden .notif-text b{filter:blur(6px);user-select:none;cursor:default;transition:filter .2s}

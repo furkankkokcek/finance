@@ -341,6 +341,54 @@ function pnlSign(v){ return v>=0?'+':''; }
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
+function renderAllocationChart(port){
+  const groups={};
+  port.forEach(inv=>{
+    const c=calcInv(inv);
+    if(c.currentValueTL<=0) return;
+    groups[inv.type]=(groups[inv.type]||0)+c.currentValueTL;
+  });
+  const segs=Object.entries(groups).filter(([,v])=>v>0).map(([type,val])=>({
+    type,val,color:INV_COLORS[type]||'#6b7280',label:INV_TYPES[type]||type
+  })).sort((a,b)=>b.val-a.val);
+  if(segs.length<2) return '';
+  const total=segs.reduce((s,seg)=>s+seg.val,0);
+  if(total<=0) return '';
+  const cx=60,cy=60,R=52,ri=30;
+  let angle=-Math.PI/2,paths='';
+  segs.forEach(seg=>{
+    const sw=(seg.val/total)*Math.PI*2;
+    const ea=angle+sw;
+    const x1=cx+R*Math.cos(angle),y1=cy+R*Math.sin(angle);
+    const x2=cx+R*Math.cos(ea),y2=cy+R*Math.sin(ea);
+    const x3=cx+ri*Math.cos(ea),y3=cy+ri*Math.sin(ea);
+    const x4=cx+ri*Math.cos(angle),y4=cy+ri*Math.sin(angle);
+    const la=sw>Math.PI?1:0;
+    paths+=`<path d="M${x4.toFixed(1)},${y4.toFixed(1)} A${ri},${ri} 0 ${la},1 ${x3.toFixed(1)},${y3.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} A${R},${R} 0 ${la},0 ${x1.toFixed(1)},${y1.toFixed(1)} Z" fill="${seg.color}" opacity=".9"/>`;
+    angle=ea;
+  });
+  paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
+  paths+=`<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="Outfit">${segs.length} varlık</text>`;
+  paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="700" font-family="Outfit">${fmtTRY(total)}</text>`;
+  const rows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:7px">
+    <div style="display:flex;align-items:center;gap:5px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></div>
+      <span style="font-size:11px;color:var(--muted)">${s.label}</span>
+    </div>
+    <div style="text-align:right">
+      <span class="inv-amount" style="font-size:11px;font-weight:600;color:var(--text)">${fmtTRY(s.val)}</span>
+      <span style="font-size:10px;color:var(--muted2);margin-left:3px">${Math.round(s.val/total*100)}%</span>
+    </div>
+  </div>`).join('');
+  return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:10px">DAĞILIM</div>
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <svg viewBox="0 0 120 120" width="110" height="110" style="flex-shrink:0">${paths}</svg>
+      <div style="flex:1;padding-top:6px">${rows}</div>
+    </div>
+  </div>`;
+}
+
 function renderYatirim(){
   const el=document.getElementById('yatirim-content');
   if(!el) return;
@@ -375,31 +423,28 @@ function renderYatirim(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam Maliyet</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalCostTL)}</div>
-          <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalCostUSD):'—'}</div>
+          <div class="inv-amount" style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalCostTL)}</div>
+          <div class="inv-amount" style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalCostUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Değer</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalValueTL)}</div>
-          <div style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalValueUSD):'—'}</div>
+          <div class="inv-amount" style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalValueTL)}</div>
+          <div class="inv-amount" style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalValueUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3);grid-column:1/-1">
           <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam K/Z</div>
-          <div style="font-size:15px;font-weight:700;color:${pnlColor(totalPnlTL)}">${pnlSign(totalPnlTL)}${fmtTRY(totalPnlTL)} (${pnlSign(totalPnlPct)}${totalPnlPct.toFixed(1)}%)</div>
-          <div style="font-size:12px;color:${usdReady?pnlColor(totalPnlUSD):'var(--muted)'}">${usdReady?pnlSign(totalPnlUSD)+fmtUSD(totalPnlUSD):'—'}</div>
+          <div class="inv-amount" style="font-size:15px;font-weight:700;color:${pnlColor(totalPnlTL)}">${pnlSign(totalPnlTL)}${fmtTRY(totalPnlTL)} (${pnlSign(totalPnlPct)}${totalPnlPct.toFixed(1)}%)</div>
+          <div class="inv-amount" style="font-size:12px;color:${usdReady?pnlColor(totalPnlUSD):'var(--muted)'}">${usdReady?pnlSign(totalPnlUSD)+fmtUSD(totalPnlUSD):'—'}</div>
         </div>
       </div>
     </div>`;
+
+    html+=renderAllocationChart(port);
 
     port.forEach(inv=>{
       const c=calcInv(inv);
       const tc=INV_COLORS[inv.type]||'#6b7280';
       const status=_priceStatus[inv.id];
-      const priceStr=inv.currentPrice
-        ?(inv.type==='btc'||inv.type==='kripto'
-          ?'$'+parseFloat(inv.currentPrice).toLocaleString('en-US',{maximumFractionDigits:2})
-          :fmtTRY(parseFloat(inv.currentPrice)))
-        :'—';
       const statusBadge=_fetchingPrices&&!status
         ?`<span style="font-size:9px;color:var(--muted)"> ↻</span>`
         :status==='err'
@@ -423,22 +468,22 @@ function renderYatirim(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted)">Ort. Maliyet</div>
-            <div style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.avgCostTL)}</div>
-            <div style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
+            <div class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.avgCostTL)}</div>
+            <div class="inv-amount" style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Fiyat</div>
-            <input type="number" min="0" step="any"
+            <input class="inv-amount" type="number" min="0" step="any"
               value="${parseFloat(inv.currentPrice||0)||''}"
               placeholder="Gir…"
               onchange="updateInvPrice('${inv.id}',this.value)"
               style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:2px 0;outline:none">
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
+            <div class="inv-amount" style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
             <div style="font-size:10px;color:var(--muted)">Kâr / Zarar</div>
-            <div style="font-size:13px;font-weight:700;color:${pnlColor(c.pnlTL)}">${pnlSign(c.pnlTL)}${fmtTRY(c.pnlTL)} (${pnlSign(c.pnlPct)}${c.pnlPct.toFixed(1)}%)</div>
-            <div style="font-size:11px;color:${c.hasUsd?pnlColor(c.pnlUSD):'var(--muted)'}">${c.hasUsd?pnlSign(c.pnlUSD)+fmtUSD(c.pnlUSD):'—'}</div>
+            <div class="inv-amount" style="font-size:13px;font-weight:700;color:${pnlColor(c.pnlTL)}">${pnlSign(c.pnlTL)}${fmtTRY(c.pnlTL)} (${pnlSign(c.pnlPct)}${c.pnlPct.toFixed(1)}%)</div>
+            <div class="inv-amount" style="font-size:11px;color:${c.hasUsd?pnlColor(c.pnlUSD):'var(--muted)'}">${c.hasUsd?pnlSign(c.pnlUSD)+fmtUSD(c.pnlUSD):'—'}</div>
           </div>
         </div>
       </div>`;
