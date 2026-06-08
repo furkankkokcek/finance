@@ -24,19 +24,21 @@ function calcAltinFromGram(gramHas){
 async function fetchCurrentUsdRate(){
   if(_fetchingUsdRate) return;
   _fetchingUsdRate=true;
+  const tryParse=d=>{
+    if(d?.usd?.try>0) return {rate:d.usd.try,xauPerUsd:d?.usd?.xau||0};
+    const r=parseFloat((d?.USD?.satis||d?.USD?.alis||'').toString().replace(',','.'));
+    if(r>0) return {rate:r,xauPerUsd:0};
+    throw new Error('no rate');
+  };
   try{
-    const res=await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
-    const data=await res.json();
-    const rate=data?.usd?.try;
-    if(rate>0){
-      _currentUsdRate=rate;
-      // usd.xau = troy oz of gold per 1 USD → free gold price with no extra request
-      const xauPerUsd=data?.usd?.xau;
-      if(xauPerUsd>0&&!_altinCache){
-        _altinCache=calcAltinFromGram((1/xauPerUsd)/31.1035*rate);
-      }
-      fetchAllInvPrices();
-    }
+    const {rate,xauPerUsd}=await Promise.any([
+      fetch('https://latest.currency-api.pages.dev/v1/currencies/usd.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse),
+      fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse),
+      fetch('https://api.genelpara.com/embed/doviz.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse),
+    ]);
+    _currentUsdRate=rate;
+    if(xauPerUsd>0&&!_altinCache) _altinCache=calcAltinFromGram((1/xauPerUsd)/31.1035*rate);
+    renderYatirim();
   }catch{}
   _fetchingUsdRate=false;
 }
@@ -52,7 +54,7 @@ async function getBistData(){
   if(_bistFetching) return null;
   _bistFetching=true;
   try{
-    const res=await fetch('https://api.genelpara.com/embed/borsa.json',{signal:AbortSignal.timeout(8000)});
+    const res=await fetch('https://api.genelpara.com/embed/borsa.json',{signal:AbortSignal.timeout(3000)});
     if(res.ok){ _bistData=await res.json(); }
   }catch{}
   _bistFetching=false;
@@ -118,51 +120,38 @@ async function fetchAltinPrices(){
   if(_altinCache&&Date.now()-_altinCache.ts<5*60*1000) return _altinCache;
   if(_altinFetching) return _altinCache;
   _altinFetching=true;
+  if(_altinCache){ _altinFetching=false; return _altinCache; }
 
   function parseTR(v){ return parseFloat((v||'').toString().replace(/\./g,'').replace(',','.')); }
 
-  // 1. Already set by fetchCurrentUsdRate via usd.xau — return early if so
-  if(_altinCache){ _altinFetching=false; return _altinCache; }
-
-  // 2. fawazahmed0 XAU endpoint (same CDN as USD)
+  // Race all sources simultaneously — take the fastest successful one
   try{
-    for(const url of['https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json','https://latest.currency-api.pages.dev/v1/currencies/xau.json']){
-      try{
-        const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
-        if(!res.ok) continue;
-        const data=await res.json();
-        const tryPerOz=data?.xau?.try;
-        if(tryPerOz>0){ _altinCache=calcAltinFromGram(tryPerOz/31.1035); break; }
-      }catch{}
-    }
+    _altinCache=await Promise.any([
+      // genelpara — fastest Turkish source
+      fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(3000)})
+        .then(r=>r.json()).then(d=>{
+          const gram=parseTR(d?.GA?.satis||d?.GA?.alis);
+          if(!(gram>0)) throw new Error();
+          return {gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:parseTR(d?.C?.satis||d?.C?.alis)||0,ts:Date.now()};
+        }),
+      // truncgil — Turkish market prices
+      fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(3000)})
+        .then(r=>r.json()).then(d=>{
+          const gram=parseTR(d['Gram Altın']?.['Satış']);
+          if(!(gram>0)) throw new Error();
+          const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
+          const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
+          return {gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+        }),
+      // fawazahmed0 XAU (Cloudflare edge)
+      fetch('https://latest.currency-api.pages.dev/v1/currencies/xau.json',{signal:AbortSignal.timeout(3000)})
+        .then(r=>r.json()).then(d=>{
+          const tryPerOz=d?.xau?.try;
+          if(!(tryPerOz>0)) throw new Error();
+          return {...calcAltinFromGram(tryPerOz/31.1035),ts:Date.now()};
+        }),
+    ]);
   }catch{}
-
-  // 3. truncgil — Turkish market prices (gram, 22 ayar bilezik, çeyrek)
-  if(!_altinCache){
-    try{
-      const res=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(8000)});
-      if(res.ok){
-        const data=await res.json();
-        const gram=parseTR(data['Gram Altın']?.['Satış']);
-        const ayar22=parseTR(data['22 Ayar Bilezik']?.['Satış']||data['22 Ayar']?.['Satış']);
-        const ceyrek=parseTR(data['Çeyrek Altın']?.['Satış']);
-        if(gram>0) _altinCache={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-      }
-    }catch{}
-  }
-
-  // 4. genelpara — GA=gram altın, C=çeyrek
-  if(!_altinCache){
-    try{
-      const res=await fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(8000)});
-      if(res.ok){
-        const data=await res.json();
-        const gram=parseTR(data?.GA?.satis||data?.GA?.alis);
-        const ceyrek=parseTR(data?.C?.satis||data?.C?.alis);
-        if(gram>0) _altinCache={gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-      }
-    }catch{}
-  }
 
   _altinFetching=false;
   return _altinCache;
@@ -220,26 +209,18 @@ async function fetchAllInvPrices(){
     );
   }
 
-  // Bitcoin + XAUT gold fallback — one combined CoinGecko call to avoid rate limiting
+  // Bitcoin — Binance BTCTRY (sub-200ms) with CoinGecko fallback
   const btcInvs=port.filter(i=>i.type==='btc');
-  const needXaut=goldInvs.length>0&&!_altinCache;
-  if(btcInvs.length||needXaut){
-    const ids=['bitcoin'];
-    if(needXaut) ids.push('tether-gold','pax-gold');
+  if(btcInvs.length){
     promises.push(
-      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=try`,{signal:AbortSignal.timeout(10000)})
-        .then(r=>r.json())
-        .then(data=>{
-          const btcPrice=data?.bitcoin?.try;
-          if(btcPrice) btcInvs.forEach(i=>{ i.currentPrice=btcPrice; _priceStatus[i.id]='ok'; });
-          else btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; });
-          if(needXaut&&!_altinCache){
-            const tryPerOz=data?.['tether-gold']?.try||data?.['pax-gold']?.try;
-            if(tryPerOz>0) _altinCache=calcAltinFromGram(tryPerOz/31.1035);
-          }
-          renderYatirim();
-        })
-        .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
+      Promise.any([
+        fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCTRY',{signal:AbortSignal.timeout(2000)})
+          .then(r=>r.json()).then(d=>{ const p=parseFloat(d.price); if(!(p>0)) throw new Error(); return p; }),
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try',{signal:AbortSignal.timeout(5000)})
+          .then(r=>r.json()).then(d=>{ const p=d?.bitcoin?.try; if(!(p>0)) throw new Error(); return p; }),
+      ])
+      .then(price=>{ btcInvs.forEach(i=>{ i.currentPrice=price; _priceStatus[i.id]='ok'; }); renderYatirim(); })
+      .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
     );
   }
 
@@ -248,7 +229,7 @@ async function fetchAllInvPrices(){
   if(kriptoInvs.length){
     const ids=[...new Set(kriptoInvs.map(i=>i.ticker.toLowerCase()))].join(',');
     promises.push(
-      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=try`)
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=try`,{signal:AbortSignal.timeout(5000)})
         .then(r=>r.json())
         .then(data=>{
           kriptoInvs.forEach(i=>{
@@ -287,8 +268,8 @@ function refreshPrices(){
   _lastPriceFetch=0;
   _altinCache=null;
   _bistData=null;
-  if(_currentUsdRate>0) fetchAllInvPrices();
-  else fetchCurrentUsdRate();
+  fetchCurrentUsdRate();
+  fetchAllInvPrices();
 }
 
 function updateInvPrice(id, val){
@@ -480,8 +461,9 @@ function renderYatirim(){
   if(!el) return;
   const port=getPortfolio();
 
-  // Boot: start USD+price fetch if not yet done
-  if(_currentUsdRate===0&&!_fetchingUsdRate&&!_fetchingPrices) fetchCurrentUsdRate();
+  // Boot: start USD and price fetches simultaneously (decoupled)
+  if(_currentUsdRate===0&&!_fetchingUsdRate) fetchCurrentUsdRate();
+  if(!_fetchingPrices&&_lastPriceFetch===0) fetchAllInvPrices();
 
   const usdReady=_currentUsdRate>0;
   const fetchDone=_lastPriceFetch>0&&!_fetchingPrices;
