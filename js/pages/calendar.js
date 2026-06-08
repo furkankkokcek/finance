@@ -119,30 +119,44 @@ function selectCalDay(day,year,month){
 function exportICS(year,month){
   const pad=n=>String(n).padStart(2,'0');
   const monthName=MONTHS_FULL[month-1];
-  const lines=['BEGIN:VCALENDAR','VERSION:2.0','CALSCALE:GREGORIAN',
+  const escICS=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  // RFC 5545: fold lines longer than 75 octets (CRLF + single space continuation)
+  const fold=s=>{
+    const bytes=new TextEncoder();
+    let out='',line='';
+    for(const ch of s){
+      const test=line+ch;
+      if(bytes.encode(test).length>74){out+=test.slice(0,-ch.length)+'\r\n ';line=' '+ch;}
+      else line=test;
+    }
+    return out+line;
+  };
+  const now=new Date();
+  const dtstamp=`${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+
+  const out=['BEGIN:VCALENDAR','VERSION:2.0','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'PRODID:-//FinTrack//TR',`X-WR-CALNAME:FinTrack ${monthName} ${year}`,'X-WR-TIMEZONE:Europe/Istanbul'];
 
   getMonthEvents(year,month).forEach(ev=>{
     const d=new Date(year,month-1,ev.day);
     const dateStr=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatırlatma':(CAT_LABELS[ev.type]||ev.type);
+    const dEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
+    const dateEndStr=`${dEnd.getFullYear()}${pad(dEnd.getMonth()+1)}${pad(dEnd.getDate())}`;
+    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatirlatma':(CAT_LABELS[ev.type]||ev.type);
+    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
     const evUid=`ft-${year}-${pad(month)}-${pad(ev.day)}-${ev.expId||'inc'}-${Math.random().toString(36).slice(2,7)}@fintrack`;
-    lines.push('BEGIN:VEVENT');
-    lines.push(`UID:${evUid}`);
-    lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
-    lines.push(`DTEND;VALUE=DATE:${dateStr}`);
-    lines.push(`SUMMARY:${ev.name}`);
-    lines.push(`DESCRIPTION:${fmtTRY(ev.amount)} · ${typeLabel}`);
-    lines.push('BEGIN:VALARM');
-    lines.push('TRIGGER;VALUE=DURATION:PT9H');
-    lines.push('ACTION:DISPLAY');
-    lines.push(`DESCRIPTION:${ev.name}`);
-    lines.push('END:VALARM');
-    lines.push('END:VEVENT');
+    out.push('BEGIN:VEVENT');
+    out.push(`UID:${evUid}`);
+    out.push(`DTSTAMP:${dtstamp}`);
+    out.push(`DTSTART;VALUE=DATE:${dateStr}`);
+    out.push(`DTEND;VALUE=DATE:${dateEndStr}`);
+    out.push(fold(`SUMMARY:${escICS(ev.name)}`));
+    out.push(fold(`DESCRIPTION:${escICS(amountStr+' - '+typeLabel)}`));
+    out.push('END:VEVENT');
   });
 
-  lines.push('END:VCALENDAR');
-  const blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  out.push('END:VCALENDAR');
+  const blob=new Blob([out.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;a.download=`fintrack_${year}-${pad(month)}.ics`;a.click();
