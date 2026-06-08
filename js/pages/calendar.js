@@ -119,24 +119,33 @@ function selectCalDay(day,year,month){
 function exportICS(year,month){
   const pad=n=>String(n).padStart(2,'0');
   const monthName=MONTHS_FULL[month-1];
-  const lines=['BEGIN:VCALENDAR','VERSION:2.0','CALSCALE:GREGORIAN',
+  const escICS=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const now=new Date();
+  const dtstamp=`${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'PRODID:-//FinTrack//TR',`X-WR-CALNAME:FinTrack ${monthName} ${year}`,'X-WR-TIMEZONE:Europe/Istanbul'];
 
   getMonthEvents(year,month).forEach(ev=>{
     const d=new Date(year,month-1,ev.day);
     const dateStr=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatırlatma':(CAT_LABELS[ev.type]||ev.type);
+    // DTEND must be the next calendar day for all-day events (RFC 5545)
+    const dEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
+    const dateEndStr=`${dEnd.getFullYear()}${pad(dEnd.getMonth()+1)}${pad(dEnd.getDate())}`;
+    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatirlatma':(CAT_LABELS[ev.type]||ev.type);
+    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
     const evUid=`ft-${year}-${pad(month)}-${pad(ev.day)}-${ev.expId||'inc'}-${Math.random().toString(36).slice(2,7)}@fintrack`;
     lines.push('BEGIN:VEVENT');
     lines.push(`UID:${evUid}`);
+    lines.push(`DTSTAMP:${dtstamp}`);
     lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
-    lines.push(`DTEND;VALUE=DATE:${dateStr}`);
-    lines.push(`SUMMARY:${ev.name}`);
-    lines.push(`DESCRIPTION:${fmtTRY(ev.amount)} · ${typeLabel}`);
+    lines.push(`DTEND;VALUE=DATE:${dateEndStr}`);
+    lines.push(`SUMMARY:${escICS(ev.name)}`);
+    lines.push(`DESCRIPTION:${escICS(amountStr + ' - ' + typeLabel)}`);
     lines.push('BEGIN:VALARM');
     lines.push('TRIGGER;VALUE=DURATION:PT9H');
     lines.push('ACTION:DISPLAY');
-    lines.push(`DESCRIPTION:${ev.name}`);
+    lines.push(`DESCRIPTION:${escICS(ev.name)}`);
     lines.push('END:VALARM');
     lines.push('END:VEVENT');
   });

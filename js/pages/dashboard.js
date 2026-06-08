@@ -44,7 +44,7 @@ function renderDashboard(){
     <div class="stat-card">
       <div class="stat-label">💸 Toplam Gider</div>
       <div class="stat-value neg">${fmtTRY(d.totalExpense)}</div>
-      <div class="stat-sub inv-amount">+${fmtTRY(d.investment)} yatırım</div>
+      ${d.investment>0?`<div class="stat-sub inv-amount">+${fmtTRY(d.investment)} yatırım</div>`:''}
     </div>
     <div class="stat-card">
       <div class="stat-label">💲 Nakit Kalan</div>

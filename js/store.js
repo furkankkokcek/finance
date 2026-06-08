@@ -22,7 +22,10 @@ const giderOpenCats = new Set();
 function getYear(y){
   y = y || S.settings.currentYear;
   if(!S.years[y]) S.years[y]={income:[],expenses:[],investments:{},spending:[]};
-  return S.years[y];
+  const yd=S.years[y];
+  if(!yd.spending) yd.spending=[];
+  if(!yd.investments) yd.investments={};
+  return yd;
 }
 
 function migrateToV4(data){
