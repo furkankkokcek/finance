@@ -47,7 +47,7 @@ function openYearTable(){
   rows+=`<tr class="grand-divider"><td colspan="14"></td></tr>`;
   rows+=`<tr class="total-row"><td>🤑 TOPLAM GELİR</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   rows+=`<tr class="total-row"><td>💸 TOPLAM GİDER</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  const invTotals=Array.from({length:12},(_,i)=>parseFloat(getYear(year).investments[i+1]||0));
+  const invTotals=Array.from({length:12},(_,i)=>getMonthlyInvestmentFromLots(year,i+1));
   rows+=`<tr class="total-row"><td>💼 YATIRIM</td>${invTotals.map(v=>`<td style="color:var(--info)">${v>0?v.toLocaleString('tr-TR',{maximumFractionDigits:0}):'-'}</td>`).join('')}<td>${invTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   rows+=`<tr class="total-row"><td>💲 NAKİT KALAN</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
 

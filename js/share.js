@@ -15,7 +15,7 @@ function shareWhatsApp(){
     `💸 *Toplam Gider:* ${fmtTRY(d.totalExpense)}\n\n`+
     `💼 *Yatırım:* ${fmtTRY(d.investment)}\n\n`+
     `${d.cashLeft<0?'🚨':d.cashLeft<d.investment?'⚠️':'✅'} *NAKİT KALAN: ${fmtTRY(d.cashLeft)}*\n`+
-    `   ÷2 → ${fmtTRY(d.cashLeft/2)}   ÷3 → ${fmtTRY(d.cashLeft/3)}   ÷4 → ${fmtTRY(d.cashLeft/4)}\n`+
+    `   ÷2 → ${fmtTRY(d.cashLeft/2)}\n`+
     `📊 Durum: ${d.cashLeft<0?'KRİTİK 🚨':d.cashLeft<d.investment?'UYARI ⚠️':'SAĞLIKLI ✅'}\n`+
     `📈 Tasarruf: ${fmtPct(d.savingsRate)}`+
     (S.settings.ppfEnabled!==false&&d.ppfTotal>0?`\n🏦 PPF: ${fmtTRY(d.ppfTotal)}`:'');

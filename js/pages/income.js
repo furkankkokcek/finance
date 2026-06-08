@@ -24,29 +24,7 @@ function renderGelir(){
     });
   }
 
-  // Investment
-  const inv=parseFloat(yd.investments[month]||0);
-  html+=`<div class="section-hdr" style="margin-top:20px"><div class="section-title">Yatırım</div></div>
-    <div class="income-item" onclick="editInvestment()">
-      <div><div class="income-item-name">Aylık Yatırım</div><div style="font-size:11px;color:var(--muted)">PPF dahil tüm yatırımlar</div></div>
-      <div class="income-item-amount" style="color:var(--info)">${fmtTRY(inv)}</div>
-    </div>`;
-
   el.innerHTML=html;
-}
-
-function editInvestment(){
-  const year=S.settings.currentYear;
-  const month=S.settings.currentMonth;
-  const yd=getYear(year);
-  const cur=parseFloat(yd.investments[month]||0);
-  const val=prompt(`${MONTHS_FULL[month-1]} ${year} yatırım tutarı (₺):`, cur);
-  if(val!==null){
-    yd.investments[month]=parseFloat(val)||0;
-    renderGelir();
-    renderDashboard();
-    trackChange();
-  }
 }
 
 function openAddIncome(){
