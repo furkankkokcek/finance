@@ -11,6 +11,37 @@ let _lastPriceFetch = 0;   // timestamp ms
 let _priceStatus = {};     // { invId: 'ok'|'err'|'loading' }
 let _altinCache = null;
 let _altinFetching = false;
+let _fetchLog = [];        // price fetch diagnostics
+
+function addFetchLog(source, status, detail, ms){
+  _fetchLog.unshift({ts:Date.now(),source,status,detail,ms:Math.round(ms)});
+  if(_fetchLog.length>150) _fetchLog.length=150;
+}
+
+function openFetchLog(){
+  renderFetchLog();
+  openModal('overlay-price-log');
+}
+
+function renderFetchLog(){
+  const el=document.getElementById('price-log-body');
+  if(!el) return;
+  if(!_fetchLog.length){
+    el.innerHTML='<div style="text-align:center;color:var(--muted);padding:28px 0;font-size:13px">Henüz log yok — fiyatlar yüklendikten sonra tekrar açın</div>';
+    return;
+  }
+  el.innerHTML=_fetchLog.map(e=>{
+    const t=new Date(e.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const ok=e.status==='ok';
+    return `<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--muted);flex-shrink:0;font-size:10px;font-family:monospace">${t}</span>
+      <span style="color:${ok?'var(--success)':'var(--danger)'};flex-shrink:0;font-size:12px">${ok?'✓':'✗'}</span>
+      <span style="color:var(--text);flex:1;font-size:12px">${e.source}</span>
+      <span style="color:var(--muted);font-size:11px">${e.detail}</span>
+      <span style="color:var(--muted);flex-shrink:0;font-size:10px;font-family:monospace">${e.ms}ms</span>
+    </div>`;
+  }).join('');
+}
 
 function calcAltinFromGram(gramHas){
   const gram=Math.round(gramHas*100)/100;
@@ -30,11 +61,13 @@ async function fetchCurrentUsdRate(){
     if(r>0) return {rate:r,xauPerUsd:0};
     throw new Error('no rate');
   };
+  const t0=Date.now();
+  const tagU=(label,p)=>p.then(v=>{addFetchLog(label,'ok',`$1 = ${v.rate.toFixed(2)}₺`,Date.now()-t0);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0);throw e;});
   try{
     const {rate,xauPerUsd}=await Promise.any([
-      fetch('https://latest.currency-api.pages.dev/v1/currencies/usd.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse),
-      fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse),
-      fetch('https://api.genelpara.com/embed/doviz.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse),
+      tagU('USD (Cloudflare)',fetch('https://latest.currency-api.pages.dev/v1/currencies/usd.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse)),
+      tagU('USD (jsDelivr)',fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse)),
+      tagU('USD (genelpara)',fetch('https://api.genelpara.com/embed/doviz.json',{signal:AbortSignal.timeout(3000)}).then(r=>r.json()).then(tryParse)),
     ]);
     _currentUsdRate=rate;
     if(xauPerUsd>0&&!_altinCache) _altinCache=calcAltinFromGram((1/xauPerUsd)/31.1035*rate);
@@ -125,31 +158,30 @@ async function fetchAltinPrices(){
   function parseTR(v){ return parseFloat((v||'').toString().replace(/\./g,'').replace(',','.')); }
 
   // Race all sources simultaneously — take the fastest successful one
+  const t0a=Date.now();
+  const tagA=(label,p)=>p.then(v=>{addFetchLog(label,'ok',`gram = ${fmtTRY(v.gram)}`,Date.now()-t0a);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0a);throw e;});
   try{
     _altinCache=await Promise.any([
-      // genelpara — fastest Turkish source
-      fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(3000)})
+      tagA('Altın (genelpara)',fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(3000)})
         .then(r=>r.json()).then(d=>{
           const gram=parseTR(d?.GA?.satis||d?.GA?.alis);
           if(!(gram>0)) throw new Error();
           return {gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:parseTR(d?.C?.satis||d?.C?.alis)||0,ts:Date.now()};
-        }),
-      // truncgil — Turkish market prices
-      fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(3000)})
+        })),
+      tagA('Altın (truncgil)',fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(3000)})
         .then(r=>r.json()).then(d=>{
           const gram=parseTR(d['Gram Altın']?.['Satış']);
           if(!(gram>0)) throw new Error();
           const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
           const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
           return {gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-        }),
-      // fawazahmed0 XAU (Cloudflare edge)
-      fetch('https://latest.currency-api.pages.dev/v1/currencies/xau.json',{signal:AbortSignal.timeout(3000)})
+        })),
+      tagA('Altın (XAU/Cloudflare)',fetch('https://latest.currency-api.pages.dev/v1/currencies/xau.json',{signal:AbortSignal.timeout(3000)})
         .then(r=>r.json()).then(d=>{
           const tryPerOz=d?.xau?.try;
           if(!(tryPerOz>0)) throw new Error();
           return {...calcAltinFromGram(tryPerOz/31.1035),ts:Date.now()};
-        }),
+        })),
     ]);
   }catch{}
 
@@ -212,12 +244,14 @@ async function fetchAllInvPrices(){
   // Bitcoin — Binance BTCTRY (sub-200ms) with CoinGecko fallback
   const btcInvs=port.filter(i=>i.type==='btc');
   if(btcInvs.length){
+    const t0b=Date.now();
+    const tagB=(label,p)=>p.then(v=>{addFetchLog(label,'ok',fmtTRY(v),Date.now()-t0b);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0b);throw e;});
     promises.push(
       Promise.any([
-        fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCTRY',{signal:AbortSignal.timeout(2000)})
-          .then(r=>r.json()).then(d=>{ const p=parseFloat(d.price); if(!(p>0)) throw new Error(); return p; }),
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try',{signal:AbortSignal.timeout(5000)})
-          .then(r=>r.json()).then(d=>{ const p=d?.bitcoin?.try; if(!(p>0)) throw new Error(); return p; }),
+        tagB('BTC (Binance)',fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCTRY',{signal:AbortSignal.timeout(2000)})
+          .then(r=>r.json()).then(d=>{ const p=parseFloat(d.price); if(!(p>0)) throw new Error(); return p; })),
+        tagB('BTC (CoinGecko)',fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try',{signal:AbortSignal.timeout(5000)})
+          .then(r=>r.json()).then(d=>{ const p=d?.bitcoin?.try; if(!(p>0)) throw new Error(); return p; })),
       ])
       .then(price=>{ btcInvs.forEach(i=>{ i.currentPrice=price; _priceStatus[i.id]='ok'; }); renderYatirim(); })
       .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
@@ -227,6 +261,7 @@ async function fetchAllInvPrices(){
   // Crypto — CoinGecko by ticker (coinId)
   const kriptoInvs=port.filter(i=>i.type==='kripto'&&i.ticker);
   if(kriptoInvs.length){
+    const t0k=Date.now();
     const ids=[...new Set(kriptoInvs.map(i=>i.ticker.toLowerCase()))].join(',');
     promises.push(
       fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=try`,{signal:AbortSignal.timeout(5000)})
@@ -234,12 +269,12 @@ async function fetchAllInvPrices(){
         .then(data=>{
           kriptoInvs.forEach(i=>{
             const price=data?.[i.ticker.toLowerCase()]?.try;
-            if(price){ i.currentPrice=price; _priceStatus[i.id]='ok'; }
-            else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
+            if(price){ addFetchLog(`${i.ticker} (CoinGecko)`,'ok',fmtTRY(price),Date.now()-t0k); i.currentPrice=price; _priceStatus[i.id]='ok'; }
+            else{ addFetchLog(`${i.ticker} (CoinGecko)`,'err','bulunamadı',Date.now()-t0k); if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }
           });
           renderYatirim();
         })
-        .catch(()=>{ kriptoInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
+        .catch(()=>{ kriptoInvs.forEach(i=>{ addFetchLog(`${i.ticker} (CoinGecko)`,'err','',Date.now()-t0k); if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
     );
   }
 
@@ -248,10 +283,11 @@ async function fetchAllInvPrices(){
   if(bistInvs.length){
     const bistBulkP=getBistData();
     bistInvs.forEach(inv=>{
+      const t0s=Date.now();
       promises.push(
         bistBulkP.then(bistBulk=>fetchBistPrice(inv.ticker, bistBulk))
-          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; renderYatirim(); })
-          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; renderYatirim(); })
+          .then(price=>{ addFetchLog(inv.ticker,'ok',fmtTRY(price),Date.now()-t0s); inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; renderYatirim(); })
+          .catch(()=>{ addFetchLog(inv.ticker,'err','',Date.now()-t0s); if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; renderYatirim(); })
       );
     });
   }
@@ -264,6 +300,7 @@ async function fetchAllInvPrices(){
 }
 
 function refreshPrices(){
+  _fetchLog=[];
   _priceStatus={};
   _lastPriceFetch=0;
   _altinCache=null;
@@ -484,6 +521,7 @@ function renderYatirim(){
         <div class="section-title">PORTFÖY</div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:10px;color:var(--muted)">${lastFetchStr}</span>
+          <button onclick="openFetchLog()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Fiyat günlüğü">📋</button>
           <button onclick="refreshPrices()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--accent);cursor:pointer" title="Fiyatları yenile">↻</button>
         </div>
       </div>
@@ -640,6 +678,18 @@ function renderInvLots(inv){
     return;
   }
   el.innerHTML=lots.map(l=>{
+    if(l.lotType==='temettu'){
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${l.date} · ${l.qty} adet</div>
+          <div style="font-size:11px;color:#f59e0b">💰 Temettü · ${fmtTRY(l.totalDiv||0)} → 0₺ maliyet</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:700;color:var(--success)">0 ₺</div>
+          <button onclick="deleteLot('${inv.id}','${l.id}')" style="font-size:10px;padding:1px 7px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);cursor:pointer;margin-top:2px">Sil</button>
+        </div>
+      </div>`;
+    }
     const total=parseFloat(l.qty||0)*parseFloat(l.price||0);
     const usdTotal=parseFloat(l.usdRate||0)>0?total/parseFloat(l.usdRate):0;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
@@ -704,14 +754,63 @@ function deleteInv(){
 // ── Lot CRUD ──────────────────────────────────────────────────────────────────
 
 function openAddLot(invId){
+  const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
   document.getElementById('lot-inv-id').value=invId;
   document.getElementById('lot-date').value=todayStr();
   document.getElementById('lot-qty').value='';
   document.getElementById('lot-price').value='';
   document.getElementById('lot-usd-rate').value='';
   document.getElementById('lot-usd-status').textContent='';
+  const typeField=document.getElementById('lot-type-field');
+  const typeSel=document.getElementById('lot-type-sel');
+  if(typeSel) typeSel.value='alim';
+  const isStock=inv&&(inv.type==='hisse'||inv.type==='fon');
+  if(typeField) typeField.style.display=isStock?'':'none';
+  onLotTypeChange('alim');
   fetchUsdRate(todayStr());
   openModal('overlay-lot');
+}
+
+function onLotTypeChange(type){
+  const stdFields=document.getElementById('lot-std-fields');
+  const divFields=document.getElementById('lot-div-fields');
+  const isTemettu=type==='temettu';
+  if(stdFields) stdFields.style.display=isTemettu?'none':'';
+  if(divFields) divFields.style.display=isTemettu?'':'none';
+  if(isTemettu){
+    const invId=document.getElementById('lot-inv-id').value;
+    const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
+    const curQtyEl=document.getElementById('lot-cur-qty-display');
+    if(inv&&curQtyEl){ const c=calcInv(inv); curQtyEl.value=c.totalQty+' adet'; }
+    const divEl=document.getElementById('lot-div-per-share');
+    const rebuyEl=document.getElementById('lot-div-rebuy-price');
+    if(divEl) divEl.value='';
+    if(rebuyEl) rebuyEl.value='';
+    calcDivFields();
+  }
+}
+
+function calcDivFields(){
+  const invId=document.getElementById('lot-inv-id').value;
+  const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
+  if(!inv) return;
+  const c=calcInv(inv);
+  const divPerShare=parseFloat(document.getElementById('lot-div-per-share')?.value)||0;
+  const rebuyPrice=parseFloat(document.getElementById('lot-div-rebuy-price')?.value)||0;
+  const totalDiv=c.totalQty*divPerShare;
+  const newQty=rebuyPrice>0?Math.floor(totalDiv/rebuyPrice*10000)/10000:0;
+  const totalEl=document.getElementById('lot-div-total-display');
+  const newQtyEl=document.getElementById('lot-div-new-qty-display');
+  const infoEl=document.getElementById('lot-div-info');
+  if(totalEl) totalEl.value=divPerShare>0?fmtTRY(totalDiv):'—';
+  if(newQtyEl) newQtyEl.value=newQty>0?newQty+' adet':'—';
+  if(infoEl){
+    if(newQty>0){
+      const newTotal=c.totalQty+newQty;
+      const newAvg=newTotal>0?c.totalCostTL/newTotal:0;
+      infoEl.innerHTML=`${newQty} adet 0₺ maliyetle eklenir. Yeni ort. maliyet: <strong>${fmtTRY(newAvg)}</strong>`;
+    } else { infoEl.innerHTML=''; }
+  }
 }
 
 async function fetchUsdRate(date){
@@ -738,12 +837,24 @@ function saveLot(){
   const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
   if(!inv){alert('Yatırım bulunamadı');return;}
   const date=document.getElementById('lot-date').value;
-  const qty=parseFloat(document.getElementById('lot-qty').value);
-  const price=parseFloat(document.getElementById('lot-price').value);
-  const usdRate=parseFloat(document.getElementById('lot-usd-rate').value)||0;
-  if(!date||!(qty>0)||!(price>0)){alert('Tarih, adet ve fiyat zorunludur');return;}
+  const isTemettu=document.getElementById('lot-type-sel')?.value==='temettu';
   if(!inv.lots) inv.lots=[];
-  inv.lots.push({id:uid('lot'),date,qty,price,usdRate});
+  if(isTemettu){
+    const divPerShare=parseFloat(document.getElementById('lot-div-per-share').value)||0;
+    const rebuyPrice=parseFloat(document.getElementById('lot-div-rebuy-price').value)||0;
+    if(!date||!(divPerShare>0)||!(rebuyPrice>0)){alert('Tarih, pay başına temettü ve yeniden alış fiyatı zorunludur');return;}
+    const c=calcInv(inv);
+    const totalDiv=c.totalQty*divPerShare;
+    const newQty=Math.floor(totalDiv/rebuyPrice*10000)/10000;
+    if(!(newQty>0)){alert('Hesaplanan yeni pay adedi 0 — fiyat veya temettü miktarını kontrol edin');return;}
+    inv.lots.push({id:uid('lot'),date,qty:newQty,price:0,usdRate:0,lotType:'temettu',divPerShare,totalDiv});
+  } else {
+    const qty=parseFloat(document.getElementById('lot-qty').value);
+    const price=parseFloat(document.getElementById('lot-price').value);
+    const usdRate=parseFloat(document.getElementById('lot-usd-rate').value)||0;
+    if(!date||!(qty>0)||!(price>0)){alert('Tarih, adet ve fiyat zorunludur');return;}
+    inv.lots.push({id:uid('lot'),date,qty,price,usdRate});
+  }
   saveS();
   closeModal('overlay-lot');
   renderInvLots(inv);
