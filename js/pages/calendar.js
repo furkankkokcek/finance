@@ -100,9 +100,13 @@ function renderTakvim(){
   html+=`</div>`;
 
   html+=`<div style="font-size:11px;color:var(--muted);margin-top:12px;padding:8px 10px;background:var(--bg3);border-radius:var(--r2);line-height:1.6">
-    📱 <strong style="color:var(--text)">Takvime Aktar nedir?</strong> Ödeme günlerini telefonunuzun veya bilgisayarınızın takvimine <strong style="color:var(--text)">etkinlik</strong> olarak ekler. İndirilen <code style="font-size:10px;background:var(--bg4);padding:1px 4px;border-radius:3px">.ics</code> dosyasını Google Takvim, Apple Takvim veya Outlook ile açın.
+    📱 <strong style="color:var(--text)">Takvime Aktar</strong> — <strong style="color:var(--text)">Google Takvim</strong> butonunu kullan (mobilden çalışır). <code style="font-size:10px;background:var(--bg4);padding:1px 4px;border-radius:3px">.ics</code> dosyası ise Apple Takvim ve masaüstü için.
   </div>`;
-  html+=`<button class="btn-secondary" style="margin-top:8px" onclick="exportICS(${displayYear},${displayMonth})">📅 Bu Ayı Takvime Aktar (.ics)</button>`;
+  html+=`<div style="display:flex;gap:8px;margin-top:8px">
+    <button class="btn-secondary" style="flex:1" onclick="exportICS(${displayYear},${displayMonth})">📥 .ics İndir</button>
+    <button class="btn-secondary" style="flex:1;color:var(--accent);border-color:var(--accent)" onclick="showGCalLinks(${displayYear},${displayMonth})">📅 Google Takvim</button>
+  </div>`;
+  html+=`<div id="gcal-links-panel" style="display:none"></div>`;
 
   el.innerHTML=html;
 }
@@ -161,4 +165,42 @@ function exportICS(year,month){
   const a=document.createElement('a');
   a.href=url;a.download=`fintrack_${year}-${pad(month)}.ics`;a.click();
   URL.revokeObjectURL(url);
+}
+
+function showGCalLinks(year,month){
+  const panel=document.getElementById('gcal-links-panel');
+  if(!panel) return;
+  if(panel.style.display!=='none'){ panel.style.display='none'; return; }
+
+  const pad=n=>String(n).padStart(2,'0');
+  const events=getMonthEvents(year,month);
+  if(!events.length){
+    panel.style.display='block';
+    panel.innerHTML=`<div style="padding:10px;font-size:12px;color:var(--muted);text-align:center">Bu ayda etkinlik yok</div>`;
+    return;
+  }
+
+  const rows=events.map(ev=>{
+    const dateStr=`${year}${pad(month)}${pad(ev.day)}`;
+    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatirlatma':(CAT_LABELS[ev.type]||ev.type);
+    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
+    const details=encodeURIComponent(amountStr+' - '+typeLabel);
+    const title=encodeURIComponent(ev.name);
+    const gcUrl=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}%2F${dateStr}&details=${details}`;
+    const dayLabel=`${ev.day} ${MONTHS_FULL[month-1].slice(0,3)}`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${ev.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${dayLabel} · ${amountStr}</div>
+      </div>
+      <a href="${gcUrl}" target="_blank" rel="noopener"
+        style="padding:5px 11px;background:var(--accent);border-radius:var(--r3);font-size:11px;font-weight:700;color:#000;text-decoration:none;flex-shrink:0">+ Ekle</a>
+    </div>`;
+  }).join('');
+
+  panel.style.display='block';
+  panel.innerHTML=`<div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Her etkinlik için <strong style="color:var(--text)">+ Ekle</strong>'ye bas — Google Takvim açılır, kaydet.</div>
+    ${rows}
+  </div>`;
 }
