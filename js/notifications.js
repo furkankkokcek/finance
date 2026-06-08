@@ -29,12 +29,12 @@ async function toggleNotif(el){
 
 async function checkDailyNotifications(){
   if(!S.settings.notifEnabled||Notification.permission!=='granted') return;
+  const now=new Date();
+  // Only send at or after 10:00 AM — don't update lastNotifDate before that
+  if(now.getHours()<10) return;
   const today=todayStr();
   if(S.settings.lastNotifDate===today) return;
   S.settings.lastNotifDate=today;
-  saveS();
-
-  const now=new Date();
   const year=now.getFullYear();
   const month=now.getMonth()+1;
 

@@ -128,13 +128,14 @@ async function runDailyNotifications() {
     const schedule = await readSchedule(db);
     if (!schedule || !schedule.notifEnabled) return;
 
+    const now = new Date();
+    // Only send at or after 10:00 AM — don't lock lastNotifDate before that
+    if (now.getHours() < 10) return;
     const today = swTodayStr();
     if (schedule.lastNotifDate === today) return;
 
     schedule.lastNotifDate = today;
     await writeSchedule(db, schedule);
-
-    const now = new Date();
     const { year, month, salaryDay, monthSummary, dueDayExpenses } = schedule;
 
     for (const exp of dueDayExpenses) {
