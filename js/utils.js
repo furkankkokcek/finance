@@ -163,6 +163,20 @@ function getMonthEvents(year,month){
   return events;
 }
 
+function getMonthlyInvestmentFromLots(year, month){
+  if(!S.investmentPortfolio) return 0;
+  let total=0;
+  S.investmentPortfolio.forEach(inv=>{
+    (inv.lots||[]).forEach(lot=>{
+      if(!lot.date) return;
+      const d=new Date(lot.date+'T12:00:00');
+      if(d.getFullYear()===year&&d.getMonth()+1===month)
+        total+=parseFloat(lot.qty||0)*parseFloat(lot.price||0);
+    });
+  });
+  return total;
+}
+
 function getMonthlyData(year,month){
   const yd=getYear(year);
   let totalIncome=0,sabitTotal=0,krediTotal=0,kkTotal=0,abonelikTotal=0,ppfTotal=0;
@@ -180,7 +194,7 @@ function getMonthlyData(year,month){
     if(exp.ppf) ppfTotal+=amt;
   });
   const totalExpense=sabitTotal+krediTotal+kkTotal+abonelikTotal;
-  const investment=parseFloat(yd.investments[month]||0);
+  const investment=getMonthlyInvestmentFromLots(year,month);
   const cashLeft=totalIncome-totalExpense;
   const savingsRate=totalIncome>0?(investment/totalIncome)*100:0;
   const spendingTotal=yd.spending.filter(s=>{
