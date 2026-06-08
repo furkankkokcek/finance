@@ -96,14 +96,27 @@ async function getBistData(){
 
 async function fetchBistPrice(ticker, cachedBistData){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
+
   const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
     const s=data?.[code];
     const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
-    if(!(p>0)) throw new Error('no genelpara price');
+    if(!(p>0)) throw new Error();
     return p;
   });
-  // Race genelpara bulk data vs Yahoo Finance in parallel
-  return Promise.any([genelarP, fetchYahooPrice(code)]);
+
+  const bigparaP=fetch(
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/'+code)}`,
+    {signal:AbortSignal.timeout(10000)}
+  ).then(async r=>{
+    const j=await r.json();
+    const d=JSON.parse(j.contents||'{}');
+    const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
+    const p=parseFloat((raw??'').toString().replace(',','.'));
+    if(!(p>0)) throw new Error();
+    return p;
+  });
+
+  return Promise.any([genelarP, fetchYahooPrice(code), bigparaP]);
 }
 
 async function fetchAltinPrices(){
