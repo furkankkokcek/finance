@@ -156,6 +156,11 @@ function exportICS(year,month){
     out.push(`DTEND;VALUE=DATE:${dateEndStr}`);
     out.push(fold(`SUMMARY:${escICS(ev.name)}`));
     out.push(fold(`DESCRIPTION:${escICS(amountStr+' - '+typeLabel)}`));
+    out.push('BEGIN:VALARM');
+    out.push('ACTION:DISPLAY');
+    out.push(`DESCRIPTION:${escICS(ev.name)}`);
+    out.push('TRIGGER:PT10H');
+    out.push('END:VALARM');
     out.push('END:VEVENT');
   });
 
