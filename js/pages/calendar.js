@@ -155,7 +155,7 @@ function exportICS(year,month){
     out.push(`DTSTART;VALUE=DATE:${dateStr}`);
     out.push(`DTEND;VALUE=DATE:${dateEndStr}`);
     out.push(fold(`SUMMARY:${escICS(ev.name)}`));
-    out.push(fold(`DESCRIPTION:${escICS(amountStr+' - '+typeLabel)}`));
+    out.push(fold(`DESCRIPTION:${escICS('FinTrack | '+amountStr+' - '+typeLabel)}`));
     out.push('BEGIN:VALARM');
     out.push('ACTION:DISPLAY');
     out.push(`DESCRIPTION:${escICS(ev.name)}`);
