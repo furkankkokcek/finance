@@ -97,56 +97,26 @@ async function getBistData(){
 async function fetchBistPrice(ticker, cachedBistData){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
 
-  // 1. genelpara bulk borsa data (pre-loaded by caller to avoid race conditions)
-  const bistData=cachedBistData||await getBistData();
-  if(bistData){
-    const s=bistData[code];
-    if(s){
-      const price=parseFloat(s.deger||s.son||s.kapanis||s.satis||0);
-      if(price>0) return price;
-    }
-  }
+  const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
+    const s=data?.[code];
+    const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
+    if(!(p>0)) throw new Error();
+    return p;
+  });
 
-  // 2. BigPara direct
-  try{
-    const res=await fetch(`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`,{signal:AbortSignal.timeout(6000)});
-    if(res.ok){
-      const d=await res.json();
-      const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
-      const price=parseFloat((raw??'').toString().replace(',','.'));
-      if(price>0) return price;
-    }
-  }catch{}
+  const bigparaP=fetch(
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/'+code)}`,
+    {signal:AbortSignal.timeout(10000)}
+  ).then(async r=>{
+    const j=await r.json();
+    const d=JSON.parse(j.contents||'{}');
+    const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
+    const p=parseFloat((raw??'').toString().replace(',','.'));
+    if(!(p>0)) throw new Error();
+    return p;
+  });
 
-  // 3. BigPara via allorigins proxy
-  try{
-    const bpUrl=`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`;
-    const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,{signal:AbortSignal.timeout(10000)});
-    if(res.ok){
-      const j=await res.json();
-      const d=JSON.parse(j.contents||'{}');
-      const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
-      const price=parseFloat((raw??'').toString().replace(',','.'));
-      if(price>0) return price;
-    }
-  }catch{}
-
-  // 4. genelpara via corsproxy (if direct was blocked by CORS)
-  try{
-    const gpUrl='https://api.genelpara.com/embed/borsa.json';
-    const res=await fetch(`https://corsproxy.io/?${encodeURIComponent(gpUrl)}`,{signal:AbortSignal.timeout(8000)});
-    if(res.ok){
-      const data=await res.json();
-      const s=data[code];
-      if(s){
-        const price=parseFloat(s.deger||s.son||s.kapanis||s.satis||0);
-        if(price>0) return price;
-      }
-    }
-  }catch{}
-
-  // 5. Yahoo Finance proxies
-  return fetchYahooPrice(ticker);
+  return Promise.any([genelarP, fetchYahooPrice(code), bigparaP]);
 }
 
 async function fetchAltinPrices(){
@@ -162,21 +132,22 @@ async function fetchAltinPrices(){
   const tagA=(label,p)=>p.then(v=>{addFetchLog(label,'ok',`gram = ${fmtTRY(v.gram)}`,Date.now()-t0a);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0a);throw e;});
   try{
     _altinCache=await Promise.any([
-      tagA('Altın (genelpara)',fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(3000)})
+      tagA('Altın (truncgil v2)',fetch('https://finans.truncgil.com/v2/today.json',{signal:AbortSignal.timeout(4000)})
+        .then(r=>r.json()).then(d=>{
+          const root=d?.result||d;
+          const gram=parseTR(root['Gram Altın']?.['Satış']||root['Gram Altin']?.['Satis']);
+          if(!(gram>0)) throw new Error();
+          const ayar22=parseTR(root['22 Ayar Bilezik']?.['Satış']||root['22 Ayar']?.['Satış']||root['22 Ayar Bilezik']?.['Satis']);
+          const ceyrek=parseTR(root['Çeyrek Altın']?.['Satış']||root['Ceyrek Altin']?.['Satis']);
+          return {gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+        })),
+      tagA('Altın (genelpara)',fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(4000)})
         .then(r=>r.json()).then(d=>{
           const gram=parseTR(d?.GA?.satis||d?.GA?.alis);
           if(!(gram>0)) throw new Error();
           return {gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:parseTR(d?.C?.satis||d?.C?.alis)||0,ts:Date.now()};
         })),
-      tagA('Altın (truncgil)',fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(3000)})
-        .then(r=>r.json()).then(d=>{
-          const gram=parseTR(d['Gram Altın']?.['Satış']);
-          if(!(gram>0)) throw new Error();
-          const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
-          const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
-          return {gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-        })),
-      tagA('Altın (XAU/Cloudflare)',fetch('https://latest.currency-api.pages.dev/v1/currencies/xau.json',{signal:AbortSignal.timeout(3000)})
+      tagA('Altın (XAU/Cloudflare)',fetch('https://latest.currency-api.pages.dev/v1/currencies/xau.json',{signal:AbortSignal.timeout(4000)})
         .then(r=>r.json()).then(d=>{
           const tryPerOz=d?.xau?.try;
           if(!(tryPerOz>0)) throw new Error();
@@ -191,26 +162,24 @@ async function fetchAltinPrices(){
 
 async function fetchYahooPrice(ticker){
   const sym=ticker.toUpperCase();
-  const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
-  const attempts=[
-    ()=>fetch(yahooUrl,{signal:AbortSignal.timeout(5000)}),
-    ()=>fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)}),
-    ()=>fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)}),
-    ()=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)})
-      .then(async r=>{ const j=await r.json(); return new Response(j.contents,{status:j.status?.http_code||200}); }),
-  ];
-  for(const attempt of attempts){
-    try{
-      const res=await attempt();
-      if(!res.ok) continue;
-      const text=await res.text();
-      if(!text||text[0]!=='{') continue;
-      const data=JSON.parse(text);
-      const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if(price>0) return price;
-    }catch{}
-  }
-  throw new Error(`no price: ${sym}`);
+  // Always add .IS for BIST stocks if not already present
+  const yahooSym=sym.endsWith('.IS')?sym:sym+'.IS';
+  const yahooUrl=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
+  const parseResp=async r=>{
+    if(!r.ok) throw new Error();
+    const text=await r.text();
+    if(!text||text[0]!=='{') throw new Error();
+    const data=JSON.parse(text);
+    const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if(!(price>0)) throw new Error();
+    return price;
+  };
+  return Promise.any([
+    fetch(yahooUrl,{signal:AbortSignal.timeout(6000)}).then(parseResp),
+    fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)}).then(parseResp),
+    fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)})
+      .then(async r=>{ const j=await r.json(); return parseResp(new Response(j.contents,{status:j.status?.http_code||200})); }),
+  ]);
 }
 
 async function fetchAllInvPrices(){
@@ -248,9 +217,11 @@ async function fetchAllInvPrices(){
     const tagB=(label,p)=>p.then(v=>{addFetchLog(label,'ok',fmtTRY(v),Date.now()-t0b);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0b);throw e;});
     promises.push(
       Promise.any([
-        tagB('BTC (Binance)',fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCTRY',{signal:AbortSignal.timeout(2000)})
+        tagB('BTC (BTCTurk)',fetch('https://api.btcturk.com/api/v2/ticker?pairSymbol=BTCTRY',{signal:AbortSignal.timeout(5000)})
+          .then(r=>r.json()).then(d=>{ const p=parseFloat(d?.data?.[0]?.last||d?.data?.last||0); if(!(p>0)) throw new Error(); return p; })),
+        tagB('BTC (Binance)',fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCTRY',{signal:AbortSignal.timeout(5000)})
           .then(r=>r.json()).then(d=>{ const p=parseFloat(d.price); if(!(p>0)) throw new Error(); return p; })),
-        tagB('BTC (CoinGecko)',fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try',{signal:AbortSignal.timeout(5000)})
+        tagB('BTC (CoinGecko)',fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try',{signal:AbortSignal.timeout(8000)})
           .then(r=>r.json()).then(d=>{ const p=d?.bitcoin?.try; if(!(p>0)) throw new Error(); return p; })),
       ])
       .then(price=>{ btcInvs.forEach(i=>{ i.currentPrice=price; _priceStatus[i.id]='ok'; }); renderYatirim(); })
