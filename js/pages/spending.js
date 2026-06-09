@@ -158,11 +158,25 @@ function openEditSpending(id){
     document.getElementById('spd-kk-readonly').style.display='block';
     const cardName=findKKCardName(s);
     const typeLabel=s.kk.n>1?`${s.kk.n} Taksit (aylık ${fmtTRY(s.kk.perInst)})`:'Tek Çekim';
+    let ekstreLabel='';
+    const pm=s.kk.paymentMonths;
+    if(pm&&pm.length){
+      if(pm.length===1){
+        ekstreLabel=`📋 ${MONTHS_FULL[pm[0].month-1]} ${pm[0].year} ekstresi`;
+      } else {
+        const first=pm[0],last=pm[pm.length-1];
+        ekstreLabel=`📋 ${MONTHS_FULL[first.month-1]} ${first.year} – ${MONTHS_FULL[last.month-1]} ${last.year}`;
+      }
+    } else {
+      const per=spdCardNote(s.date,s.kk.cardId||s.kk.cardRef||'');
+      if(per) ekstreLabel=`📋 ${per.replace('→ ','').replace(' ekstresi','')} ekstresi`;
+    }
     document.getElementById('spd-kk-readonly-info').innerHTML=
       `<div style="font-weight:700;font-size:14px;margin-bottom:6px">${s.description}</div>`+
       `<div>💳 ${cardName}</div>`+
       `<div>💰 ${fmtTRY(s.amount)} · ${typeLabel}</div>`+
       `<div>📅 ${s.date}</div>`+
+      (ekstreLabel?`<div style="color:var(--purple);font-size:13px;margin-top:4px">${ekstreLabel}</div>`:'')+
       `<div style="color:var(--muted);font-size:12px;margin-top:6px">${SPD_CATS[s.category]||s.category}</div>`;
   } else {
     document.getElementById('spending-modal-title').textContent='Harcama Düzenle';
