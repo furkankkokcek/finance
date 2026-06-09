@@ -198,17 +198,23 @@ function saveSpending(){
       const purchaseMonth=dateObj.getMonth()+1;
       const purchaseYear=dateObj.getFullYear();
       if(linkedExp){
+        const stDay=linkedExp.statementDay||0;
+        let firstM=purchaseMonth+1,firstY=purchaseYear;
+        if(firstM>12){firstM=1;firstY++;}
+        const firstPer=stDay>0?statementPeriod(date,stDay):{year:firstY,month:firstM};
         let skipped=0;
+        const paymentMonths=[];
         for(let i=0;i<n;i++){
-          let pm=purchaseMonth+1+i,py=purchaseYear;
+          let pm=firstPer.month+i,py=firstPer.year;
           if(pm>12){pm-=12;py++;}
+          paymentMonths.push({year:py,month:pm});
           const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===linkedExp.id);
           if(!kkExp){skipped++;continue;}
           kkExp.amounts=kkExp.amounts||{};
           kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
         }
         if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdı; manuel ekleyebilirsin.`);
-        kkMeta={cardId:linkedExp.id,cardRef:selId,n,perInst};
+        kkMeta={cardId:linkedExp.id,cardRef:selId,n,perInst,paymentMonths};
       } else {
         // No linked KK expense: store only card reference
         kkMeta={cardId:'',cardRef:selId,n,perInst};
@@ -218,17 +224,24 @@ function saveSpending(){
       const dateObj=new Date(date);
       const purchaseMonth=dateObj.getMonth()+1;
       const purchaseYear=dateObj.getFullYear();
+      const kkExpForDay=(yd.expenses||[]).find(e=>e.id===selId);
+      const stDay=kkExpForDay?.statementDay||0;
+      let firstM=purchaseMonth+1,firstY=purchaseYear;
+      if(firstM>12){firstM=1;firstY++;}
+      const firstPer=stDay>0?statementPeriod(date,stDay):{year:firstY,month:firstM};
       let skipped=0;
+      const paymentMonths=[];
       for(let i=0;i<n;i++){
-        let pm=purchaseMonth+1+i,py=purchaseYear;
+        let pm=firstPer.month+i,py=firstPer.year;
         if(pm>12){pm-=12;py++;}
+        paymentMonths.push({year:py,month:pm});
         const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===selId);
         if(!kkExp){skipped++;continue;}
         kkExp.amounts=kkExp.amounts||{};
         kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
       }
       if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdı; manuel ekleyebilirsin.`);
-      kkMeta={cardId:selId,n,perInst};
+      kkMeta={cardId:selId,n,perInst,paymentMonths};
     }
   }
 
@@ -261,17 +274,26 @@ function deleteSpending(){
   if(s.kk){
     const kkExpId=s.kk.cardId||'';
     if(kkExpId){
-      const {n,perInst}=s.kk;
-      const dateObj=new Date(s.date);
-      const purchaseMonth=dateObj.getMonth()+1;
-      const purchaseYear=dateObj.getFullYear();
-      for(let i=0;i<n;i++){
-        let pm=purchaseMonth+1+i,py=purchaseYear;
-        if(pm>12){pm-=12;py++;}
-        const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===kkExpId);
-        if(!kkExp) continue;
-        kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)-perInst)*100)/100;
-        if(kkExp.amounts[pm]<0) kkExp.amounts[pm]=0;
+      const {n,perInst,paymentMonths}=s.kk;
+      if(paymentMonths&&paymentMonths.length){
+        for(const {year:py,month:pm} of paymentMonths){
+          const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===kkExpId);
+          if(!kkExp) continue;
+          kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)-perInst)*100)/100;
+          if(kkExp.amounts[pm]<0) kkExp.amounts[pm]=0;
+        }
+      } else {
+        const dateObj=new Date(s.date);
+        const purchaseMonth=dateObj.getMonth()+1;
+        const purchaseYear=dateObj.getFullYear();
+        for(let i=0;i<n;i++){
+          let pm=purchaseMonth+1+i,py=purchaseYear;
+          if(pm>12){pm-=12;py++;}
+          const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===kkExpId);
+          if(!kkExp) continue;
+          kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)-perInst)*100)/100;
+          if(kkExp.amounts[pm]<0) kkExp.amounts[pm]=0;
+        }
       }
     }
   }
