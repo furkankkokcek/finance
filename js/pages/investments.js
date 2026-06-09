@@ -99,11 +99,21 @@ async function fetchBistPrice(ticker, cachedBistData){
   const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
     const s=data?.[code];
     const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
-    if(!(p>0)) throw new Error('no genelpara price');
+    if(!(p>0)) throw new Error();
     return p;
   });
-  // Race genelpara bulk data vs Yahoo Finance in parallel
-  return Promise.any([genelarP, fetchYahooPrice(code)]);
+  const bigparaP=fetch(
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/'+code)}`,
+    {signal:AbortSignal.timeout(10000)}
+  ).then(async r=>{
+    const j=await r.json();
+    let d; try{ d=JSON.parse(j.contents||'{}'); }catch{ throw new Error(); }
+    const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
+    const p=parseFloat((raw??'').toString().replace(',','.'));
+    if(!(p>0)) throw new Error();
+    return p;
+  });
+  return Promise.any([genelarP, bigparaP, fetchYahooPrice(code)]);
 }
 
 async function fetchAltinPrices(){
@@ -119,13 +129,12 @@ async function fetchAltinPrices(){
   const tagA=(label,p)=>p.then(v=>{addFetchLog(label,'ok',`gram = ${fmtTRY(v.gram)}`,Date.now()-t0a);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0a);throw e;});
   try{
     _altinCache=await Promise.any([
-      tagA('Altın (truncgil v2)',fetch('https://finans.truncgil.com/v2/today.json',{signal:AbortSignal.timeout(4000)})
+      tagA('Altın (truncgil)',fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(4000)})
         .then(r=>r.json()).then(d=>{
-          const root=d?.result||d;
-          const gram=parseTR(root['Gram Altın']?.['Satış']||root['Gram Altin']?.['Satis']);
+          const gram=parseTR(d['Gram Altın']?.['Satış']);
           if(!(gram>0)) throw new Error();
-          const ayar22=parseTR(root['22 Ayar Bilezik']?.['Satış']||root['22 Ayar']?.['Satış']||root['22 Ayar Bilezik']?.['Satis']);
-          const ceyrek=parseTR(root['Çeyrek Altın']?.['Satış']||root['Ceyrek Altin']?.['Satis']);
+          const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
+          const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
           return {gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
         })),
       tagA('Altın (genelpara)',fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(4000)})
@@ -188,7 +197,7 @@ async function fetchAllInvPrices(){
           goldInvs.forEach(i=>{
             const sub=i.goldSubtype||'gram';
             const price=sub==='ayar22'?prices.ayar22:sub==='ceyrek'?prices.ceyrek:prices.gram;
-            if(price>0){ i.currentPrice=Math.round(price*100)/100; _priceStatus[i.id]='ok'; }
+            if(price>0){ i.currentPrice=Math.round(price*100)/100; i.priceUpdatedAt=Date.now(); _priceStatus[i.id]='ok'; }
             else if(!_priceStatus[i.id]) _priceStatus[i.id]='err';
           });
           renderYatirim();
@@ -211,7 +220,7 @@ async function fetchAllInvPrices(){
         tagB('BTC (CoinGecko)',fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try',{signal:AbortSignal.timeout(8000)})
           .then(r=>r.json()).then(d=>{ const p=d?.bitcoin?.try; if(!(p>0)) throw new Error(); return p; })),
       ])
-      .then(price=>{ btcInvs.forEach(i=>{ i.currentPrice=price; _priceStatus[i.id]='ok'; }); renderYatirim(); })
+      .then(price=>{ btcInvs.forEach(i=>{ i.currentPrice=price; i.priceUpdatedAt=Date.now(); _priceStatus[i.id]='ok'; }); renderYatirim(); })
       .catch(()=>{ btcInvs.forEach(i=>{ if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }); renderYatirim(); })
     );
   }
@@ -227,7 +236,7 @@ async function fetchAllInvPrices(){
         .then(data=>{
           kriptoInvs.forEach(i=>{
             const price=data?.[i.ticker.toLowerCase()]?.try;
-            if(price){ addFetchLog(`${i.ticker} (CoinGecko)`,'ok',fmtTRY(price),Date.now()-t0k); i.currentPrice=price; _priceStatus[i.id]='ok'; }
+            if(price){ addFetchLog(`${i.ticker} (CoinGecko)`,'ok',fmtTRY(price),Date.now()-t0k); i.currentPrice=price; i.priceUpdatedAt=Date.now(); _priceStatus[i.id]='ok'; }
             else{ addFetchLog(`${i.ticker} (CoinGecko)`,'err','bulunamadı',Date.now()-t0k); if(!_priceStatus[i.id]) _priceStatus[i.id]='err'; }
           });
           renderYatirim();
@@ -244,7 +253,7 @@ async function fetchAllInvPrices(){
       const t0s=Date.now();
       promises.push(
         bistBulkP.then(bistBulk=>fetchBistPrice(inv.ticker, bistBulk))
-          .then(price=>{ addFetchLog(inv.ticker,'ok',fmtTRY(price),Date.now()-t0s); inv.currentPrice=Math.round(price*100)/100; _priceStatus[inv.id]='ok'; renderYatirim(); })
+          .then(price=>{ addFetchLog(inv.ticker,'ok',fmtTRY(price),Date.now()-t0s); inv.currentPrice=Math.round(price*100)/100; inv.priceUpdatedAt=Date.now(); _priceStatus[inv.id]='ok'; renderYatirim(); })
           .catch(()=>{ addFetchLog(inv.ticker,'err','',Date.now()-t0s); if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; renderYatirim(); })
       );
     });
@@ -273,6 +282,7 @@ function updateInvPrice(id, val){
   const price=parseFloat(val)||0;
   if(price===inv.currentPrice) return;
   inv.currentPrice=price;
+  inv.priceUpdatedAt=Date.now();
   saveS();
   renderYatirim();
 }
@@ -544,6 +554,7 @@ function renderYatirim(){
               onchange="updateInvPrice('${inv.id}',this.value)"
               style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:2px 0;outline:none">
             <div class="inv-amount" style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">${inv.priceUpdatedAt?fmtRelTime(inv.priceUpdatedAt):'güncellenmedi'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
             <div style="font-size:10px;color:var(--muted)">Kâr / Zarar</div>
