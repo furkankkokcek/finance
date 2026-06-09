@@ -15,15 +15,23 @@ function renderHarcama(){
   // KK installment virtual records (payment month)
   const kkInsts=[];
   yd.spending.forEach(s=>{
-    if(!s.kk) return;
-    const dateObj=new Date(s.date);
-    const pm0=dateObj.getMonth()+1;
-    const py=dateObj.getFullYear();
-    for(let i=0;i<s.kk.n;i++){
-      let pm=pm0+1+i,pyr=py;
-      if(pm>12){pm-=12;pyr++;}
-      if(pm===month&&pyr===year){
-        kkInsts.push({s,instIdx:i,instNum:i+1,total:s.kk.n,perInst:s.kk.perInst});
+    if(!s.kk||s.kk.n<=1) return;
+    if(s.kk.paymentMonths&&s.kk.paymentMonths.length){
+      s.kk.paymentMonths.forEach(({year:pyr,month:pm},i)=>{
+        if(pm===month&&pyr===year){
+          kkInsts.push({s,instIdx:i,instNum:i+1,total:s.kk.n,perInst:s.kk.perInst});
+        }
+      });
+    } else {
+      const dateObj=new Date(s.date);
+      const pm0=dateObj.getMonth()+1;
+      const py=dateObj.getFullYear();
+      for(let i=0;i<s.kk.n;i++){
+        let pm=pm0+1+i,pyr=py;
+        if(pm>12){pm-=12;pyr++;}
+        if(pm===month&&pyr===year){
+          kkInsts.push({s,instIdx:i,instNum:i+1,total:s.kk.n,perInst:s.kk.perInst});
+        }
       }
     }
   });
@@ -36,7 +44,7 @@ function renderHarcama(){
   } else {
     items.forEach(s=>{
       const d=new Date(s.date);
-      const kkBadge=s.kk?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:var(--purple);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">💳 ${s.kk.n} taksit</span>`:'';
+      const kkBadge=(s.kk&&s.kk.n>1)?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:var(--purple);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">💳 ${s.kk.n} taksit</span>`:'';
       html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')">
         <div class="spending-left">
           <div class="spending-desc">${s.description}${kkBadge}</div>
