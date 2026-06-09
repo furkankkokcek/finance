@@ -15,7 +15,7 @@ function renderHarcama(){
   // KK installment virtual records (payment month)
   const kkInsts=[];
   yd.spending.forEach(s=>{
-    if(!s.kk||s.kk.n<=1) return;
+    if(!s.kk) return;
     if(s.kk.paymentMonths&&s.kk.paymentMonths.length){
       s.kk.paymentMonths.forEach(({year:pyr,month:pm},i)=>{
         if(pm===month&&pyr===year){
@@ -56,13 +56,14 @@ function renderHarcama(){
 
     if(kkInsts.length>0){
       if(items.length>0) html+=`<div style="height:6px"></div>`;
-      html+=`<div class="section-hdr" style="margin-top:4px"><div class="section-title" style="font-size:12px">💳 KK Taksitleri</div></div>`;
+      html+=`<div class="section-hdr" style="margin-top:4px"><div class="section-title" style="font-size:12px">💳 Önceki Dönem & Tek Çekim</div></div>`;
       kkInsts.forEach(({s,instNum,total,perInst})=>{
         const d=new Date(s.date);
+        const metaLabel=total>1?`${instNum}/${total} taksit`:'tek çekim';
         html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')" style="background:rgba(168,85,247,.05);border-left:3px solid rgba(168,85,247,.4)">
           <div class="spending-left">
             <div class="spending-desc">${s.description}</div>
-            <div class="spending-meta">${instNum}/${total} taksit · alış ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s)}</div>
+            <div class="spending-meta">${metaLabel} · alış ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s)}</div>
           </div>
           <div class="spending-amount" style="color:var(--purple)">-${fmtTRY(perInst)}</div>
         </div>`;
