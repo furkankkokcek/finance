@@ -159,17 +159,25 @@ function openEditSpending(id){
     const cardName=findKKCardName(s);
     const typeLabel=s.kk.n>1?`${s.kk.n} Taksit (aylık ${fmtTRY(s.kk.perInst)})`:'Tek Çekim';
     let ekstreLabel='';
-    const pm=s.kk.paymentMonths;
-    if(pm&&pm.length){
-      if(pm.length===1){
-        ekstreLabel=`📋 ${MONTHS_FULL[pm[0].month-1]} ${pm[0].year} ekstresi`;
+    const kpm=s.kk.paymentMonths;
+    if(kpm&&kpm.length){
+      if(kpm.length===1){
+        ekstreLabel=`📋 ${MONTHS_FULL[kpm[0].month-1]} ${kpm[0].year} ekstresi`;
       } else {
-        const first=pm[0],last=pm[pm.length-1];
+        const first=kpm[0],last=kpm[kpm.length-1];
         ekstreLabel=`📋 ${MONTHS_FULL[first.month-1]} ${first.year} – ${MONTHS_FULL[last.month-1]} ${last.year}`;
       }
     } else {
-      const per=spdCardNote(s.date,s.kk.cardId||s.kk.cardRef||'');
-      if(per) ekstreLabel=`📋 ${per.replace('→ ','').replace(' ekstresi','')} ekstresi`;
+      const dateObj=new Date(s.date);
+      let fm=dateObj.getMonth()+2,fy=dateObj.getFullYear();
+      if(fm>12){fm=1;fy++;}
+      if(s.kk.n<=1){
+        ekstreLabel=`📋 ${MONTHS_FULL[fm-1]} ${fy} ekstresi`;
+      } else {
+        let lm=fm+(s.kk.n-1),ly=fy;
+        while(lm>12){lm-=12;ly++;}
+        ekstreLabel=`📋 ${MONTHS_FULL[fm-1]} ${fy} – ${MONTHS_FULL[lm-1]} ${ly}`;
+      }
     }
     document.getElementById('spd-kk-readonly-info').innerHTML=
       `<div style="font-weight:700;font-size:14px;margin-bottom:6px">${s.description}</div>`+
