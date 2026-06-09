@@ -102,18 +102,23 @@ async function fetchBistPrice(ticker, cachedBistData){
     if(!(p>0)) throw new Error();
     return p;
   });
-  const bigparaP=fetch(
-    `https://api.allorigins.win/get?url=${encodeURIComponent('https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/'+code)}`,
-    {signal:AbortSignal.timeout(10000)}
-  ).then(async r=>{
-    const j=await r.json();
-    let d; try{ d=JSON.parse(j.contents||'{}'); }catch{ throw new Error(); }
+  const bpUrl=`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`;
+  const parseBP=d=>{
     const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
     const p=parseFloat((raw??'').toString().replace(',','.'));
     if(!(p>0)) throw new Error();
     return p;
+  };
+  const bigparaDirectP=fetch(bpUrl,{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(parseBP);
+  const bigparaProxyP=fetch(
+    `https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,
+    {signal:AbortSignal.timeout(10000)}
+  ).then(async r=>{
+    const j=await r.json();
+    let d; try{ d=JSON.parse(j.contents||'{}'); }catch{ throw new Error(); }
+    return parseBP(d);
   });
-  return Promise.any([genelarP, bigparaP, fetchYahooPrice(code)]);
+  return Promise.any([genelarP, bigparaDirectP, bigparaProxyP]);
 }
 
 async function fetchAltinPrices(){
@@ -154,28 +159,6 @@ async function fetchAltinPrices(){
 
   _altinFetching=false;
   return _altinCache;
-}
-
-async function fetchYahooPrice(ticker){
-  const sym=ticker.toUpperCase();
-  // Always add .IS for BIST stocks if not already present
-  const yahooSym=sym.endsWith('.IS')?sym:sym+'.IS';
-  const yahooUrl=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
-  const parseResp=async r=>{
-    if(!r.ok) throw new Error();
-    const text=await r.text();
-    if(!text||text[0]!=='{') throw new Error();
-    const data=JSON.parse(text);
-    const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if(!(price>0)) throw new Error();
-    return price;
-  };
-  return Promise.any([
-    fetch(yahooUrl,{signal:AbortSignal.timeout(6000)}).then(parseResp),
-    fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)}).then(parseResp),
-    fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,{signal:AbortSignal.timeout(8000)})
-      .then(async r=>{ const j=await r.json(); return parseResp(new Response(j.contents,{status:j.status?.http_code||200})); }),
-  ]);
 }
 
 async function fetchAllInvPrices(){
