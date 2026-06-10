@@ -96,6 +96,11 @@ async function getBistData(){
 
 async function fetchBistPrice(ticker, cachedBistData){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
+  const t0=Date.now();
+  const tag=(label,p)=>p
+    .then(v=>{ addFetchLog(`${code} (${label})`, 'ok', fmtTRY(v), Date.now()-t0); return v; })
+    .catch(e=>{ addFetchLog(`${code} (${label})`, 'err', '', Date.now()-t0); throw e; });
+
   const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
     const s=data?.[code];
     const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
@@ -119,7 +124,6 @@ async function fetchBistPrice(ticker, cachedBistData){
     return parseBP(d);
   });
   const yahooSym=code+'.IS';
-  // v7/quote — same endpoint yahoo-finance2 uses internally
   const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
   const parseV7=async r=>{
     if(!r.ok) throw new Error();
@@ -143,11 +147,11 @@ async function fetchBistPrice(ticker, cachedBistData){
       .then(async r=>{ const j=await r.json(); return parser(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
 
   return Promise.any([
-    genelarP,
-    bigparaDirectP,
-    bigparaProxyP,
-    viaProxy(v7Url, parseV7, 9000),
-    viaProxy(v8Url, parseV8, 9000),
+    tag('genelpara', genelarP),
+    tag('BigPara', bigparaDirectP),
+    tag('BigPara proxy', bigparaProxyP),
+    tag('Yahoo v7', viaProxy(v7Url, parseV7, 9000)),
+    tag('Yahoo v8', viaProxy(v8Url, parseV8, 9000)),
   ]);
 }
 
