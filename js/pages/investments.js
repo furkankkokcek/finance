@@ -126,18 +126,30 @@ async function fetchBistPrice(ticker, cachedBistData){
   const bigparaProxyP=fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,{signal:AbortSignal.timeout(10000)})
     .then(async r=>{ const j=await r.json(); let d; try{d=JSON.parse(j.contents||'{}')}catch{throw new Error();} return parseBP(d); });
 
-  // Yahoo Finance v7 via corsproxy.io (different proxy for redundancy)
   const yahooSym=code+'.IS';
   const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
-  const yahooP=fetch(`https://corsproxy.io/?url=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)})
-    .then(async r=>{ const d=await r.json(); const p=d?.quoteResponse?.result?.[0]?.regularMarketPrice; if(!(p>0)) throw new Error(); return p; });
+  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1m&range=1d`;
+  const parseV7=async r=>{ const d=await r.json(); const p=d?.quoteResponse?.result?.[0]?.regularMarketPrice; if(!(p>0)) throw new Error(); return p; };
+  const parseV8=async r=>{ const t=await r.text(); if(!t||t[0]!=='{') throw new Error(); const p=JSON.parse(t)?.chart?.result?.[0]?.meta?.regularMarketPrice; if(!(p>0)) throw new Error(); return p; };
+  // corsproxy.io: URL directly after ? (no url= prefix, no encoding)
+  const yahooCorsproxyP=fetch(`https://corsproxy.io/?${v7Url}`,{signal:AbortSignal.timeout(10000)}).then(parseV7);
+  // allorigins v7
+  const yahooAlloriginsP=fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)})
+    .then(async r=>{ const j=await r.json(); return parseV7(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
+  // allorigins v8 raw
+  const yahooV8P=fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(v8Url)}`,{signal:AbortSignal.timeout(10000)}).then(parseV8);
+  // codetabs
+  const yahooCodetabsP=fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)}).then(parseV7);
 
   return Promise.any([
     tag('genelpara', genelarP),
     tag('Stooq', stooqP),
     tag('BigPara', bigparaDirectP),
     tag('BigPara proxy', bigparaProxyP),
-    tag('Yahoo', yahooP),
+    tag('Yahoo (corsproxy)', yahooCorsproxyP),
+    tag('Yahoo v7 (allorigins)', yahooAlloriginsP),
+    tag('Yahoo v8 (allorigins)', yahooV8P),
+    tag('Yahoo (codetabs)', yahooCodetabsP),
   ]);
 }
 
