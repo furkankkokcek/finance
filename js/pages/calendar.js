@@ -47,14 +47,19 @@ function renderTakvim(){
     const isHol=!isWknd&&isPublicHoliday(dateObj);
     const isGray=isWknd||isHol; // weekends + public holidays = same muted look
 
+    const payEvs=dayEvs.filter(e=>!e.isReminder&&e.type!=='income');
+    const allPaid=payEvs.length>0&&payEvs.every(e=>e.paid);
+    const somePaid=!allPaid&&payEvs.some(e=>e.paid);
+
     let evHtml='';
     dayEvs.slice(0,3).forEach(ev=>{
-      evHtml+=`<div style="font-size:9px;font-weight:600;color:${ev.color};background:${ev.color}22;border-radius:2px;padding:1px 2px;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${ev.name.slice(0,7)}</div>`;
+      const badgeColor=ev.paid?'#22c55e':ev.color;
+      evHtml+=`<div style="font-size:9px;font-weight:600;color:${badgeColor};background:${badgeColor}22;border-radius:2px;padding:1px 2px;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${ev.paid?'✓ ':''  }${ev.name.slice(0,7)}</div>`;
     });
     if(dayEvs.length>3) evHtml+=`<div style="font-size:9px;color:var(--muted)">+${dayEvs.length-3}</div>`;
 
-    const bg=isSel?'rgba(245,158,11,.22)':isToday?'rgba(245,158,11,.1)':isGray?'var(--bg2)':'var(--bg3)';
-    const bdr=isSel?'rgba(245,158,11,.55)':isToday?'rgba(245,158,11,.3)':'var(--border)';
+    const bg=isSel?'rgba(245,158,11,.22)':allPaid?'rgba(34,197,94,.12)':isToday?'rgba(245,158,11,.1)':isGray?'var(--bg2)':'var(--bg3)';
+    const bdr=isSel?'rgba(245,158,11,.55)':allPaid?'rgba(34,197,94,.45)':somePaid?'rgba(34,197,94,.25)':isToday?'rgba(245,158,11,.3)':'var(--border)';
     const numColor=isToday?'var(--accent)':isGray?'var(--muted)':'var(--text)';
     const numWeight=isToday?'700':'500';
     // Small holiday dot for official holidays (not weekends)
@@ -79,10 +84,16 @@ function renderTakvim(){
     } else {
       dayEvs.forEach(ev=>{
         const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatırlatma':(CAT_LABELS[ev.type]||ev.type);
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+        const canMark=!ev.isReminder&&ev.type!=='income'&&ev.expId;
+        const paidBtn=canMark
+          ?`<button onclick="togglePaymentPaid('${ev.expId}',${displayYear},${displayMonth})" style="margin-top:4px;padding:3px 10px;border-radius:20px;border:1px solid ${ev.paid?'#22c55e':'var(--border)'};background:${ev.paid?'rgba(34,197,94,.15)':'transparent'};color:${ev.paid?'#22c55e':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer">${ev.paid?'✓ Ödendi':'Ödenmedi'}</button>`
+          :'';
+        const nameColor=ev.paid?'#22c55e':ev.color;
+        html+=`<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
           <div>
-            <div style="font-size:13px;font-weight:600;color:${ev.color}">${ev.name}</div>
+            <div style="font-size:13px;font-weight:600;color:${nameColor}">${ev.paid?'✓ ':''  }${ev.name}</div>
             <div style="font-size:11px;color:var(--muted)">${typeLabel}</div>
+            ${paidBtn}
           </div>
           <div class="inv-amount" style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(ev.amount)}</div>
         </div>`;
@@ -96,6 +107,7 @@ function renderTakvim(){
   [{c:'#3b82f6',l:'Sabit'},{c:'#ef4444',l:'Kredi'},{c:'#f59e0b',l:'KK'},{c:'#a855f7',l:'PPF Hatırl.'},{c:'#22c55e',l:'Maaş/Gelir'}].forEach(({c,l})=>{
     html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:${c}"></div><span style="font-size:11px;color:var(--muted)">${l}</span></div>`;
   });
+  html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:rgba(34,197,94,.45);border:1px solid rgba(34,197,94,.7)"></div><span style="font-size:11px;color:var(--muted)">Ödendi</span></div>`;
   html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></div><span style="font-size:11px;color:var(--muted)">Tatil/Haftasonu</span></div>`;
   html+=`</div>`;
 
@@ -109,6 +121,17 @@ function renderTakvim(){
   html+=`<div id="gcal-links-panel" style="display:none"></div>`;
 
   el.innerHTML=html;
+}
+
+function togglePaymentPaid(expId,year,month){
+  const yd=getYear(year);
+  const exp=yd.expenses.find(e=>e.id===expId);
+  if(!exp) return;
+  if(!exp.status) exp.status={};
+  exp.status[month]=exp.status[month]==='paid'?'unpaid':'paid';
+  saveS();
+  renderTakvim();
+  if(typeof renderDashboard==='function') renderDashboard();
 }
 
 function selectCalDay(day,year,month){
