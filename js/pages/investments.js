@@ -86,9 +86,10 @@ async function fetchBistPrice(ticker){
     .catch(()=>{ addFetchLog(`${code} (${label})`,'err','',Date.now()-t0); throw new Error(); });
 
   const yahooSym=code+'.IS';
-  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
-  const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
 
+  // v8/chart endpoint parsers
+  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d&corsDomain=finance.yahoo.com`;
+  const v8UrlAlt=`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
   const parseV8=async r=>{
     if(!r.ok) throw new Error();
     const text=await r.text();
@@ -97,22 +98,61 @@ async function fetchBistPrice(ticker){
     if(!(p>0)) throw new Error();
     return p;
   };
+
+  // v7/quote endpoint parsers
+  const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}&corsDomain=finance.yahoo.com`;
   const parseV7=async r=>{
-    const d=await r.json();
-    const p=d?.quoteResponse?.result?.[0]?.regularMarketPrice;
+    if(!r.ok) throw new Error();
+    const text=await r.text();
+    if(!text||text[0]!=='{') throw new Error();
+    const p=JSON.parse(text)?.quoteResponse?.result?.[0]?.regularMarketPrice;
     if(!(p>0)) throw new Error();
     return p;
   };
 
+  // search endpoint — reportedly no crumb required
+  const searchUrl=`https://query1.finance.yahoo.com/v1/finance/search?q=${yahooSym}&quotesCount=1&newsCount=0&enableFuzzyQuery=false`;
+  const parseSearch=async r=>{
+    if(!r.ok) throw new Error();
+    const text=await r.text();
+    if(!text||text[0]!=='{') throw new Error();
+    const p=JSON.parse(text)?.quotes?.[0]?.regularMarketPrice;
+    if(!(p>0)) throw new Error();
+    return p;
+  };
+
+  // spark endpoint
+  const sparkUrl=`https://query1.finance.yahoo.com/v8/finance/spark?symbols=${yahooSym}&range=1d&interval=1d`;
+  const parseSpark=async r=>{
+    if(!r.ok) throw new Error();
+    const text=await r.text();
+    if(!text||text[0]!=='{') throw new Error();
+    const p=JSON.parse(text)?.spark?.result?.[0]?.response?.[0]?.meta?.regularMarketPrice;
+    if(!(p>0)) throw new Error();
+    return p;
+  };
+
+  const ao=(url,parser,ms)=>fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)}).then(parser);
+  const aoGet=(url,parser,ms)=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)})
+    .then(async r=>{ const j=await r.json(); return parser(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
+  const cp=(url,parser,ms)=>fetch(`https://corsproxy.io/?${url}`,{signal:AbortSignal.timeout(ms)}).then(parser);
+  const ct=(url,parser,ms)=>fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)}).then(parser);
+  const tp=(url,parser,ms)=>fetch(`https://thingproxy.freeboard.io/fetch/${url}`,{signal:AbortSignal.timeout(ms)}).then(parser);
+
   return Promise.any([
-    // v8/chart — was working reliably before (direct + allorigins raw + allorigins get)
-    tag('Yahoo v8', fetch(v8Url,{signal:AbortSignal.timeout(6000)}).then(parseV8)),
-    tag('Yahoo v8 (allorigins raw)', fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(v8Url)}`,{signal:AbortSignal.timeout(8000)}).then(parseV8)),
-    tag('Yahoo v8 (allorigins)', fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(v8Url)}`,{signal:AbortSignal.timeout(8000)})
-      .then(async r=>{ const j=await r.json(); return parseV8(new Response(j.contents||'{}',{status:j.status?.http_code||200})); })),
-    // v7/quote — additional fallback via corsproxy and codetabs
-    tag('Yahoo v7 (corsproxy)', fetch(`https://corsproxy.io/?${v7Url}`,{signal:AbortSignal.timeout(10000)}).then(parseV7)),
-    tag('Yahoo v7 (codetabs)', fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)}).then(parseV7)),
+    tag('Yahoo v8 direct',      fetch(v8Url,{signal:AbortSignal.timeout(6000)}).then(parseV8)),
+    tag('Yahoo v8 (allorigins raw)', ao(v8Url,parseV8,10000)),
+    tag('Yahoo v8 (allorigins get)', aoGet(v8Url,parseV8,10000)),
+    tag('Yahoo v8 (corsproxy)',  cp(v8Url,parseV8,10000)),
+    tag('Yahoo v8 (codetabs)',   ct(v8UrlAlt,parseV8,10000)),
+    tag('Yahoo v8 (thingproxy)',  tp(v8UrlAlt,parseV8,12000)),
+    tag('Yahoo v7 (corsproxy)',  cp(v7Url,parseV7,10000)),
+    tag('Yahoo v7 (codetabs)',   ct(v7Url.replace('corsDomain=finance.yahoo.com&',''),parseV7,10000)),
+    tag('Yahoo search direct',   fetch(searchUrl,{signal:AbortSignal.timeout(6000)}).then(parseSearch)),
+    tag('Yahoo search (allorigins)', ao(searchUrl,parseSearch,10000)),
+    tag('Yahoo search (corsproxy)',  cp(searchUrl,parseSearch,10000)),
+    tag('Yahoo spark (allorigins)', ao(sparkUrl,parseSpark,10000)),
+    tag('Yahoo spark (corsproxy)',  cp(sparkUrl,parseSpark,10000)),
   ]);
 }
 
