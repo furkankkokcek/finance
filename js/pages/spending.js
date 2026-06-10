@@ -162,12 +162,10 @@ function openEditSpending(id){
     let ekstreLabel='';
     const kpm=s.kk.paymentMonths;
     if(kpm&&kpm.length){
-      if(kpm.length===1){
-        ekstreLabel=`📋 ${MONTHS_FULL[kpm[0].month-1]} ${kpm[0].year} ekstresi`;
-      } else {
-        const first=kpm[0],last=kpm[kpm.length-1];
-        ekstreLabel=`📋 ${MONTHS_FULL[first.month-1]} ${first.year} – ${MONTHS_FULL[last.month-1]} ${last.year}`;
-      }
+      const first=kpm[0],last=kpm[kpm.length-1];
+      ekstreLabel=kpm.length===1
+        ?`📋 ${MONTHS_FULL[first.month-1]} ${first.year} ekstresi`
+        :`📋 ${MONTHS_FULL[first.month-1]} ${first.year} – ${MONTHS_FULL[last.month-1]} ${last.year}`;
     } else {
       const dateObj=new Date(s.date);
       let fm=dateObj.getMonth()+2,fy=dateObj.getFullYear();
@@ -237,7 +235,7 @@ function saveSpending(){
         const paymentMonths=[];
         for(let i=0;i<n;i++){
           let pm=firstPer.month+i,py=firstPer.year;
-          if(pm>12){pm-=12;py++;}
+          while(pm>12){pm-=12;py++;}
           paymentMonths.push({year:py,month:pm});
           const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===linkedExp.id);
           if(!kkExp){skipped++;continue;}
@@ -264,7 +262,7 @@ function saveSpending(){
       const paymentMonths=[];
       for(let i=0;i<n;i++){
         let pm=firstPer.month+i,py=firstPer.year;
-        if(pm>12){pm-=12;py++;}
+        while(pm>12){pm-=12;py++;}
         paymentMonths.push({year:py,month:pm});
         const kkExp=(S.years[py]?.expenses||[]).find(e=>e.id===selId);
         if(!kkExp){skipped++;continue;}

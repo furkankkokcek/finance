@@ -98,15 +98,23 @@ async function fetchBistPrice(ticker, cachedBistData){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
   const t0=Date.now();
   const tag=(label,p)=>p
-    .then(v=>{ addFetchLog(`${code} (${label})`, 'ok', fmtTRY(v), Date.now()-t0); return v; })
-    .catch(e=>{ addFetchLog(`${code} (${label})`, 'err', '', Date.now()-t0); throw e; });
+    .then(v=>{ addFetchLog(`${code} (${label})`,'ok',fmtTRY(v),Date.now()-t0); return v; })
+    .catch(()=>{ addFetchLog(`${code} (${label})`,'err','',Date.now()-t0); throw new Error(); });
 
+  // genelpara bulk (cached)
   const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
     const s=data?.[code];
     const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
     if(!(p>0)) throw new Error();
     return p;
   });
+
+  // Stooq CSV — CORS-friendly, supports BIST .IS symbols
+  const stooqUrl=`https://stooq.com/q/l/?s=${code}.IS&f=c&e=csv`;
+  const stooqP=fetch(stooqUrl,{signal:AbortSignal.timeout(6000)})
+    .then(async r=>{ const t=await r.text(); const p=parseFloat(t.trim()); if(!(p>0)) throw new Error(); return p; });
+
+  // BigPara direct + proxy
   const bpUrl=`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`;
   const parseBP=d=>{
     const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
@@ -115,43 +123,21 @@ async function fetchBistPrice(ticker, cachedBistData){
     return p;
   };
   const bigparaDirectP=fetch(bpUrl,{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(parseBP);
-  const bigparaProxyP=fetch(
-    `https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,
-    {signal:AbortSignal.timeout(10000)}
-  ).then(async r=>{
-    const j=await r.json();
-    let d; try{ d=JSON.parse(j.contents||'{}'); }catch{ throw new Error(); }
-    return parseBP(d);
-  });
+  const bigparaProxyP=fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,{signal:AbortSignal.timeout(10000)})
+    .then(async r=>{ const j=await r.json(); let d; try{d=JSON.parse(j.contents||'{}')}catch{throw new Error();} return parseBP(d); });
+
+  // Yahoo Finance v7 via corsproxy.io (different proxy for redundancy)
   const yahooSym=code+'.IS';
   const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
-  const parseV7=async r=>{
-    if(!r.ok) throw new Error();
-    const data=await r.json();
-    const price=data?.quoteResponse?.result?.[0]?.regularMarketPrice;
-    if(!(price>0)) throw new Error();
-    return price;
-  };
-  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
-  const parseV8=async r=>{
-    if(!r.ok) throw new Error();
-    const text=await r.text();
-    if(!text||text[0]!=='{') throw new Error();
-    const data=JSON.parse(text);
-    const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if(!(price>0)) throw new Error();
-    return price;
-  };
-  const viaProxy=(url,parser,ms)=>
-    fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)})
-      .then(async r=>{ const j=await r.json(); return parser(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
+  const yahooP=fetch(`https://corsproxy.io/?url=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)})
+    .then(async r=>{ const d=await r.json(); const p=d?.quoteResponse?.result?.[0]?.regularMarketPrice; if(!(p>0)) throw new Error(); return p; });
 
   return Promise.any([
     tag('genelpara', genelarP),
+    tag('Stooq', stooqP),
     tag('BigPara', bigparaDirectP),
     tag('BigPara proxy', bigparaProxyP),
-    tag('Yahoo v7', viaProxy(v7Url, parseV7, 9000)),
-    tag('Yahoo v8', viaProxy(v8Url, parseV8, 9000)),
+    tag('Yahoo', yahooP),
   ]);
 }
 
