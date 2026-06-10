@@ -78,78 +78,41 @@ async function fetchCurrentUsdRate(){
 
 // ── Live price helpers ───────────────────────────────────────────────────────
 
-// genelpara.com bulk BIST data — fetched once, cached in module scope
-let _bistData = null;
-let _bistFetching = false;
-
-async function getBistData(){
-  if(_bistData) return _bistData;
-  if(_bistFetching) return null;
-  _bistFetching=true;
-  try{
-    const res=await fetch('https://api.genelpara.com/embed/borsa.json',{signal:AbortSignal.timeout(3000)});
-    if(res.ok){ _bistData=await res.json(); }
-  }catch{}
-  _bistFetching=false;
-  return _bistData;
-}
-
-async function fetchBistPrice(ticker, cachedBistData){
+async function fetchBistPrice(ticker){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
   const t0=Date.now();
   const tag=(label,p)=>p
     .then(v=>{ addFetchLog(`${code} (${label})`,'ok',fmtTRY(v),Date.now()-t0); return v; })
     .catch(()=>{ addFetchLog(`${code} (${label})`,'err','',Date.now()-t0); throw new Error(); });
 
-  // genelpara bulk (cached)
-  const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
-    const s=data?.[code];
-    const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
-    if(!(p>0)) throw new Error();
-    return p;
-  });
+  const yahooSym=code+'.IS';
+  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
+  const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
 
-  // Stooq CSV — CORS-friendly, supports BIST .IS symbols
-  const stooqUrl=`https://stooq.com/q/l/?s=${code}.IS&f=c&e=csv`;
-  const stooqP=fetch(stooqUrl,{signal:AbortSignal.timeout(6000)})
-    .then(async r=>{ const t=await r.text(); const p=parseFloat(t.trim()); if(!(p>0)) throw new Error(); return p; });
-
-  // BigPara direct + proxy
-  const bpUrl=`https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${code}`;
-  const parseBP=d=>{
-    const raw=d?.data?.hisseBilgileri?.sonFiyat??d?.data?.sonFiyat??d?.hisseBilgileri?.sonFiyat??d?.sonFiyat;
-    const p=parseFloat((raw??'').toString().replace(',','.'));
+  const parseV8=async r=>{
+    if(!r.ok) throw new Error();
+    const text=await r.text();
+    if(!text||text[0]!=='{') throw new Error();
+    const p=JSON.parse(text)?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if(!(p>0)) throw new Error();
     return p;
   };
-  const bigparaDirectP=fetch(bpUrl,{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(parseBP);
-  const bigparaProxyP=fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(bpUrl)}`,{signal:AbortSignal.timeout(10000)})
-    .then(async r=>{ const j=await r.json(); let d; try{d=JSON.parse(j.contents||'{}')}catch{throw new Error();} return parseBP(d); });
-
-  const yahooSym=code+'.IS';
-  const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
-  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1m&range=1d`;
-  const parseV7=async r=>{ const d=await r.json(); const p=d?.quoteResponse?.result?.[0]?.regularMarketPrice; if(!(p>0)) throw new Error(); return p; };
-  const parseV8=async r=>{ const t=await r.text(); if(!t||t[0]!=='{') throw new Error(); const p=JSON.parse(t)?.chart?.result?.[0]?.meta?.regularMarketPrice; if(!(p>0)) throw new Error(); return p; };
-  // corsproxy.io: URL directly after ? (no url= prefix, no encoding)
-  const yahooCorsproxyP=fetch(`https://corsproxy.io/?${v7Url}`,{signal:AbortSignal.timeout(10000)}).then(parseV7);
-  // allorigins v7
-  const yahooAlloriginsP=fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)})
-    .then(async r=>{ const j=await r.json(); return parseV7(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
-  // allorigins v8 raw
-  const yahooV8P=fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(v8Url)}`,{signal:AbortSignal.timeout(10000)}).then(parseV8);
-  // codetabs
-  const yahooCodetabsP=fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)}).then(parseV7);
+  const parseV7=async r=>{
+    const d=await r.json();
+    const p=d?.quoteResponse?.result?.[0]?.regularMarketPrice;
+    if(!(p>0)) throw new Error();
+    return p;
+  };
 
   return Promise.any([
-    tag('genelpara', genelarP),
-    tag('Stooq', stooqP),
-    tag('BigPara', bigparaDirectP),
-    tag('BigPara proxy', bigparaProxyP),
-    tag('Yahoo (corsproxy)', yahooCorsproxyP),
-    tag('Yahoo v7 (allorigins)', yahooAlloriginsP),
-    tag('Yahoo v8 (allorigins)', yahooV8P),
-    tag('Yahoo (codetabs)', yahooCodetabsP),
+    // v8/chart — was working reliably before (direct + allorigins raw + allorigins get)
+    tag('Yahoo v8', fetch(v8Url,{signal:AbortSignal.timeout(6000)}).then(parseV8)),
+    tag('Yahoo v8 (allorigins raw)', fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(v8Url)}`,{signal:AbortSignal.timeout(8000)}).then(parseV8)),
+    tag('Yahoo v8 (allorigins)', fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(v8Url)}`,{signal:AbortSignal.timeout(8000)})
+      .then(async r=>{ const j=await r.json(); return parseV8(new Response(j.contents||'{}',{status:j.status?.http_code||200})); })),
+    // v7/quote — additional fallback via corsproxy and codetabs
+    tag('Yahoo v7 (corsproxy)', fetch(`https://corsproxy.io/?${v7Url}`,{signal:AbortSignal.timeout(10000)}).then(parseV7)),
+    tag('Yahoo v7 (codetabs)', fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(v7Url)}`,{signal:AbortSignal.timeout(10000)}).then(parseV7)),
   ]);
 }
 
@@ -260,16 +223,14 @@ async function fetchAllInvPrices(){
     );
   }
 
-  // Stocks & funds — start BIST bulk fetch immediately (parallel with gold/BTC/kripto)
+  // Stocks & funds — Yahoo Finance (multiple proxies, race for first success)
   const bistInvs=port.filter(i=>(i.type==='hisse'||i.type==='fon')&&i.ticker);
   if(bistInvs.length){
-    const bistBulkP=getBistData();
     bistInvs.forEach(inv=>{
-      const t0s=Date.now();
       promises.push(
-        bistBulkP.then(bistBulk=>fetchBistPrice(inv.ticker, bistBulk))
-          .then(price=>{ addFetchLog(inv.ticker,'ok',fmtTRY(price),Date.now()-t0s); inv.currentPrice=Math.round(price*100)/100; inv.priceUpdatedAt=Date.now(); _priceStatus[inv.id]='ok'; renderYatirim(); })
-          .catch(()=>{ addFetchLog(inv.ticker,'err','',Date.now()-t0s); if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; renderYatirim(); })
+        fetchBistPrice(inv.ticker)
+          .then(price=>{ inv.currentPrice=Math.round(price*100)/100; inv.priceUpdatedAt=Date.now(); _priceStatus[inv.id]='ok'; renderYatirim(); })
+          .catch(()=>{ if(!_priceStatus[inv.id]) _priceStatus[inv.id]='err'; renderYatirim(); })
       );
     });
   }
