@@ -96,6 +96,11 @@ async function getBistData(){
 
 async function fetchBistPrice(ticker, cachedBistData){
   const code=ticker.replace(/\.IS$/i,'').toUpperCase();
+  const t0=Date.now();
+  const tag=(label,p)=>p
+    .then(v=>{ addFetchLog(`${code} (${label})`, 'ok', fmtTRY(v), Date.now()-t0); return v; })
+    .catch(e=>{ addFetchLog(`${code} (${label})`, 'err', '', Date.now()-t0); throw e; });
+
   const genelarP=Promise.resolve(cachedBistData||null).then(data=>{
     const s=data?.[code];
     const p=parseFloat(s?.deger||s?.son||s?.kapanis||s?.satis||0);
@@ -118,7 +123,36 @@ async function fetchBistPrice(ticker, cachedBistData){
     let d; try{ d=JSON.parse(j.contents||'{}'); }catch{ throw new Error(); }
     return parseBP(d);
   });
-  return Promise.any([genelarP, bigparaDirectP, bigparaProxyP]);
+  const yahooSym=code+'.IS';
+  const v7Url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSym}`;
+  const parseV7=async r=>{
+    if(!r.ok) throw new Error();
+    const data=await r.json();
+    const price=data?.quoteResponse?.result?.[0]?.regularMarketPrice;
+    if(!(price>0)) throw new Error();
+    return price;
+  };
+  const v8Url=`https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
+  const parseV8=async r=>{
+    if(!r.ok) throw new Error();
+    const text=await r.text();
+    if(!text||text[0]!=='{') throw new Error();
+    const data=JSON.parse(text);
+    const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if(!(price>0)) throw new Error();
+    return price;
+  };
+  const viaProxy=(url,parser,ms)=>
+    fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)})
+      .then(async r=>{ const j=await r.json(); return parser(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
+
+  return Promise.any([
+    tag('genelpara', genelarP),
+    tag('BigPara', bigparaDirectP),
+    tag('BigPara proxy', bigparaProxyP),
+    tag('Yahoo v7', viaProxy(v7Url, parseV7, 9000)),
+    tag('Yahoo v8', viaProxy(v8Url, parseV8, 9000)),
+  ]);
 }
 
 async function fetchAltinPrices(){
