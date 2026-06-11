@@ -169,10 +169,10 @@ async function fetchAltinPrices(){
     _altinCache=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(6000)})
       .then(r=>r.json())
       .then(d=>{
-        const gram=parseTR(d['Gram Altın']?.['Satış']);
+        const gram=parseTR(d['Gram Altın']?.['Alış']);
         if(!(gram>0)) throw new Error();
-        const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
-        const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
+        const ayar22=parseTR(d['22 Ayar Bilezik']?.['Alış']);
+        const ceyrek=parseTR(d['Çeyrek Altın']?.['Alış']);
         const result={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
         addFetchLog('Altın (truncgil)','ok',`gram = ${fmtTRY(gram)}`,Date.now()-t0a);
         return result;
