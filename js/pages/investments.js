@@ -164,33 +164,20 @@ async function fetchAltinPrices(){
 
   function parseTR(v){ return parseFloat((v||'').toString().replace(/\./g,'').replace(',','.')); }
 
-  // Race all sources simultaneously — take the fastest successful one
   const t0a=Date.now();
-  const tagA=(label,p)=>p.then(v=>{addFetchLog(label,'ok',`gram = ${fmtTRY(v.gram)}`,Date.now()-t0a);return v;}).catch(e=>{addFetchLog(label,'err','',Date.now()-t0a);throw e;});
   try{
-    _altinCache=await Promise.any([
-      tagA('Altın (truncgil)',fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(4000)})
-        .then(r=>r.json()).then(d=>{
-          const gram=parseTR(d['Gram Altın']?.['Satış']);
-          if(!(gram>0)) throw new Error();
-          const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
-          const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
-          return {gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
-        })),
-      tagA('Altın (genelpara)',fetch('https://api.genelpara.com/embed/altin.json',{signal:AbortSignal.timeout(4000)})
-        .then(r=>r.json()).then(d=>{
-          const gram=parseTR(d?.GA?.satis||d?.GA?.alis);
-          if(!(gram>0)) throw new Error();
-          return {gram,ayar22:Math.round(gram*(22/24)*100)/100,ceyrek:parseTR(d?.C?.satis||d?.C?.alis)||0,ts:Date.now()};
-        })),
-      tagA('Altın (XAU/Cloudflare)',fetch('https://latest.currency-api.pages.dev/v1/currencies/xau.json',{signal:AbortSignal.timeout(4000)})
-        .then(r=>r.json()).then(d=>{
-          const tryPerOz=d?.xau?.try;
-          if(!(tryPerOz>0)) throw new Error();
-          return {...calcAltinFromGram(tryPerOz/31.1035),ts:Date.now()};
-        })),
-    ]);
-  }catch{}
+    _altinCache=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(6000)})
+      .then(r=>r.json())
+      .then(d=>{
+        const gram=parseTR(d['Gram Altın']?.['Satış']);
+        if(!(gram>0)) throw new Error();
+        const ayar22=parseTR(d['22 Ayar Bilezik']?.['Satış']||d['22 Ayar']?.['Satış']);
+        const ceyrek=parseTR(d['Çeyrek Altın']?.['Satış']);
+        const result={gram,ayar22:ayar22||Math.round(gram*(22/24)*100)/100,ceyrek:ceyrek||0,ts:Date.now()};
+        addFetchLog('Altın (truncgil)','ok',`gram = ${fmtTRY(gram)}`,Date.now()-t0a);
+        return result;
+      });
+  }catch{ addFetchLog('Altın (truncgil)','err','',Date.now()-t0a); }
 
   _altinFetching=false;
   return _altinCache;
