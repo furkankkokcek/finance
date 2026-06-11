@@ -132,15 +132,16 @@ async function fetchBistPrice(ticker){
     return p;
   };
 
-  const ao=(url,parser,ms)=>fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)}).then(parser);
-  const aoGet=(url,parser,ms)=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)})
+  const nc={cache:'no-store'};
+  const ao=(url,parser,ms)=>fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms),...nc}).then(parser);
+  const aoGet=(url,parser,ms)=>fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms),...nc})
     .then(async r=>{ const j=await r.json(); return parser(new Response(j.contents||'{}',{status:j.status?.http_code||200})); });
-  const cp=(url,parser,ms)=>fetch(`https://corsproxy.io/?${url}`,{signal:AbortSignal.timeout(ms)}).then(parser);
-  const ct=(url,parser,ms)=>fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms)}).then(parser);
-  const tp=(url,parser,ms)=>fetch(`https://thingproxy.freeboard.io/fetch/${url}`,{signal:AbortSignal.timeout(ms)}).then(parser);
+  const cp=(url,parser,ms)=>fetch(`https://corsproxy.io/?${url}`,{signal:AbortSignal.timeout(ms),...nc}).then(parser);
+  const ct=(url,parser,ms)=>fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(ms),...nc}).then(parser);
+  const tp=(url,parser,ms)=>fetch(`https://thingproxy.freeboard.io/fetch/${url}`,{signal:AbortSignal.timeout(ms),...nc}).then(parser);
 
   return Promise.any([
-    tag('Yahoo v8 direct',      fetch(v8Url,{signal:AbortSignal.timeout(6000)}).then(parseV8)),
+    tag('Yahoo v8 direct',      fetch(v8Url,{signal:AbortSignal.timeout(6000),...nc}).then(parseV8)),
     tag('Yahoo v8 (allorigins raw)', ao(v8Url,parseV8,10000)),
     tag('Yahoo v8 (allorigins get)', aoGet(v8Url,parseV8,10000)),
     tag('Yahoo v8 (corsproxy)',  cp(v8Url,parseV8,10000)),
@@ -148,7 +149,7 @@ async function fetchBistPrice(ticker){
     tag('Yahoo v8 (thingproxy)',  tp(v8UrlAlt,parseV8,12000)),
     tag('Yahoo v7 (corsproxy)',  cp(v7Url,parseV7,10000)),
     tag('Yahoo v7 (codetabs)',   ct(v7Url.replace('corsDomain=finance.yahoo.com&',''),parseV7,10000)),
-    tag('Yahoo search direct',   fetch(searchUrl,{signal:AbortSignal.timeout(6000)}).then(parseSearch)),
+    tag('Yahoo search direct',   fetch(searchUrl,{signal:AbortSignal.timeout(6000),...nc}).then(parseSearch)),
     tag('Yahoo search (allorigins)', ao(searchUrl,parseSearch,10000)),
     tag('Yahoo search (corsproxy)',  cp(searchUrl,parseSearch,10000)),
     tag('Yahoo spark (allorigins)', ao(sparkUrl,parseSpark,10000)),
