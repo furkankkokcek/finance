@@ -1,4 +1,4 @@
-const CACHE = 'fintrack-v4';
+const CACHE = 'fintrack-v5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -22,6 +22,8 @@ const ASSETS = [
   '/js/pages/income.js',
   '/js/pages/expense.js',
   '/js/pages/spending.js',
+  '/js/pages/calendar.js',
+  '/js/pages/investments.js',
   '/js/pages/freedom.js',
   '/js/pages/yeartable.js',
   '/js/pages/year.js',
