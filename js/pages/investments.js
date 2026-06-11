@@ -166,7 +166,7 @@ async function fetchAltinPrices(){
 
   const t0a=Date.now();
   try{
-    _altinCache=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(6000)})
+    _altinCache=await fetch('https://finans.truncgil.com/today.json',{signal:AbortSignal.timeout(6000),cache:'no-store'})
       .then(r=>r.json())
       .then(d=>{
         const gram=parseTR(d['gram-altin']?.['Alış']);
