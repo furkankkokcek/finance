@@ -151,9 +151,9 @@ function getMonthEvents(year,month){
     if(eventDate.getMonth()+1===month){
       events.push({day:eventDate.getDate(),name:exp.name,amount:amt,type:exp.category,color:expColor(exp.category),expId:exp.id,isReminder:false,paid:exp.status?.[month]==='paid'});
     }
-    // PPF prev-business-day reminder — only when nominal falls on a holiday
-    if(S.settings.ppfEnabled!==false&&exp.ppf&&isHoliday(nominal)){
-      const pbd=prevBusinessDay(nominal);
+    // PPF prev-business-day reminder — only when the actual event date falls on a holiday
+    if(S.settings.ppfEnabled!==false&&exp.ppf&&isHoliday(eventDate)){
+      const pbd=prevBusinessDay(eventDate);
       if(pbd.getFullYear()===year&&pbd.getMonth()+1===month){
         events.push({day:pbd.getDate(),name:exp.name,amount:amt,type:'ppf',color:'#a855f7',expId:exp.id,isReminder:true});
       }
