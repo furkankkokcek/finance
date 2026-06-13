@@ -270,6 +270,76 @@ async function fetchAllInvPrices(){
   renderYatirim();
 }
 
+function exportPortfolioTxt(){
+  const port=getPortfolio();
+  if(!port.length){ alert('Portföyde kayıt yok.'); return; }
+  const pad=(s,n)=>String(s).padStart(n,' ');
+  const line=(ch=>'─')('─').repeat(46);
+  const dbl='═'.repeat(46);
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});
+  const rows=[];
+  rows.push(`FinTrack Portföy Raporu — ${dateStr}`);
+  rows.push(dbl);
+  rows.push('');
+
+  let grandCost=0,grandVal=0;
+
+  port.forEach(inv=>{
+    const c=calcInv(inv);
+    grandCost+=c.totalCostTL;
+    grandVal+=c.currentValueTL;
+
+    const typeLabel=INV_TYPES[inv.type]||inv.type;
+    const subtypeLabel=inv.type==='altin'&&inv.goldSubtype?(` · ${ALTIN_SUBTYPES[inv.goldSubtype]||inv.goldSubtype}`):'';
+    const tickerLabel=inv.ticker?` · ${inv.ticker}`:'';
+    rows.push(`${inv.name}  (${typeLabel}${subtypeLabel}${tickerLabel})`);
+
+    const lots=inv.lots||[];
+    if(lots.length){
+      rows.push('  Alımlar:');
+      lots.forEach(l=>{
+        const d=l.date?l.date.slice(0,10).split('-').reverse().join('.'):'—';
+        const qty=parseFloat(l.qty||0);
+        const price=parseFloat(l.price||0);
+        const unit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet';
+        const total=qty*price;
+        rows.push(`    ${d}   ${pad(qty.toLocaleString('tr-TR'),8)} ${unit}   @ ${pad(fmtTRY(price),12)}  →  ${fmtTRY(total)}`);
+      });
+    }
+
+    const unit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet';
+    rows.push(`  Toplam: ${c.totalQty.toLocaleString('tr-TR')} ${unit}  |  Ort. maliyet: ${fmtTRY(c.avgCostTL)}  |  Toplam maliyet: ${fmtTRY(c.totalCostTL)}`);
+    if(inv.currentPrice>0){
+      const sign=c.pnlTL>=0?'+':'-';
+      rows.push(`  Güncel fiyat: ${fmtTRY(inv.currentPrice)}  |  Güncel değer: ${fmtTRY(c.currentValueTL)}`);
+      rows.push(`  Kâr/Zarar: ${sign}${fmtTRY(Math.abs(c.pnlTL))}  (${sign}${Math.abs(c.pnlPct).toFixed(1)}%)`);
+    } else {
+      rows.push('  Güncel fiyat: girilmemiş');
+    }
+    rows.push(line);
+    rows.push('');
+  });
+
+  rows.push('GENEL TOPLAM');
+  rows.push(`  Toplam maliyet : ${fmtTRY(grandCost)}`);
+  rows.push(`  Güncel değer   : ${fmtTRY(grandVal)}`);
+  const grandPnl=grandVal-grandCost;
+  const grandPct=grandCost>0?(grandPnl/grandCost)*100:0;
+  const gs=grandPnl>=0?'+':'-';
+  rows.push(`  Kâr/Zarar      : ${gs}${fmtTRY(Math.abs(grandPnl))}  (${gs}${Math.abs(grandPct).toFixed(1)}%)`);
+  rows.push('');
+
+  const txt=rows.join('\n');
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`portfoy_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function refreshPrices(){
   _fetchLog=[];
   _priceStatus={};
@@ -494,6 +564,7 @@ function renderYatirim(){
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:10px;color:var(--muted)">${lastFetchStr}</span>
           <button onclick="openFetchLog()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Fiyat günlüğü">📋</button>
+          <button onclick="exportPortfolioTxt()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Portföyü dışa aktar">⬇ TXT</button>
           <button onclick="refreshPrices()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--accent);cursor:pointer" title="Fiyatları yenile">↻</button>
         </div>
       </div>
