@@ -3,9 +3,9 @@
 function openYearTable(){
   const year=S.settings.currentYear;
   const yd=getYear(year);
-  document.getElementById('yeartable-title').textContent=`${year} Yıllık Tablo`;
+  document.getElementById('yeartable-title').textContent=t('yeartable.title',{year});
 
-  const header=`<tr><th>Kalem</th>${MONTHS.map(m=>`<th>${m}</th>`).join('')}<th>Toplam</th></tr>`;
+  const header=`<tr><th>${t('yeartable.item')}</th>${MONTHS.map(m=>`<th>${m}</th>`).join('')}<th>${t('common.total')}</th></tr>`;
   let rows='';
 
   const addSection=(label,items)=>{
@@ -27,13 +27,13 @@ function openYearTable(){
       rows+=`<td style="font-weight:700">${itemTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
     });
     const secTotal=secTotals.reduce((a,b)=>a+b,0);
-    rows+=`<tr class="total-row"><td>${label} TOPLAM</td>${secTotals.map(v=>`<td>${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${secTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+    rows+=`<tr class="total-row"><td>${t('yeartable.sectionTotal',{label})}</td>${secTotals.map(v=>`<td>${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${secTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   };
 
-  addSection('SABİT GİDERLER',yd.expenses.filter(e=>e.category==='sabit'));
-  addSection('KREDİLER',yd.expenses.filter(e=>e.category==='kredi'));
-  addSection('KREDİ KARTLARI',yd.expenses.filter(e=>e.category==='kk'));
-  addSection('ABONELİKLER',yd.expenses.filter(e=>e.category==='abonelik'));
+  addSection(t('yeartable.fixedExpenses'),yd.expenses.filter(e=>e.category==='sabit'));
+  addSection(t('yeartable.loans'),yd.expenses.filter(e=>e.category==='kredi'));
+  addSection(t('yeartable.creditCards'),yd.expenses.filter(e=>e.category==='kk'));
+  addSection(t('yeartable.subscriptions'),yd.expenses.filter(e=>e.category==='abonelik'));
 
   let gTotals=Array(12).fill(0);
   let iTotals=Array(12).fill(0);
@@ -45,11 +45,11 @@ function openYearTable(){
     cashTotals[m-1]=d.cashLeft;
   }
   rows+=`<tr class="grand-divider"><td colspan="14"></td></tr>`;
-  rows+=`<tr class="total-row"><td>🤑 TOPLAM GELİR</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  rows+=`<tr class="total-row"><td>💸 TOPLAM GİDER</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.totalIncome')}</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.totalExpense')}</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
   const invTotals=Array.from({length:12},(_,i)=>getMonthlyInvestmentFromLots(year,i+1));
-  rows+=`<tr class="total-row"><td>💼 YATIRIM</td>${invTotals.map(v=>`<td style="color:var(--info)">${v>0?v.toLocaleString('tr-TR',{maximumFractionDigits:0}):'-'}</td>`).join('')}<td>${invTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  rows+=`<tr class="total-row"><td>💲 NAKİT KALAN</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.investment')}</td>${invTotals.map(v=>`<td style="color:var(--info)">${v>0?v.toLocaleString('tr-TR',{maximumFractionDigits:0}):'-'}</td>`).join('')}<td>${invTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.cashLeft')}</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
 
   document.getElementById('year-table-content').innerHTML=`<table class="year-table"><thead>${header}</thead><tbody>${rows}</tbody></table>`;
   openModal('overlay-yeartable');

@@ -37,14 +37,14 @@ function renderHarcama(){
   });
 
   const total=items.reduce((acc,i)=>acc+parseFloat(i.amount||0),0);
-  let html=`<div class="section-hdr"><div class="section-title">Harcamalar — ${MONTHS_FULL[month-1]}</div><div class="section-badge neg" style="color:var(--danger);background:var(--danger-bg)">${fmtTRY(total)}</div></div>`;
+  let html=`<div class="section-hdr"><div class="section-title">${t('spending.list')} — ${MONTHS_FULL[month-1]}</div><div class="section-badge neg" style="color:var(--danger);background:var(--danger-bg)">${fmtTRY(total)}</div></div>`;
 
   if(items.length===0&&kkInsts.length===0){
-    html+=`<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-text">Bu ay harcama kaydı yok</div><div class="empty-sub">Sağ alttaki + butonuna bas</div></div>`;
+    html+=`<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-text">${t('spending.empty')}</div><div class="empty-sub">${t('spending.emptySub')}</div></div>`;
   } else {
     items.forEach(s=>{
       const d=new Date(s.date);
-      const kkBadge=(s.kk&&s.kk.n>1)?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:var(--purple);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">💳 ${s.kk.n} taksit</span>`:'';
+      const kkBadge=(s.kk&&s.kk.n>1)?`<span style="font-size:10px;background:rgba(168,85,247,.15);color:var(--purple);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">${t('spending.kkBadge',{n:s.kk.n})}</span>`:'';
       html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')">
         <div class="spending-left">
           <div class="spending-desc">${s.description}${kkBadge}</div>
@@ -56,14 +56,14 @@ function renderHarcama(){
 
     if(kkInsts.length>0){
       if(items.length>0) html+=`<div style="height:6px"></div>`;
-      html+=`<div class="section-hdr" style="margin-top:4px"><div class="section-title" style="font-size:12px">💳 Önceki Dönem & Tek Çekim</div></div>`;
+      html+=`<div class="section-hdr" style="margin-top:4px"><div class="section-title" style="font-size:12px">${t('spending.prevPeriod')}</div></div>`;
       kkInsts.forEach(({s,instNum,total,perInst})=>{
         const d=new Date(s.date);
-        const metaLabel=total>1?`${instNum}/${total} taksit`:'tek çekim';
+        const metaLabel=total>1?t('spending.installmentLabel',{n:instNum,total}):t('spending.singleLabel');
         html+=`<div class="spending-item" onclick="openEditSpending('${s.id}')" style="background:rgba(168,85,247,.05);border-left:3px solid rgba(168,85,247,.4)">
           <div class="spending-left">
             <div class="spending-desc">${s.description}</div>
-            <div class="spending-meta">${metaLabel} · alış ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s)}</div>
+            <div class="spending-meta">${metaLabel} · ${t('spending.buyPrefix')} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${findKKCardName(s)}</div>
           </div>
           <div class="spending-amount" style="color:var(--purple)">-${fmtTRY(perInst)}</div>
         </div>`;
@@ -75,7 +75,7 @@ function renderHarcama(){
 }
 
 function findKKCardName(s){
-  if(!s.kk) return 'Bilinmeyen';
+  if(!s.kk) return t('spending.unknownCard');
   // Look up by expense ID (kk.cardId is the KK expense id)
   const expId=s.kk.cardId||'';
   if(expId){
@@ -84,7 +84,7 @@ function findKKCardName(s){
       if(exp) return exp.name;
     }
   }
-  return 'Bilinmeyen KK';
+  return t('spending.unknownKk');
 }
 
 // Returns note about which statement month a KK purchase will fall into
@@ -97,7 +97,7 @@ function spdCardNote(dateStr, expId){
   }
   if(!exp||!exp.statementDay) return '';
   const per=statementPeriod(dateStr,exp.statementDay);
-  return `→ ${MONTHS_FULL[per.month-1]} ${per.year} ekstresi`;
+  return `→ ${MONTHS_FULL[per.month-1]} ${per.year} ${t('spending.statementSuffix')}`;
 }
 
 function resetSpdKK(){
@@ -117,7 +117,7 @@ function toggleSpdKK(cb){
     const cards=getYear(S.settings.currentYear).expenses.filter(e=>e.category==='kk');
     cardSel.innerHTML=cards.length
       ?cards.map(k=>`<option value="${k.id}">${k.name}</option>`).join('')
-      :'<option value="">— KK tanımlanmamış —</option>';
+      :'<option value="">'+t('spending.noKkDefined')+'</option>';
     cardSel.dataset.mode='expenses';
     updateSpdCardNote();
   }
@@ -136,7 +136,7 @@ function updateSpdCardNote(){
 }
 
 function openAddSpending(){
-  document.getElementById('spending-modal-title').textContent='Harcama Ekle';
+  document.getElementById('spending-modal-title').textContent=t('spending.addTitle');
   document.getElementById('spd-id').value='';
   document.getElementById('spd-desc').value='';
   document.getElementById('spd-amount').value='';
@@ -154,24 +154,24 @@ function openEditSpending(id){
   document.getElementById('spd-id').value=id;
 
   if(s.kk){
-    document.getElementById('spending-modal-title').textContent='KK Harcaması';
+    document.getElementById('spending-modal-title').textContent=t('spending.kkTitle');
     document.getElementById('spd-normal-form').style.display='none';
     document.getElementById('spd-kk-readonly').style.display='block';
     const cardName=findKKCardName(s);
-    const typeLabel=s.kk.n>1?`${s.kk.n} Taksit (aylık ${fmtTRY(s.kk.perInst)})`:'Tek Çekim';
+    const typeLabel=s.kk.n>1?t('spending.installmentMonthly',{n:s.kk.n,amount:fmtTRY(s.kk.perInst)}):t('spending.single');
     let ekstreLabel='';
     const kpm=s.kk.paymentMonths;
     if(kpm&&kpm.length){
       const first=kpm[0],last=kpm[kpm.length-1];
       ekstreLabel=kpm.length===1
-        ?`📋 ${MONTHS_FULL[first.month-1]} ${first.year} ekstresi`
+        ?`📋 ${MONTHS_FULL[first.month-1]} ${first.year} ${t('spending.statementSuffix')}`
         :`📋 ${MONTHS_FULL[first.month-1]} ${first.year} – ${MONTHS_FULL[last.month-1]} ${last.year}`;
     } else {
       const dateObj=new Date(s.date);
       let fm=dateObj.getMonth()+2,fy=dateObj.getFullYear();
       if(fm>12){fm=1;fy++;}
       if(s.kk.n<=1){
-        ekstreLabel=`📋 ${MONTHS_FULL[fm-1]} ${fy} ekstresi`;
+        ekstreLabel=`📋 ${MONTHS_FULL[fm-1]} ${fy} ${t('spending.statementSuffix')}`;
       } else {
         let lm=fm+(s.kk.n-1),ly=fy;
         while(lm>12){lm-=12;ly++;}
@@ -186,7 +186,7 @@ function openEditSpending(id){
       (ekstreLabel?`<div style="color:var(--purple);font-size:13px;margin-top:4px">${ekstreLabel}</div>`:'')+
       `<div style="color:var(--muted);font-size:12px;margin-top:6px">${SPD_CATS[s.category]||s.category}</div>`;
   } else {
-    document.getElementById('spending-modal-title').textContent='Harcama Düzenle';
+    document.getElementById('spending-modal-title').textContent=t('spending.editTitle');
     document.getElementById('spd-normal-form').style.display='block';
     document.getElementById('spd-kk-readonly').style.display='none';
     document.getElementById('spd-desc').value=s.description;
@@ -207,17 +207,17 @@ function saveSpending(){
   const amount=parseFloat(document.getElementById('spd-amount').value)||0;
   const date=document.getElementById('spd-date').value;
   const cat=document.getElementById('spd-cat').value;
-  if(!desc||!amount||!date){alert('Tüm alanları doldurun');return;}
+  if(!desc||!amount||!date){alert(t('spending.fillAll'));return;}
 
   const kkActive=document.getElementById('spd-kk-toggle').checked;
   let kkMeta=null;
   if(kkActive){
     const cardSel=document.getElementById('spd-kk-card');
     const selId=cardSel.value;
-    if(!selId){alert('Kredi kartı seçin');return;}
+    if(!selId){alert(t('spending.selectCard'));return;}
     const type=document.getElementById('spd-kk-type').value;
     const n=type==='inst'?(parseInt(document.getElementById('spd-kk-inst').value)||1):1;
-    if(type==='inst'&&n<2){alert('Taksit sayısı en az 2 olmalı');return;}
+    if(type==='inst'&&n<2){alert(t('spending.minInstallment'));return;}
     const perInst=Math.round(amount/n*100)/100;
 
     if(cardSel.dataset.mode==='cards'){
@@ -242,7 +242,7 @@ function saveSpending(){
           kkExp.amounts=kkExp.amounts||{};
           kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
         }
-        if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdı; manuel ekleyebilirsin.`);
+        if(skipped>0) alert(t('spending.installmentMovedYear',{n:skipped}));
         kkMeta={cardId:linkedExp.id,cardRef:selId,n,perInst,paymentMonths};
       } else {
         // No linked KK expense: store only card reference
@@ -269,7 +269,7 @@ function saveSpending(){
         kkExp.amounts=kkExp.amounts||{};
         kkExp.amounts[pm]=Math.round((parseFloat(kkExp.amounts[pm]||0)+perInst)*100)/100;
       }
-      if(skipped>0) alert(`${skipped} taksit farklı yıla taşıdı; manuel ekleyebilirsin.`);
+      if(skipped>0) alert(t('spending.installmentMovedYear',{n:skipped}));
       kkMeta={cardId:selId,n,perInst,paymentMonths};
     }
   }
@@ -296,8 +296,8 @@ function deleteSpending(){
   if(!s) return;
 
   const confirmMsg=s.kk
-    ?'Bu KK harcaması silinecek ve ilgili KK tutarlarından geri çıkarılacak. Onaylıyor musun?'
-    :'Bu harcamayı silmek istiyor musun?';
+    ?t('spending.deleteKkConfirm')
+    :t('spending.deleteConfirm');
   if(!confirm(confirmMsg)) return;
 
   if(s.kk){

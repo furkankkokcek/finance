@@ -24,7 +24,7 @@ function renderGider(){
       <div class="acc-body${isOpen?' open':''}">`;
 
     if(items.length===0){
-      html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Kayıt yok</div>`;
+      html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">${t('expense.noRecord')}</div>`;
     } else {
       let anyRendered=false;
       items.forEach(exp=>{
@@ -43,9 +43,9 @@ function renderGider(){
           const adjDue=exp.dueDay?getAdjustedDueDate(year,month,exp.dueDay):null;
           const extended=adjDue&&(adjDue.getDate()!==nomDue.getDate()||adjDue.getMonth()!==nomDue.getMonth());
           const dueNote=extended?`→${adjDue.getDate()} ${MONTHS[adjDue.getMonth()]}`:adjDue?`${adjDue.getDate()} ${MONTHS[adjDue.getMonth()]}`:'-';
-          dueStr=`Kesim:${nomStat.getDate()}${statNote} · Ödeme:${dueNote}`;
+          dueStr=`${t('expense.statementShort')}${nomStat.getDate()}${statNote} · ${t('expense.paymentShort')}${dueNote}`;
         }
-        const dueLabel=cat==='abonelik'?'Yenileme':cat==='kk'?'':'Ödeme';
+        const dueLabel=cat==='abonelik'?t('expense.renewal'):cat==='kk'?'':t('expense.payment');
         const instInfo=exp.installments>0?` (${exp.installmentPaid||0}/${exp.installments})`:'';
         const bgColor=status==='paid'?'rgba(34,197,94,0.08)':status==='partial'?'rgba(245,158,11,0.08)':status==='unpaid'?'rgba(239,68,68,0.15)':'transparent';
         html+=`<div class="exp-item" style="background:${bgColor};justify-content:space-between" onclick="openStatusModal('${exp.id}',${month})">
@@ -53,7 +53,7 @@ function renderGider(){
             <div class="exp-item-name">
               ${S.settings.ppfEnabled!==false&&exp.ppf?'<span class="badge badge-ppf">PPF</span>':''}
               ${exp.name}
-              ${isDue?'<span class="badge badge-due">BUGÜN</span>':''}
+              ${isDue?'<span class="badge badge-due">'+t('expense.today')+'</span>':''}
               ${instInfo?'<span style="font-size:11px;color:var(--muted)">'+instInfo+'</span>':''}
             </div>
             <div class="exp-item-meta">${dueLabel?dueLabel+': ':''}${dueStr}${exp.detail?' · '+exp.detail:''}</div>
@@ -61,14 +61,14 @@ function renderGider(){
           <div class="exp-item-right" style="display:flex;gap:8px;align-items:center">
             <div style="text-align:right">
               <div class="exp-item-amount">${fmtTRY(amt)}</div>
-              <div class="exp-item-status"><span class="badge badge-${status}">${status==='paid'?'Ödendi':status==='partial'?'Kısmen':'Ödenmedi'}</span></div>
+              <div class="exp-item-status"><span class="badge badge-${status}">${status==='paid'?t('status.paid'):status==='partial'?t('status.partial'):t('status.unpaid')}</span></div>
             </div>
             <button onclick="event.stopPropagation();openAddExpense('${exp.id}')" style="padding:6px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">✏️</button>
           </div>
         </div>`;
       });
       if(!anyRendered){
-        html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Bu ay için tutar girilmemiş</div>`;
+        html+=`<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">${t('expense.noAmountThisMonth')}</div>`;
       }
     }
     html+=`</div></div>`;
@@ -91,7 +91,7 @@ function kkExpOptionsHtml(selectedId){
   const year=S.settings.currentYear;
   const yd=getYear(year);
   const kkExps=yd.expenses.filter(e=>e.category==='kk');
-  const opts=['<option value="">— Kart seç —</option>'];
+  const opts=['<option value="">'+t('card.select')+'</option>'];
   kkExps.forEach(e=>{
     opts.push(`<option value="${e.id}"${e.id===selectedId?' selected':''}>${e.name}</option>`);
   });
@@ -117,7 +117,7 @@ function onExpCatChange(){
     }
   }
 
-  if(dueLabel) dueLabel.textContent=cat==='abonelik'?'Yenileme Günü':cat==='kk'?'Son Ödeme Günü':'Ödeme Günü';
+  if(dueLabel) dueLabel.textContent=cat==='abonelik'?t('expense.dueDayRenew'):cat==='kk'?t('expense.dueDayLast'):t('expense.dueDay');
   if(ppfField) ppfField.style.display=(S.settings.ppfEnabled!==false&&cat!=='abonelik')?'':'none';
 
   if(cat==='kk') updateExpKKInfo();
@@ -134,15 +134,15 @@ function updateExpKKInfo(){
   if(statDay){
     const nomStat=nominalDate(year,month,statDay);
     const isHol=isHoliday(nomStat);
-    const holNote=isHol?' (tatil — banka ertesi iş günü işler)':'';
-    lines.push(`Hesap kesim: ${nomStat.getDate()} ${MONTHS_FULL[nomStat.getMonth()]}${holNote}`);
+    const holNote=isHol?' '+t('expense.kkHoliday'):'';
+    lines.push(`${t('expense.kkStatement')} ${nomStat.getDate()} ${MONTHS_FULL[nomStat.getMonth()]}${holNote}`);
   }
   if(dueDay){
     const adjDue=getAdjustedDueDate(year,month,dueDay);
     const nomDue=nominalDate(year,month,dueDay);
     const extended=adjDue.getDate()!==nomDue.getDate()||adjDue.getMonth()!==nomDue.getMonth();
-    const extNote=extended?` → ${adjDue.getDate()} ${MONTHS_FULL[adjDue.getMonth()]} (uzatıldı)`:'';
-    lines.push(`Son ödeme: ${nomDue.getDate()} ${MONTHS_FULL[nomDue.getMonth()]}${extNote}`);
+    const extNote=extended?` → ${adjDue.getDate()} ${MONTHS_FULL[adjDue.getMonth()]} ${t('expense.kkExtended')}`:'';
+    lines.push(`${t('expense.kkDueLine')} ${nomDue.getDate()} ${MONTHS_FULL[nomDue.getMonth()]}${extNote}`);
   }
   infoEl.innerHTML=lines.join('<br>');
 }
@@ -150,7 +150,7 @@ function updateExpKKInfo(){
 function openAddExpense(id=null, defaultCat=null){
   const yd=getYear(S.settings.currentYear);
   const exp=id?yd.expenses.find(e=>e.id===id):null;
-  document.getElementById('exp-modal-title').textContent=exp?'Gider Düzenle':'Gider Ekle';
+  document.getElementById('exp-modal-title').textContent=exp?t('expense.editTitle'):t('expense.addTitle');
   document.getElementById('exp-id').value=id||'';
   document.getElementById('exp-name').value=exp?exp.name:'';
   document.getElementById('exp-cat').value=exp?exp.category:(defaultCat||'sabit');
@@ -175,7 +175,7 @@ function saveExpense(){
   const yd=getYear(year);
   const id=document.getElementById('exp-id').value;
   const name=document.getElementById('exp-name').value.trim();
-  if(!name){alert('Gider adı girin');return;}
+  if(!name){alert(t('expense.nameRequired'));return;}
   const amounts=readAmountsGrid('exp-amounts');
   const cat=document.getElementById('exp-cat').value;
   const cardSel=document.getElementById('exp-card-id');
@@ -206,7 +206,7 @@ function saveExpense(){
 }
 
 function deleteExpense(){
-  if(!confirm('Bu gideri silmek istiyor musunuz?')) return;
+  if(!confirm(t('expense.deleteConfirm'))) return;
   const year=S.settings.currentYear;
   const yd=getYear(year);
   const id=document.getElementById('exp-id').value;
@@ -223,7 +223,7 @@ function openStatusModal(expId,month){
   const yd=getYear(S.settings.currentYear);
   const exp=yd.expenses.find(e=>e.id===expId);
   const status=exp?.status?.[month]||'unpaid';
-  document.getElementById('status-modal-title').textContent=exp?.name||'Ödeme Durumu';
+  document.getElementById('status-modal-title').textContent=exp?.name||t('status.title');
   ['paid','partial','unpaid'].forEach(s=>{
     document.getElementById('sopt-'+s).classList.toggle('sel',s===status);
   });
@@ -252,8 +252,8 @@ function saveStatus(){
   renderDashboard();
   trackChange();
   if(prev!==_selectedStatus){
-    const statusLabel={paid:'Ödendi',partial:'Kısmi Ödendi',unpaid:'Ödenmedi'}[_selectedStatus]||_selectedStatus;
+    const statusLabel={paid:t('status.paid'),partial:t('status.partialPaid'),unpaid:t('status.unpaid')}[_selectedStatus]||_selectedStatus;
     const icon=_selectedStatus==='paid'?'✅':_selectedStatus==='partial'?'⚠️':'↩️';
-    addNotifEntry('status_change',icon,'Durum Güncellendi',`${exp.name} — ${MONTHS_FULL[month-1]}: ${statusLabel}`);
+    addNotifEntry('status_change',icon,t('status.changed'),`${exp.name} — ${MONTHS_FULL[month-1]}: ${statusLabel}`);
   }
 }

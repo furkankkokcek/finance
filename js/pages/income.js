@@ -10,10 +10,10 @@ function renderGelir(){
   let totalIncome=0;
   yd.income.forEach(inc=>{ totalIncome+=parseFloat(inc.amounts[month]||0); });
 
-  let html=`<div class="section-hdr"><div class="section-title">Gelir Kaynakları</div><div class="section-badge">${fmtTRY(totalIncome)}</div></div>`;
+  let html=`<div class="section-hdr"><div class="section-title">${t('income.sources')}</div><div class="section-badge">${fmtTRY(totalIncome)}</div></div>`;
 
   if(yd.income.length===0){
-    html+=`<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">Henüz gelir eklenmedi</div><div class="empty-sub">Sağ alttaki + butonuna bas</div></div>`;
+    html+=`<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">${t('income.empty')}</div><div class="empty-sub">${t('income.emptySub')}</div></div>`;
   } else {
     yd.income.forEach(inc=>{
       const amt=parseFloat(inc.amounts[month]||0);
@@ -28,7 +28,7 @@ function renderGelir(){
 }
 
 function openAddIncome(){
-  document.getElementById('income-modal-title').textContent='Gelir Ekle';
+  document.getElementById('income-modal-title').textContent=t('income.addTitle');
   document.getElementById('inc-id').value='';
   document.getElementById('inc-name').value='';
   document.getElementById('inc-delete-btn').style.display='none';
@@ -40,7 +40,7 @@ function openEditIncome(id){
   const yd=getYear(S.settings.currentYear);
   const inc=yd.income.find(i=>i.id===id);
   if(!inc) return;
-  document.getElementById('income-modal-title').textContent='Gelir Düzenle';
+  document.getElementById('income-modal-title').textContent=t('income.editTitle');
   document.getElementById('inc-id').value=id;
   document.getElementById('inc-name').value=inc.name;
   document.getElementById('inc-delete-btn').style.display='block';
@@ -53,7 +53,7 @@ function saveIncome(){
   const yd=getYear(year);
   const id=document.getElementById('inc-id').value;
   const name=document.getElementById('inc-name').value.trim();
-  if(!name){alert('Gelir adı girin');return;}
+  if(!name){alert(t('income.nameRequired'));return;}
   const amounts=readAmountsGrid('inc-amounts');
 
   if(id){
@@ -69,7 +69,7 @@ function saveIncome(){
 }
 
 function deleteIncome(){
-  if(!confirm('Bu geliri silmek istiyor musunuz?')) return;
+  if(!confirm(t('income.deleteConfirm'))) return;
   const year=S.settings.currentYear;
   const yd=getYear(year);
   const id=document.getElementById('inc-id').value;

@@ -7,6 +7,8 @@ function openSettingsModal(){
   document.getElementById('cfg-ppf').checked=S.settings.ppfEnabled!==false;
   const testEl=document.getElementById('cfg-test-notif');
   if(testEl) testEl.checked=S.settings.testNotifEnabled===true;
+  const langSel=document.getElementById('cfg-language');
+  if(langSel) langSel.value=getLang();
   updatePpfInfoTexts();
   renderHolidayList();
   openModal('overlay-settings');
@@ -25,7 +27,7 @@ function updatePpfInfoTexts(){
   if(ppfInfoEl) ppfInfoEl.style.display=enabled?'':'none';
   if(noPpfInfoEl) noPpfInfoEl.style.display=enabled?'none':'';
   const subEl=document.getElementById('cfg-notif-sub');
-  if(subEl) subEl.textContent=enabled?'Ödeme ve PPF bildirimleri':'Ödeme bildirimleri';
+  if(subEl) subEl.textContent=enabled?t('settings.notifSubBoth'):t('settings.notifSubPay');
 }
 
 function saveSettings(){
@@ -34,7 +36,7 @@ function saveSettings(){
   saveS();
   closeModal('overlay-settings');
   renderPage(currentPage);
-  alert('Ayarlar kaydedildi.');
+  alert(t('settings.savedAlert'));
 }
 
 // ---- Holiday management ----
@@ -44,7 +46,7 @@ function renderHolidayList(){
   if(!el) return;
   const holidays=(S.settings.customHolidays||[]).slice().sort();
   if(holidays.length===0){
-    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">Özel tatil eklenmemiş</div>`;
+    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">${t('settings.noCustomHoliday')}</div>`;
     return;
   }
   el.innerHTML=holidays.map(d=>{
@@ -52,14 +54,14 @@ function renderHolidayList(){
     const label=`${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]} ${dt.getFullYear()}`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg4);border-radius:var(--r3);margin-bottom:4px">
       <span style="font-size:13px;color:var(--text)">${label}</span>
-      <button onclick="removeHoliday('${d}')" style="padding:2px 8px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);font-size:11px;cursor:pointer">Sil</button>
+      <button onclick="removeHoliday('${d}')" style="padding:2px 8px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);font-size:11px;cursor:pointer">${t('common.delete')}</button>
     </div>`;
   }).join('');
 }
 
 function addHoliday(){
   const inp=document.getElementById('holiday-input');
-  if(!inp||!inp.value){alert('Tarih seçin');return;}
+  if(!inp||!inp.value){alert(t('settings.selectDate'));return;}
   if(!S.settings.customHolidays) S.settings.customHolidays=[];
   if(!S.settings.customHolidays.includes(inp.value)){
     S.settings.customHolidays.push(inp.value);
@@ -92,7 +94,7 @@ function exportData(){
 }
 
 function showBackupDialog(){
-  if(confirm('💾 Veri yedeği almanız önerilir. Şimdi dışa aktarmak ister misiniz?')){
+  if(confirm(t('settings.backupSuggest'))){
     exportData();
   }
 }
@@ -104,33 +106,34 @@ function importData(e){
   reader.onload=()=>{
     try{
       const data=JSON.parse(reader.result);
-      if(!data.settings){alert('Geçersiz dosya');return;}
-      if(confirm('Tüm veriler bu dosyayla değiştirilecek. Devam?')){
+      if(!data.settings){alert(t('settings.invalidFile'));return;}
+      if(confirm(t('settings.importConfirm'))){
         S=data;
         if(!S.cards||!S.settings.customHolidays) migrateToV4(S);
         saveS();
         applyTheme(S.settings.theme||'dark');
         closeModal('overlay-settings');
         document.getElementById('year-btn').textContent=S.settings.currentYear;
+        applyLocale();
         renderPage(currentPage);
-        alert('İçe aktarma başarılı!');
+        alert(t('settings.importSuccess'));
       }
-    }catch(err){alert('Dosya okunamadı');}
+    }catch(err){alert(t('settings.fileReadError'));}
   };
   reader.readAsText(file);
   e.target.value='';
 }
 
 function clearAllData(){
-  if(!confirm('⚠️ Tüm veriler silinecek!\nBu işlem geri alınamaz.')) return;
-  if(!confirm('Son onay: Tüm yıllara ait gelir, gider ve harcama verileri silinecek. Emin misiniz?')) return;
+  if(!confirm(t('settings.clearConfirm1'))) return;
+  if(!confirm(t('settings.clearConfirm2'))) return;
   localStorage.removeItem('fintrack_v4');
   localStorage.removeItem('fintrack_v3');
   location.reload();
 }
 
 async function forceRefreshCache(){
-  if(!confirm('Önbellek temizlenecek ve sayfa yenilenecek. Devam?')) return;
+  if(!confirm(t('settings.cacheConfirm'))) return;
   try{
     if('serviceWorker' in navigator){
       const regs=await navigator.serviceWorker.getRegistrations();
@@ -151,7 +154,7 @@ function setupExitGuard(){
   window.addEventListener('popstate',()=>{
     if((S.settings.changeCount||0)>0){
       history.pushState(null,'',location.href);
-      if(confirm('💾 Kaydedilmemiş değişiklikler var. Yedek almak ister misiniz?')){
+      if(confirm(t('settings.exitGuard'))){
         exportData();
       }
     }

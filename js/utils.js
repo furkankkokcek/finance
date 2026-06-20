@@ -3,7 +3,8 @@
 function fmtTRY(n, showSign=false){
   if(n===undefined||n===null||isNaN(n)) return '—';
   const abs=Math.abs(n);
-  const str=abs.toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const loc=(typeof i18nLocaleCode==='function')?i18nLocaleCode():'tr-TR';
+  const str=abs.toLocaleString(loc,{minimumFractionDigits:0,maximumFractionDigits:0});
   if(showSign) return (n>=0?'+':'-')+str+' ₺';
   return str+' ₺';
 }

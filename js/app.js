@@ -33,7 +33,7 @@ function checkMonthlyCalendarPrompt(){
   S.settings.lastCalExportPrompt=key;
   saveS();
   setTimeout(()=>{
-    if(confirm(`📅 ${MONTHS_FULL[today.getMonth()]} ayı başladı!\n\nBu ayın ödeme günlerini takvimine görev olarak eklemek ister misin?\n(.ics dosyası indirilecek, takvim uygulamanla açabilirsin)`)){
+    if(confirm(t('app.monthStarted',{month:MONTHS_FULL[today.getMonth()]}))){
       exportICS(today.getFullYear(),today.getMonth()+1);
     }
   },800);
@@ -52,6 +52,10 @@ if('serviceWorker' in navigator){
 
 // Boot
 const loaded=loadS();
+// Localize month arrays + static DOM before first render.
+if(typeof applyLocale==='function') applyLocale();
+// Native-only banner ads (no-op on web/PWA).
+if(typeof initAds==='function') initAds();
 if(loaded&&S.setupDone){
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='block';

@@ -9,7 +9,7 @@ function openYearModal(){
   years.sort((a,b)=>b-a);
   document.getElementById('year-list').innerHTML=years.map(y=>`
     <div class="year-opt${y===S.settings.currentYear?' active':''}" onclick="selectYear(${y})">${y}</div>
-  `).join('')+`<div class="year-opt" onclick="addNewYear()">+ Yeni Yıl Ekle</div>`;
+  `).join('')+`<div class="year-opt" onclick="addNewYear()">${t('year.addNew')}</div>`;
   openModal('overlay-year');
 }
 
@@ -23,7 +23,7 @@ function selectYear(y){
 }
 
 function addNewYear(){
-  const y=parseInt(prompt('Hangi yıl?', new Date().getFullYear()+1));
+  const y=parseInt(prompt(t('year.prompt'), new Date().getFullYear()+1));
   if(y&&y>=2000&&y<=2100){
     selectYear(y);
   }

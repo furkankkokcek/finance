@@ -9,7 +9,7 @@ function pasteFromExcel(gridId){
       const num=parseFloat(values[i].replace(/\./g,'').replace(',','.'));
       inp.value=isNaN(num)?'':num;
     });
-  }).catch(()=>alert('Pano erişimi reddedildi. Önce Excel\'den kopyalayıp tekrar deneyin.'));
+  }).catch(()=>alert(t('grid.clipboardDenied')));
 }
 
 function buildAmountsGrid(containerId, amounts){

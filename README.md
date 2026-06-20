@@ -5,6 +5,8 @@ Aylık gelir, gider, harcama ve finansal özgürlük hedeflerini takip etmeye y�
 ## Özellikler
 
 - **PWA Desteği** - İnternetsiz çalışır, uygulama gibi kurulabilir
+- **Çoklu Dil** - Türkçe, İngilizce, Almanca, İspanyolca, Fransızca (Ayarlar'dan değiştirilir)
+- **Native Uygulama** - Capacitor ile Google Play / App Store için paketlenebilir (bkz. [PUBLISHING.md](PUBLISHING.md))
 - **Gelir Takibi** - Aylık gelir kaynakları kalem kalem, Excel'den yapıştırma desteği
 - **Gider Yönetimi** - Sabit giderler, krediler, kredi kartları; accordion açık kalır
 - **KK Harcama Entegrasyonu** - Harcama eklerken KK'ya bağla, tek çekim veya taksitli; ilgili ayların KK tutarına otomatik eklenir, silinince geri alınır
@@ -34,6 +36,29 @@ python3 -m http.server 8000
 # veya
 npx http-server
 ```
+
+### Mobil Uygulamaya Dönüştürme (Capacitor)
+
+FinTrack, **Capacitor** ile gerçek bir native Android/iOS uygulamasına dönüştürülebilir (PWABuilder/TWA
+değil — kod uygulamanın içine gömülür). Google Play ve App Store'da yayınlamanın tam adımları için:
+
+➡️ **[PUBLISHING.md](PUBLISHING.md)**
+
+Özet:
+```bash
+npm install
+npm run build          # web dosyalarını www/'ye kopyalar
+npx cap add android    # native android/ projesini üretir
+npx cap sync
+npx cap open android   # Android Studio'da aç, imzalı AAB üret
+```
+
+### Çoklu Dil
+
+Arayüz 5 dilde: **TR, EN, DE, ES, FR**. Çeviriler `locales/*.js` içinde, i18n altyapısı `js/i18n.js`
+içindedir. Yeni dil eklemek için: `locales/<kod>.js` oluştur (`tr.js`'i şablon al), `js/i18n.js`'teki
+`I18N_LANGS` ve `I18N_LOCALE_CODES` listelerine ekle, `index.html`'deki dil seçicisine bir `<option>`
+ekle. Ay/gün adları `Intl` ile otomatik gelir.
 
 ## Kullanım
 
@@ -88,6 +113,11 @@ Tüm veriler tarayıcıda (localStorage) tutulur, sunucuya gönderilmez. Export 
 index.html                  ← HTML kabuğu (CSS/JS referansları)
 manifest.json
 sw.js
+capacitor.config.json       ← Capacitor native uygulama yapılandırması
+package.json                ← Capacitor + AdMob bağımlılıkları
+scripts/build-web.mjs       ← web dosyalarını www/'ye kopyalar
+
+locales/                    ← çoklu dil sözlükleri (tr, en, de, es, fr)
 
 css/
   base.css                  ← CSS değişkenleri, reset, body
@@ -102,6 +132,8 @@ css/
 
 js/
   store.js                  ← S durum nesnesi, localStorage kalıcılığı
+  i18n.js                   ← çoklu dil: t(), applyLocale(), Intl ay/gün adları
+  ads.js                    ← AdMob banner (native uygulamada; web'de no-op)
   utils.js                  ← Formatlayıcılar, getTotalDebt, getMonthlyData
   notifications.js
   share.js

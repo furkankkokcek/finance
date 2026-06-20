@@ -14,7 +14,7 @@ async function showPWANotification(title, opts) {
 
 async function toggleNotif(el){
   if(el.checked){
-    if(!('Notification' in window)){el.checked=false;alert('Tarayıcınız bildirimleri desteklemiyor.');return;}
+    if(!('Notification' in window)){el.checked=false;alert(t('notif.notSupported'));return;}
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){el.checked=false;return;}
     S.settings.notifEnabled=true;
@@ -45,9 +45,9 @@ async function checkDailyNotifications(){
     if(adj.toDateString()===now.toDateString()){
       const amt=parseFloat(exp.amounts[month]||0);
       if(amt===0) continue;
-      const body=`${exp.name} — ${fmtTRY(amt)} bugün ödenmeli.`;
-      await showPWANotification('💳 Ödeme Günü!',{body,icon:'/icons/icon-192.png'});
-      addNotifEntry('payment_due','💳','Ödeme Günü!',body);
+      const body=t('notif.paymentBody',{name:exp.name,amount:fmtTRY(amt)});
+      await showPWANotification('💳 '+t('notif.paymentDay'),{body,icon:'/icons/icon-192.png'});
+      addNotifEntry('payment_due','💳',t('notif.paymentDay'),body);
     }
   }
 
@@ -56,13 +56,14 @@ async function checkDailyNotifications(){
   if(now.getDate()===sd){
     const d=getMonthlyData(year,month);
     if(S.settings.ppfEnabled!==false&&d.ppfTotal>0){
-      const body=`Bu ay PPF hesabına atılacak tutar: ${fmtTRY(d.ppfTotal)}`;
-      await showPWANotification('🏦 PPF Hatırlatması',{body,icon:'/icons/icon-192.png'});
-      addNotifEntry('ppf','🏦','PPF Hatırlatması',body);
+      const body=t('notif.ppfBody',{amount:fmtTRY(d.ppfTotal)});
+      await showPWANotification('🏦 '+t('notif.ppfTitle'),{body,icon:'/icons/icon-192.png'});
+      addNotifEntry('ppf','🏦',t('notif.ppfTitle'),body);
     }
-    const body=`${MONTHS_FULL[month-1]} ${year} — Gelir: ${fmtTRY(d.totalIncome)}, Gider: ${fmtTRY(d.totalExpense)}, Nakit: ${fmtTRY(d.cashLeft)}`;
-    await showPWANotification('💵 Aylık Mali Özet',{body:`${MONTHS_FULL[month-1]} ${year}\nGelir: ${fmtTRY(d.totalIncome)}\nGider: ${fmtTRY(d.totalExpense)}\nNakit Kalan: ${fmtTRY(d.cashLeft)}`,icon:'/icons/icon-192.png'});
-    addNotifEntry('monthly_summary','💵','Aylık Mali Özet',body);
+    const mname=MONTHS_FULL[month-1];
+    const body=t('notif.summaryBody',{month:mname,year,income:fmtTRY(d.totalIncome),expense:fmtTRY(d.totalExpense),cash:fmtTRY(d.cashLeft)});
+    await showPWANotification('💵 '+t('notif.monthlySummary'),{body:t('notif.summaryBodyLong',{month:mname,year,income:fmtTRY(d.totalIncome),expense:fmtTRY(d.totalExpense),cash:fmtTRY(d.cashLeft)}),icon:'/icons/icon-192.png'});
+    addNotifEntry('monthly_summary','💵',t('notif.monthlySummary'),body);
   }
 }
 
@@ -96,7 +97,7 @@ function renderNotifCenter(){
   const body=document.getElementById('notif-center-body');
   if(!body) return;
   if(!S.notifLog||!S.notifLog.length){
-    body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:14px">Henüz bildirim yok</div>';
+    body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:14px">'+t('notif.empty')+'</div>';
     return;
   }
   body.innerHTML=S.notifLog.map(n=>`
@@ -112,10 +113,10 @@ function renderNotifCenter(){
 
 function fmtRelTime(ts){
   const diff=Date.now()-ts;
-  if(diff<60000) return 'Az önce';
-  if(diff<3600000) return Math.floor(diff/60000)+' dk önce';
-  if(diff<86400000) return Math.floor(diff/3600000)+' saat önce';
-  return Math.floor(diff/86400000)+' gün önce';
+  if(diff<60000) return t('notif.justNow');
+  if(diff<3600000) return t('notif.minAgo',{n:Math.floor(diff/60000)});
+  if(diff<86400000) return t('notif.hourAgo',{n:Math.floor(diff/3600000)});
+  return t('notif.dayAgo',{n:Math.floor(diff/86400000)});
 }
 
 // ── Background Sync (IndexedDB bridge for SW) ─────────────────────────────
@@ -161,10 +162,10 @@ function startTestNotifMode(){
   stopTestNotifMode();
   if(Notification.permission!=='granted') return;
   _testNotifIntervalId = setInterval(async ()=>{
-    const ts = new Date().toLocaleTimeString('tr-TR');
-    const body = `Test bildirimi: ${ts}`;
-    await showPWANotification('🧪 Test Bildirimi',{body,icon:'/icons/icon-192.png'});
-    addNotifEntry('test','🧪','Test Bildirimi',body);
+    const ts = new Date().toLocaleTimeString(i18nLocaleCode());
+    const body = t('notif.testBody',{time:ts});
+    await showPWANotification('🧪 '+t('notif.testTitle'),{body,icon:'/icons/icon-192.png'});
+    addNotifEntry('test','🧪',t('notif.testTitle'),body);
   }, 10*60*1000);
 }
 
@@ -174,7 +175,7 @@ function stopTestNotifMode(){
 
 async function toggleTestNotif(el){
   if(el.checked){
-    if(!('Notification' in window)){el.checked=false;alert('Tarayıcınız bildirimleri desteklemiyor.');return;}
+    if(!('Notification' in window)){el.checked=false;alert(t('notif.notSupported'));return;}
     if(Notification.permission!=='granted'){
       const p = await Notification.requestPermission();
       if(p!=='granted'){el.checked=false;return;}
@@ -182,9 +183,9 @@ async function toggleTestNotif(el){
     S.settings.testNotifEnabled=true;
     saveS();
     startTestNotifMode();
-    const body = 'Her 10 dakikada bir test bildirimi gelecek (uygulama açıkken).';
-    await showPWANotification('🧪 Test Modu Aktif',{body,icon:'/icons/icon-192.png'});
-    addNotifEntry('test','🧪','Test Modu Aktif',body);
+    const body = t('notif.testModeBody');
+    await showPWANotification('🧪 '+t('notif.testModeActive'),{body,icon:'/icons/icon-192.png'});
+    addNotifEntry('test','🧪',t('notif.testModeActive'),body);
   } else {
     S.settings.testNotifEnabled=false;
     saveS();
@@ -194,17 +195,17 @@ async function toggleTestNotif(el){
 
 async function sendTestNotificationNow(){
   if(!('Notification' in window)&&!('serviceWorker' in navigator)){
-    alert('Tarayıcınız bildirimleri desteklemiyor.');return;
+    alert(t('notif.notSupported'));return;
   }
   if(Notification.permission!=='granted'){
-    alert('Önce bildirim izni vermelisiniz. Bildirimler toggle\'ını açın.');
+    alert(t('notif.permFirst'));
     return;
   }
-  const ts = new Date().toLocaleTimeString('tr-TR');
-  const body = `Anlık test bildirimi — ${ts}`;
-  await showPWANotification('🔔 Anlık Test',{body,icon:'/icons/icon-192.png'});
-  addNotifEntry('test','🔔','Anlık Test',body);
-  alert('Bildirim gönderildi ✓\nTelefon bildirim çekmecesini kontrol edin.\n\nBildirim gelmezse sistem ayarlarından uygulamaya bildirim izni verildiğini kontrol edin.');
+  const ts = new Date().toLocaleTimeString(i18nLocaleCode());
+  const body = t('notif.instantTestBody',{time:ts});
+  await showPWANotification('🔔 '+t('notif.instantTest'),{body,icon:'/icons/icon-192.png'});
+  addNotifEntry('test','🔔',t('notif.instantTest'),body);
+  alert(t('notif.sentAlert'));
 }
 
 // ── Diagnostic ────────────────────────────────────────────────────────────
@@ -212,23 +213,23 @@ async function sendTestNotificationNow(){
 function getNotifDiagnostic(){
   const lines = [];
   if(!('Notification' in window)){
-    lines.push('❌ Tarayıcı bildirimleri desteklemiyor');
+    lines.push(t('notif.diagNoSupport'));
   } else {
     const p = Notification.permission;
-    lines.push(`İzin durumu: ${p==='granted'?'✅ İzinli':p==='denied'?'❌ Reddedildi':'⚠️ Sorulmadı'}`);
+    lines.push(`${t('notif.diagPermLabel')} ${p==='granted'?t('notif.diagAllowed'):p==='denied'?t('notif.diagDenied'):t('notif.diagNotAsked')}`);
   }
-  lines.push(`Uygulama içi bildirim: ${S.settings.notifEnabled?'✅ Açık':'❌ Kapalı'}`);
+  lines.push(`${t('notif.diagInAppLabel')} ${S.settings.notifEnabled?t('notif.diagOn'):t('notif.diagOff')}`);
   const installed = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
-  lines.push(`PWA yüklü: ${installed?'✅ Evet':'⚠️ Hayır (sadece tarayıcıda — arka plan bildirimi için yüklü olmalı)'}`);
-  lines.push(`Servis Worker: ${'serviceWorker' in navigator?'✅ Destekleniyor':'❌ Desteklenmiyor'}`);
+  lines.push(`${t('notif.diagInstalledLabel')} ${installed?t('notif.diagInstalledYes'):t('notif.diagInstalledNo')}`);
+  lines.push(`${t('notif.diagSwLabel')} ${'serviceWorker' in navigator?t('notif.diagSwYes'):t('notif.diagSwNo')}`);
   const periodicSupport = 'PeriodicSyncManager' in window;
-  lines.push(`Arka plan sync: ${periodicSupport?'✅ Tarayıcı destekliyor':'⚠️ Desteklenmiyor (sadece Chrome Android yüklü PWA)'}`);
-  lines.push(`Son bildirim tarihi: ${S.settings.lastNotifDate||'—'}`);
-  lines.push(`Test Modu: ${S.settings.testNotifEnabled?'✅ Aktif':'Kapalı'}`);
-  lines.push(`Bildirim merkezi kayıt sayısı: ${(S.notifLog||[]).length}`);
+  lines.push(`${t('notif.diagSyncLabel')} ${periodicSupport?t('notif.diagSyncYes'):t('notif.diagSyncNo')}`);
+  lines.push(`${t('notif.diagLastDate')} ${S.settings.lastNotifDate||'—'}`);
+  lines.push(`${t('notif.diagTestModeLabel')} ${S.settings.testNotifEnabled?t('notif.diagTestOn'):t('notif.diagTestOff')}`);
+  lines.push(`${t('notif.diagCount')} ${(S.notifLog||[]).length}`);
   return lines.join('\n');
 }
 
 function showNotifDiagnostic(){
-  alert('Bildirim Durumu:\n\n' + getNotifDiagnostic());
+  alert(t('notif.diagTitle') + '\n\n' + getNotifDiagnostic());
 }
