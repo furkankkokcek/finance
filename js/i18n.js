@@ -94,6 +94,8 @@ function setLanguage(lang) {
   // Re-render whatever is on screen so dynamic strings refresh.
   if (typeof currentPage !== 'undefined' && typeof renderPage === 'function' && currentPage) renderPage(currentPage);
   if (typeof updatePpfInfoTexts === 'function') updatePpfInfoTexts();
+  // Refresh IDB notification schedule so background (SW) notifications use the new language.
+  if (typeof syncNotifSchedule === 'function') syncNotifSchedule();
 }
 
 function changeLanguage(el) { setLanguage(el.value); }

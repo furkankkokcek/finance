@@ -1,4 +1,4 @@
-const CACHE = 'fintrack-v5';
+const CACHE = 'fintrack-v6';
 const ASSETS = [
   '/',
   '/index.html',
@@ -12,6 +12,13 @@ const ASSETS = [
   '/css/components/items.css',
   '/css/components/charts.css',
   '/js/store.js',
+  '/js/i18n.js',
+  '/locales/tr.js',
+  '/locales/en.js',
+  '/locales/de.js',
+  '/locales/es.js',
+  '/locales/fr.js',
+  '/js/ads.js',
   '/js/utils.js',
   '/js/components/modal.js',
   '/js/components/grid.js',
@@ -143,8 +150,8 @@ async function runDailyNotifications() {
       if (exp.isPaid || !exp.amount) continue;
       const adj = swGetAdjustedDueDate(year, month, exp.dueDay);
       if (adj.toDateString() === now.toDateString()) {
-        await self.registration.showNotification('💳 Ödeme Günü!', {
-          body:  `${exp.name} — ${swFmtTRY(exp.amount)} bugün ödenmeli.`,
+        await self.registration.showNotification(exp.title || '💳 Ödeme Günü!', {
+          body:  exp.body || `${exp.name} — ${swFmtTRY(exp.amount)} bugün ödenmeli.`,
           icon:  '/icons/icon-192.png',
           tag:   `due-${exp.name}-${today}`,
           data:  { url: '/' }
@@ -154,15 +161,15 @@ async function runDailyNotifications() {
 
     if (now.getDate() === salaryDay) {
       if (monthSummary.ppfTotal > 0) {
-        await self.registration.showNotification('🏦 PPF Hatırlatması', {
-          body:  `Bu ay PPF hesabına atılacak tutar: ${swFmtTRY(monthSummary.ppfTotal)}`,
+        await self.registration.showNotification(monthSummary.ppfTitle || '🏦 PPF Hatırlatması', {
+          body:  monthSummary.ppfBody || `Bu ay PPF hesabına atılacak tutar: ${swFmtTRY(monthSummary.ppfTotal)}`,
           icon:  '/icons/icon-192.png',
           tag:   `ppf-${today}`,
           data:  { url: '/' }
         });
       }
-      await self.registration.showNotification('💵 Aylık Mali Özet', {
-        body:  `${monthSummary.monthName} ${year}\nGelir: ${swFmtTRY(monthSummary.totalIncome)}\nGider: ${swFmtTRY(monthSummary.totalExpense)}\nNakit Kalan: ${swFmtTRY(monthSummary.cashLeft)}`,
+      await self.registration.showNotification(monthSummary.summaryTitle || '💵 Aylık Mali Özet', {
+        body:  monthSummary.summaryBody || `${monthSummary.monthName} ${year}\nGelir: ${swFmtTRY(monthSummary.totalIncome)}\nGider: ${swFmtTRY(monthSummary.totalExpense)}\nNakit Kalan: ${swFmtTRY(monthSummary.cashLeft)}`,
         icon:  '/icons/icon-192.png',
         tag:   `summary-${today}`,
         data:  { url: '/' }

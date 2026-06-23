@@ -127,10 +127,21 @@ function syncNotifSchedule(){
   const d=getMonthlyData(year,month);
   const dueDayExpenses=getYear(year).expenses
     .filter(exp=>exp.dueDay&&exp.dueDay>0)
-    .map(exp=>({name:exp.name,dueDay:exp.dueDay,amount:parseFloat(exp.amounts[month]||0),isPaid:!!(exp.status&&exp.status[month]==='paid')}));
+    .map(exp=>{
+      const amount=parseFloat(exp.amounts[month]||0);
+      // Pre-render localized strings here (SW has no i18n / t() access)
+      return {name:exp.name,dueDay:exp.dueDay,amount,isPaid:!!(exp.status&&exp.status[month]==='paid'),
+        title:'💳 '+t('notif.paymentDay'),
+        body:t('notif.paymentBody',{name:exp.name,amount:fmtTRY(amount)})};
+    });
+  const mname=MONTHS_FULL[month-1];
   const schedule={id:'current',notifEnabled:S.settings.notifEnabled,salaryDay:S.settings.salaryDay,
-    lastNotifDate:S.settings.lastNotifDate,year,month,
-    monthSummary:{totalIncome:d.totalIncome,totalExpense:d.totalExpense,investment:d.investment,cashLeft:d.cashLeft,ppfTotal:d.ppfTotal,monthName:MONTHS_FULL[month-1]},
+    lastNotifDate:S.settings.lastNotifDate,year,month,lang:(S.settings&&S.settings.language)||'tr',
+    monthSummary:{totalIncome:d.totalIncome,totalExpense:d.totalExpense,investment:d.investment,cashLeft:d.cashLeft,ppfTotal:d.ppfTotal,monthName:mname,
+      ppfTitle:'🏦 '+t('notif.ppfTitle'),
+      ppfBody:t('notif.ppfBody',{amount:fmtTRY(d.ppfTotal)}),
+      summaryTitle:'💵 '+t('notif.monthlySummary'),
+      summaryBody:t('notif.summaryBodyLong',{month:mname,year,income:fmtTRY(d.totalIncome),expense:fmtTRY(d.totalExpense),cash:fmtTRY(d.cashLeft)})},
     dueDayExpenses};
   const req=indexedDB.open('fintrack_notif',1);
   req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('schedule'))db.createObjectStore('schedule',{keyPath:'id'});};
