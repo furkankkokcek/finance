@@ -174,10 +174,20 @@ Yeniden derleyip mağazaya yükle.
 
 ---
 
-## 6. İleri / takip işleri (bu sürümde dahil değil)
+## 6. Bildirimler (native + web)
 
-- **Native bildirimler:** Şu an web `Notification` API + service worker kullanılıyor; native
-  WebView'de bunlar güvenilir çalışmaz (uygulama yine çalışır, bildirimler sessizce devre dışı
-  kalır). Tam native bildirim için `@capacitor/local-notifications` entegrasyonu önerilir.
+Native uygulamada bildirimler **`@capacitor/local-notifications`** ile çalışır: ödeme günleri,
+maaş günü PPF ve aylık özet, içinde bulunulan + gelecek ay için **gerçek zamanlanmış** bildirimler
+olarak kurulur (uygulama kapalıyken bile saat 09:00'da tetiklenir). Her veri/dil değişiminde
+otomatik yeniden zamanlanır (`js/native-notif.js`). Web/PWA'da eski `Notification` API + service
+worker yolu devrede kalır.
+
+- **İzin:** Android 13+ için `POST_NOTIFICATIONS` izni gerekir; plugin çalışma anında otomatik sorar
+  (Ayarlar → Bildirimler toggle'ı açılınca). Manifest izni de `npx cap sync` ile eklenir.
+- **Test:** Ayarlar → "🔔 Şimdi Test Bildirimi Gönder" anlık native bildirim atar; "🔍 Bildirim
+  Durumunu Göster" native modun aktif olduğunu yazar.
+
+## 7. İleri / takip işleri (bu sürümde dahil değil)
+
 - **Çoklu para birimi:** Arayüz 5 dilde; tutarlar ₺ (TRY) olarak kalır.
 - **RTL diller** (Arapça vb.): mevcut 5 dil soldan-sağa; ileride eklenebilir.

@@ -274,6 +274,7 @@ window.I18N.en = {
   "notif.instantTestBody": "Instant test notification — {time}",
   "notif.sentAlert": "Notification sent ✓\nCheck your phone's notification tray.\n\nIf it doesn't arrive, check that the app has notification permission in system settings.",
   "notif.diagTitle": "Notification Status:",
+  "notif.diagNativeMode": "✅ Native notifications active (work even when the app is closed)",
   "notif.diagNoSupport": "❌ Browser does not support notifications",
   "notif.diagPermLabel": "Permission:",
   "notif.diagAllowed": "✅ Allowed",

@@ -274,6 +274,7 @@ window.I18N.fr = {
   "notif.instantTestBody": "Notification de test instantané — {time}",
   "notif.sentAlert": "Notification envoyée ✓\nVérifiez le volet de notifications de votre téléphone.\n\nSi rien n'arrive, vérifiez dans les paramètres système que l'app a l'autorisation de notification.",
   "notif.diagTitle": "État des notifications :",
+  "notif.diagNativeMode": "✅ Notifications natives actives (fonctionnent même app fermée)",
   "notif.diagNoSupport": "❌ Le navigateur ne prend pas en charge les notifications",
   "notif.diagPermLabel": "Autorisation :",
   "notif.diagAllowed": "✅ Autorisé",

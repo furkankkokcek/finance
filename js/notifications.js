@@ -8,8 +8,13 @@
 function notifSupported(){ return typeof Notification !== 'undefined'; }
 function notifPermission(){ return notifSupported() ? Notification.permission : 'denied'; }
 
-// SW-based notification — works on iOS PWA (16.4+) and Android; falls back to Notification API
+// SW-based notification — works on iOS PWA (16.4+) and Android; falls back to Notification API.
+// Inside the Capacitor native app it routes through native local notifications instead.
 async function showPWANotification(title, opts) {
+  if (typeof nativeNotifAvailable === 'function' && nativeNotifAvailable()) {
+    const ok = await sendNativeNotificationNow(title, opts && opts.body);
+    if (ok) return;
+  }
   if ('serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.ready;
@@ -22,6 +27,15 @@ async function showPWANotification(title, opts) {
 
 async function toggleNotif(el){
   if(el.checked){
+    // Native app: use Capacitor LocalNotifications (real scheduled notifications).
+    if(typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
+      const granted=await requestNativeNotifPermission();
+      if(!granted){el.checked=false;return;}
+      S.settings.notifEnabled=true;
+      saveS();
+      await scheduleNativeNotifications();
+      return;
+    }
     if(!('Notification' in window)){el.checked=false;alert(t('notif.notSupported'));return;}
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){el.checked=false;return;}
@@ -31,7 +45,8 @@ async function toggleNotif(el){
   } else {
     S.settings.notifEnabled=false;
     saveS();
-    unregisterPeriodicSync();
+    if(typeof nativeNotifAvailable==='function' && nativeNotifAvailable()) await cancelAllNativeNotifications();
+    else unregisterPeriodicSync();
   }
 }
 
@@ -130,6 +145,10 @@ function fmtRelTime(ts){
 // ── Background Sync (IndexedDB bridge for SW) ─────────────────────────────
 
 function syncNotifSchedule(){
+  // Native app: (re)schedule real local notifications on every data/lang change.
+  if(typeof scheduleNativeNotifications==='function' && typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
+    scheduleNativeNotifications();
+  }
   if(!window.indexedDB) return;
   const now=new Date(); const year=now.getFullYear(); const month=now.getMonth()+1;
   const d=getMonthlyData(year,month);
@@ -213,6 +232,16 @@ async function toggleTestNotif(el){
 }
 
 async function sendTestNotificationNow(){
+  const ts = new Date().toLocaleTimeString(i18nLocaleCode());
+  const body = t('notif.instantTestBody',{time:ts});
+  // Native app: send via LocalNotifications, requesting permission if needed.
+  if(typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
+    const ok=await sendNativeNotificationNow('🔔 '+t('notif.instantTest'),body);
+    if(!ok){alert(t('notif.permFirst'));return;}
+    addNotifEntry('test','🔔',t('notif.instantTest'),body);
+    alert(t('notif.sentAlert'));
+    return;
+  }
   if(!('Notification' in window)&&!('serviceWorker' in navigator)){
     alert(t('notif.notSupported'));return;
   }
@@ -220,8 +249,6 @@ async function sendTestNotificationNow(){
     alert(t('notif.permFirst'));
     return;
   }
-  const ts = new Date().toLocaleTimeString(i18nLocaleCode());
-  const body = t('notif.instantTestBody',{time:ts});
   await showPWANotification('🔔 '+t('notif.instantTest'),{body,icon:'/icons/icon-192.png'});
   addNotifEntry('test','🔔',t('notif.instantTest'),body);
   alert(t('notif.sentAlert'));
@@ -231,6 +258,9 @@ async function sendTestNotificationNow(){
 
 function getNotifDiagnostic(){
   const lines = [];
+  if(typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
+    lines.push(t('notif.diagNativeMode'));
+  }
   if(!('Notification' in window)){
     lines.push(t('notif.diagNoSupport'));
   } else {

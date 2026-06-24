@@ -288,6 +288,7 @@ window.I18N.tr = {
   "notif.instantTestBody": "Anlık test bildirimi — {time}",
   "notif.sentAlert": "Bildirim gönderildi ✓\nTelefon bildirim çekmecesini kontrol edin.\n\nBildirim gelmezse sistem ayarlarından uygulamaya bildirim izni verildiğini kontrol edin.",
   "notif.diagTitle": "Bildirim Durumu:",
+  "notif.diagNativeMode": "✅ Native bildirimler etkin (uygulama kapalıyken de çalışır)",
   "notif.diagNoSupport": "❌ Tarayıcı bildirimleri desteklemiyor",
   "notif.diagPermLabel": "İzin durumu:",
   "notif.diagAllowed": "✅ İzinli",

@@ -274,6 +274,7 @@ window.I18N.de = {
   "notif.instantTestBody": "Sofort-Testbenachrichtigung — {time}",
   "notif.sentAlert": "Benachrichtigung gesendet ✓\nPrüfen Sie die Benachrichtigungsleiste Ihres Telefons.\n\nFalls keine ankommt, prüfen Sie in den Systemeinstellungen, ob die App die Berechtigung hat.",
   "notif.diagTitle": "Benachrichtigungsstatus:",
+  "notif.diagNativeMode": "✅ Native Benachrichtigungen aktiv (auch bei geschlossener App)",
   "notif.diagNoSupport": "❌ Browser unterstützt keine Benachrichtigungen",
   "notif.diagPermLabel": "Berechtigung:",
   "notif.diagAllowed": "✅ Erlaubt",

@@ -274,6 +274,7 @@ window.I18N.es = {
   "notif.instantTestBody": "Notificación de prueba instantánea — {time}",
   "notif.sentAlert": "Notificación enviada ✓\nRevisa la bandeja de notificaciones de tu teléfono.\n\nSi no llega, comprueba en los ajustes del sistema que la app tiene permiso de notificaciones.",
   "notif.diagTitle": "Estado de notificaciones:",
+  "notif.diagNativeMode": "✅ Notificaciones nativas activas (funcionan con la app cerrada)",
   "notif.diagNoSupport": "❌ El navegador no admite notificaciones",
   "notif.diagPermLabel": "Permiso:",
   "notif.diagAllowed": "✅ Permitido",
