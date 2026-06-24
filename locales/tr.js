@@ -272,6 +272,8 @@ window.I18N.tr = {
   "notif.hourAgo": "{n} saat önce",
   "notif.dayAgo": "{n} gün önce",
   "notif.notSupported": "Tarayıcınız bildirimleri desteklemiyor.",
+  "notif.pluginMissing": "⚠️ Native bildirim eklentisi yüklü değil.\n\nBilgisayarda şunları çalıştırın:\n  npm install\n  npm run sync\n\nSonra uygulamayı yeniden derleyin (Android Studio → Run).",
+  "notif.diagPluginMissing": "⚠️ Native eklenti YÜKLENMEMİŞ (npm install + npm run sync gerekli)",
   "notif.permFirst": "Önce bildirim izni vermelisiniz. Bildirimler toggle'ını açın.",
   "notif.paymentDay": "Ödeme Günü!",
   "notif.paymentBody": "{name} — {amount} bugün ödenmeli.",

@@ -25,6 +25,12 @@ async function showPWANotification(title, opts) {
   try { new Notification(title, opts); } catch(e) {}
 }
 
+// True when running inside the Capacitor native app (regardless of whether the
+// LocalNotifications plugin is wired up yet).
+function isNativeApp(){
+  return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+}
+
 async function toggleNotif(el){
   if(el.checked){
     // Native app: use Capacitor LocalNotifications (real scheduled notifications).
@@ -36,6 +42,10 @@ async function toggleNotif(el){
       await scheduleNativeNotifications();
       return;
     }
+    // Native app but the LocalNotifications plugin is missing — `npm install` +
+    // `npm run sync` weren't (re)run after the plugin was added. Web Notification
+    // API doesn't work in WebView, so be explicit instead of falling back to it.
+    if(isNativeApp()){el.checked=false;alert(t('notif.pluginMissing'));return;}
     if(!('Notification' in window)){el.checked=false;alert(t('notif.notSupported'));return;}
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){el.checked=false;return;}
@@ -260,6 +270,10 @@ function getNotifDiagnostic(){
   const lines = [];
   if(typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
     lines.push(t('notif.diagNativeMode'));
+  } else if(isNativeApp()){
+    // Inside the native app but the plugin isn't loaded — most likely the user
+    // didn't re-run `npm install` and `npm run sync` after the plugin was added.
+    lines.push(t('notif.diagPluginMissing'));
   }
   if(!('Notification' in window)){
     lines.push(t('notif.diagNoSupport'));

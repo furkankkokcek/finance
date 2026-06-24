@@ -258,6 +258,8 @@ window.I18N.en = {
   "notif.hourAgo": "{n} h ago",
   "notif.dayAgo": "{n} d ago",
   "notif.notSupported": "Your browser does not support notifications.",
+  "notif.pluginMissing": "⚠️ Native notification plugin is not loaded.\n\nOn your computer run:\n  npm install\n  npm run sync\n\nThen rebuild the app (Android Studio → Run).",
+  "notif.diagPluginMissing": "⚠️ Native plugin NOT loaded (run npm install + npm run sync)",
   "notif.permFirst": "You must grant notification permission first. Turn on the Notifications toggle.",
   "notif.paymentDay": "Payment Day!",
   "notif.paymentBody": "{name} — {amount} due today.",

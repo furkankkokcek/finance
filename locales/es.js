@@ -258,6 +258,8 @@ window.I18N.es = {
   "notif.hourAgo": "hace {n} h",
   "notif.dayAgo": "hace {n} d",
   "notif.notSupported": "Tu navegador no admite notificaciones.",
+  "notif.pluginMissing": "⚠️ El plugin de notificaciones nativas no está cargado.\n\nEn tu equipo ejecuta:\n  npm install\n  npm run sync\n\nLuego vuelve a compilar la app (Android Studio → Run).",
+  "notif.diagPluginMissing": "⚠️ Plugin nativo NO cargado (ejecuta npm install + npm run sync)",
   "notif.permFirst": "Primero debes conceder permiso de notificaciones. Activa el interruptor de Notificaciones.",
   "notif.paymentDay": "¡Día de pago!",
   "notif.paymentBody": "{name} — {amount} a pagar hoy.",

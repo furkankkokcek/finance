@@ -258,6 +258,8 @@ window.I18N.de = {
   "notif.hourAgo": "vor {n} Std",
   "notif.dayAgo": "vor {n} T",
   "notif.notSupported": "Ihr Browser unterstützt keine Benachrichtigungen.",
+  "notif.pluginMissing": "⚠️ Native Benachrichtigungs-Plugin nicht geladen.\n\nAuf dem Rechner ausführen:\n  npm install\n  npm run sync\n\nDann die App neu bauen (Android Studio → Run).",
+  "notif.diagPluginMissing": "⚠️ Native Plugin NICHT geladen (npm install + npm run sync ausführen)",
   "notif.permFirst": "Sie müssen zuerst die Benachrichtigungsberechtigung erteilen. Schalten Sie den Benachrichtigungsschalter ein.",
   "notif.paymentDay": "Zahlungstag!",
   "notif.paymentBody": "{name} — {amount} heute fällig.",
