@@ -18,8 +18,8 @@ function initApp(){
   syncNotifSchedule();
   setupExitGuard();
   checkMonthlyCalendarPrompt();
-  if(S.settings.notifEnabled&&Notification.permission==='granted') registerPeriodicSync();
-  if(S.settings.testNotifEnabled&&Notification.permission==='granted') startTestNotifMode();
+  if(S.settings.notifEnabled&&notifPermission()==='granted') registerPeriodicSync();
+  if(S.settings.testNotifEnabled&&notifPermission()==='granted') startTestNotifMode();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);

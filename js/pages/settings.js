@@ -3,7 +3,7 @@
 function openSettingsModal(){
   document.getElementById('cfg-salary').value=S.settings.salaryDay;
   document.getElementById('cfg-theme').checked=S.settings.theme==='light';
-  document.getElementById('cfg-notif').checked=S.settings.notifEnabled&&Notification.permission==='granted';
+  document.getElementById('cfg-notif').checked=!!(S.settings.notifEnabled&&notifPermission()==='granted');
   document.getElementById('cfg-ppf').checked=S.settings.ppfEnabled!==false;
   const testEl=document.getElementById('cfg-test-notif');
   if(testEl) testEl.checked=S.settings.testNotifEnabled===true;

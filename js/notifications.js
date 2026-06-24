@@ -1,5 +1,13 @@
 // Notifications
 
+// Android WebView (and some browsers) may not expose the Notification API at
+// all — touching `Notification.permission` then throws a ReferenceError that can
+// abort whatever code is running (e.g. the settings modal failing to open on a
+// real device while working in the emulator). These helpers make every check
+// safe regardless of platform.
+function notifSupported(){ return typeof Notification !== 'undefined'; }
+function notifPermission(){ return notifSupported() ? Notification.permission : 'denied'; }
+
 // SW-based notification — works on iOS PWA (16.4+) and Android; falls back to Notification API
 async function showPWANotification(title, opts) {
   if ('serviceWorker' in navigator) {
@@ -28,7 +36,7 @@ async function toggleNotif(el){
 }
 
 async function checkDailyNotifications(){
-  if(!S.settings.notifEnabled||Notification.permission!=='granted') return;
+  if(!S.settings.notifEnabled||notifPermission()!=='granted') return;
   const today=todayStr();
   if(S.settings.lastNotifDate===today) return;
   S.settings.lastNotifDate=today;
@@ -171,7 +179,7 @@ let _testNotifIntervalId = null;
 
 function startTestNotifMode(){
   stopTestNotifMode();
-  if(Notification.permission!=='granted') return;
+  if(notifPermission()!=='granted') return;
   _testNotifIntervalId = setInterval(async ()=>{
     const ts = new Date().toLocaleTimeString(i18nLocaleCode());
     const body = t('notif.testBody',{time:ts});
@@ -208,7 +216,7 @@ async function sendTestNotificationNow(){
   if(!('Notification' in window)&&!('serviceWorker' in navigator)){
     alert(t('notif.notSupported'));return;
   }
-  if(Notification.permission!=='granted'){
+  if(notifPermission()!=='granted'){
     alert(t('notif.permFirst'));
     return;
   }
