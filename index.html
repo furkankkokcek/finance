@@ -22,6 +22,8 @@
 /* Reserve space for the native AdMob banner (added only inside the Capacitor app). */
 body.has-banner-ad .nav{bottom:60px}
 body.has-banner-ad{padding-bottom:60px}
+/* Lift the FAB above the banner+nav so it never hides behind the bottom bar. */
+body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
 </style>
 </head>
 <body>
@@ -31,6 +33,16 @@ body.has-banner-ad{padding-bottom:60px}
   <div class="setup-logo">Fin<span>Track</span></div>
   <div class="setup-sub" data-i18n="setup.subtitle">Kişisel Finansal Yönetim</div>
   <div class="setup-card">
+    <div class="setup-field">
+      <label data-i18n="settings.language">Dil</label>
+      <select id="setup-language" class="js-lang-select" onchange="changeLanguage(this)">
+        <option value="tr">Türkçe</option>
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
     <div class="setup-field">
       <label data-i18n="setup.startYear">Başlangıç Yılı</label>
       <input type="number" id="s-year" value="2026" min="2020" max="2040">
@@ -475,7 +487,7 @@ body.has-banner-ad{padding-bottom:60px}
     </div>
     <div class="modal-body">
       <div class="field"><label data-i18n="settings.language">Dil</label>
-        <select id="cfg-language" onchange="changeLanguage(this)">
+        <select id="cfg-language" class="js-lang-select" onchange="changeLanguage(this)">
           <option value="tr">Türkçe</option>
           <option value="en">English</option>
           <option value="de">Deutsch</option>

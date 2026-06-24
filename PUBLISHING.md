@@ -49,30 +49,30 @@ dosyalarını `www/`'ye kopyalar (Capacitor bu klasörü native projeye gömecek
 
 ```bash
 npx cap add android     # android/ klasörünü üretir (tek seferlik)
-npx cap sync            # www/ içeriğini ve eklentileri senkronize eder
+npm run sync            # build + cap sync + AdMob manifest yamasını uygular
 npx cap open android    # Android Studio'da açar
 ```
 
-> Kod her değiştiğinde: `npm run build && npx cap sync`.
+> Kod her değiştiğinde: **`npm run sync`** (sadece `npx cap sync` değil — aşağıdaki AdMob yaması da
+> bununla çalışır).
 
-### 2.2 AdMob App ID'sini manifest'e ekle (ZORUNLU — yoksa uygulama açılışta çöker)
+### 2.2 AdMob App ID (manifest) — otomatik hallolur
 
 Google Mobile Ads SDK, **test reklamlarında bile** `AndroidManifest.xml` içinde bir App ID arar.
 Eksikse uygulama açılır açılmaz native seviyede crash eder (`js/ads.js`'teki `try/catch` bunu
-yakalayamaz). `npx cap add android`'den sonra `android/app/src/main/AndroidManifest.xml` aç ve
-**`<application>` etiketinin içine** (örn. mevcut `<activity>`'nin yanına) şunu ekle:
+yakalayamaz).
 
-```xml
-<meta-data
-    android:name="com.google.android.gms.ads.APPLICATION_ID"
-    android:value="ca-app-pub-3940256099942544~3347511713"/>
-```
+`scripts/patch-android.mjs` bunu **otomatik** ekler: `npm run sync` her çalıştığında
+`android/app/src/main/AndroidManifest.xml`'e `com.google.android.gms.ads.APPLICATION_ID` meta-data'sını
+(yoksa) enjekte eder. `android/` klasörü `.gitignore`'da olduğu için her `npx cap add android`
+sonrası elle eklemen gerekmez — sadece `npm run sync` çalıştır.
 
-> Bu, Google'ın resmi **test App ID**'sidir — geliştirmede güvenle kullanılır. Yayın öncesi kendi
-> gerçek App ID'nle değiştir (bkz. §3). Dikkat: App ID'de `~`, reklam birimi ID'sinde `/` kullanılır.
+> Geliştirmede Google'ın resmi **test App ID**'si kullanılır
+> (`ca-app-pub-3940256099942544~3347511713`). Yayın öncesi `scripts/patch-android.mjs` içindeki
+> `ADMOB_APP_ID`'yi kendi gerçek App ID'nle, `js/ads.js`'teki ad unit ID'lerini de gerçek ID'lerinle
+> değiştir (bkz. §3). Dikkat: App ID'de `~`, reklam birimi ID'sinde `/` kullanılır.
 
-Ekledikten sonra `npx cap sync` ile senkronize et. (`android/` klasörü `.gitignore`'da olduğundan bu
-düzenleme her `npx cap add android` sonrası tekrar gerekir.)
+Yamayı tek başına çalıştırmak için: `npm run patch:android`.
 
 ### 2.3 Emülatörde / cihazda dene
 Android Studio'da **Run ▶** ile uygulamayı çalıştır. Alt kısımda **test reklam banner'ı** görünmeli

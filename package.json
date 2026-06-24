@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-web.mjs",
-    "sync": "npm run build && cap sync",
+    "patch:android": "node scripts/patch-android.mjs",
+    "sync": "npm run build && cap sync && npm run patch:android",
     "open:android": "cap open android",
     "open:ios": "cap open ios"
   },

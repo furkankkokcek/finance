@@ -12,8 +12,8 @@ const I18N_LOCALE_CODES = { tr: 'tr-TR', en: 'en-US', de: 'de-DE', es: 'es-ES', 
 function detectLang() {
   const stored = (typeof S !== 'undefined' && S.settings && S.settings.language) || null;
   if (stored && I18N_LANGS.includes(stored)) return stored;
-  const nav = (navigator.language || 'tr').slice(0, 2).toLowerCase();
-  return I18N_LANGS.includes(nav) ? nav : 'tr';
+  // Default to Turkish until the user explicitly picks a language.
+  return 'tr';
 }
 
 function getLang() { return detectLang(); }
@@ -77,6 +77,8 @@ function applyLocale() {
 
   document.documentElement.lang = getLang();
   applyTranslations(document);
+  // Keep any on-screen language picker (setup + settings) in sync.
+  document.querySelectorAll('.js-lang-select').forEach(sel => { sel.value = getLang(); });
 }
 
 // Walks the DOM applying translations to data-i18n* attributes.
