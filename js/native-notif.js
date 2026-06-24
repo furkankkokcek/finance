@@ -124,7 +124,9 @@ async function scheduleNativeNotifications(){
 }
 
 // Fire an immediate native notification (used by the "send test now" button and
-// by showPWANotification on native).
+// by showPWANotification on native). No `schedule` field → Capacitor delivers it
+// immediately (scheduling even a few hundred ms out gets batched/delayed by
+// Android's inexact alarms, so the notification wouldn't appear right away).
 async function sendNativeNotificationNow(title, body){
   const LN = getLocalNotif();
   if(!LN) return false;
@@ -133,8 +135,7 @@ async function sendNativeNotificationNow(title, body){
   try{
     await LN.schedule({ notifications: [{
       id: Math.floor(Math.random()*100000) + 500000,
-      title, body: body||'',
-      schedule: { at: new Date(Date.now() + 600) }
+      title, body: body||''
     }]});
     return true;
   }catch(e){ return false; }

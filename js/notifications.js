@@ -208,7 +208,10 @@ let _testNotifIntervalId = null;
 
 function startTestNotifMode(){
   stopTestNotifMode();
-  if(notifPermission()!=='granted') return;
+  const nativeOK = typeof nativeNotifAvailable==='function' && nativeNotifAvailable();
+  // On native, permission was granted when the toggle was enabled; the per-fire
+  // call re-checks. On web, gate on the Notification permission.
+  if(!nativeOK && notifPermission()!=='granted') return;
   _testNotifIntervalId = setInterval(async ()=>{
     const ts = new Date().toLocaleTimeString(i18nLocaleCode());
     const body = t('notif.testBody',{time:ts});
@@ -223,10 +226,18 @@ function stopTestNotifMode(){
 
 async function toggleTestNotif(el){
   if(el.checked){
-    if(!('Notification' in window)){el.checked=false;alert(t('notif.notSupported'));return;}
-    if(Notification.permission!=='granted'){
-      const p = await Notification.requestPermission();
-      if(p!=='granted'){el.checked=false;return;}
+    // Native app: request permission via LocalNotifications, not the web API.
+    if(typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
+      const granted=await requestNativeNotifPermission();
+      if(!granted){el.checked=false;return;}
+    } else if(isNativeApp()){
+      el.checked=false;alert(t('notif.pluginMissing'));return;
+    } else {
+      if(!('Notification' in window)){el.checked=false;alert(t('notif.notSupported'));return;}
+      if(notifPermission()!=='granted'){
+        const p = await Notification.requestPermission();
+        if(p!=='granted'){el.checked=false;return;}
+      }
     }
     S.settings.testNotifEnabled=true;
     saveS();
