@@ -275,6 +275,13 @@ function getNotifDiagnostic(){
     // didn't re-run `npm install` and `npm run sync` after the plugin was added.
     lines.push(t('notif.diagPluginMissing'));
   }
+  // Diagnostic aid: list Capacitor plugins actually registered with the runtime,
+  // so we can tell "plugin missing from native build" apart from "plugin loaded
+  // but not detected".
+  if(isNativeApp()){
+    const plugs = (window.Capacitor && window.Capacitor.Plugins) ? Object.keys(window.Capacitor.Plugins) : [];
+    lines.push(`Capacitor.Plugins: ${plugs.length ? plugs.join(', ') : '—'}`);
+  }
   if(!('Notification' in window)){
     lines.push(t('notif.diagNoSupport'));
   } else {
