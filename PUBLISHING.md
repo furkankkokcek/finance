@@ -55,17 +55,36 @@ npx cap open android    # Android Studio'da açar
 
 > Kod her değiştiğinde: `npm run build && npx cap sync`.
 
-### 2.2 Emülatörde / cihazda dene
+### 2.2 AdMob App ID'sini manifest'e ekle (ZORUNLU — yoksa uygulama açılışta çöker)
+
+Google Mobile Ads SDK, **test reklamlarında bile** `AndroidManifest.xml` içinde bir App ID arar.
+Eksikse uygulama açılır açılmaz native seviyede crash eder (`js/ads.js`'teki `try/catch` bunu
+yakalayamaz). `npx cap add android`'den sonra `android/app/src/main/AndroidManifest.xml` aç ve
+**`<application>` etiketinin içine** (örn. mevcut `<activity>`'nin yanına) şunu ekle:
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-3940256099942544~3347511713"/>
+```
+
+> Bu, Google'ın resmi **test App ID**'sidir — geliştirmede güvenle kullanılır. Yayın öncesi kendi
+> gerçek App ID'nle değiştir (bkz. §3). Dikkat: App ID'de `~`, reklam birimi ID'sinde `/` kullanılır.
+
+Ekledikten sonra `npx cap sync` ile senkronize et. (`android/` klasörü `.gitignore`'da olduğundan bu
+düzenleme her `npx cap add android` sonrası tekrar gerekir.)
+
+### 2.3 Emülatörde / cihazda dene
 Android Studio'da **Run ▶** ile uygulamayı çalıştır. Alt kısımda **test reklam banner'ı** görünmeli
 (gerçek reklam değil — bkz. AdMob bölümü).
 
-### 2.3 İmzalı AAB üret
+### 2.4 İmzalı AAB üret
 1. Android Studio → **Build → Generate Signed Bundle / APK → Android App Bundle**.
 2. **Create new keystore** ile bir keystore (`.jks`) oluştur. **Bu dosyayı ve şifrelerini güvenle
    sakla** — kaybedersen uygulamayı bir daha güncelleyemezsin.
 3. Release `.aab` dosyası üretilir.
 
-### 2.4 Digital Asset Links (önemli)
+### 2.5 Digital Asset Links (önemli)
 Repo'da `/.well-known/assetlinks.json` mevcut ve paket adı doğru. İçindeki
 `BURAYA_PWABUILDER_SHA256_HASH_GIRILECEK` placeholder'ını **imzalama anahtarının SHA256 parmak izi**
 ile değiştir:
@@ -78,7 +97,7 @@ keytool -list -v -keystore yol/anahtar.jks -alias <alias>
 Play App Signing kullanıyorsan parmak izini **Play Console → Setup → App integrity** sayfasından al.
 Güncelledikten sonra repo'yu commit + push et (GitHub Pages'te yayınlanır).
 
-### 2.5 Play Console'a yükle
+### 2.6 Play Console'a yükle
 1. [Play Console](https://play.google.com/console) → **Create app**.
 2. Mağaza listesi varlıkları:
    - Uygulama ikonu (512×512 — `icons/icon-512.png` kullanılabilir)
