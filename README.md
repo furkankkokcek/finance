@@ -99,13 +99,22 @@ Net Servet girerek 5 seviyede ilerleme takibi:
 
 ## Bildirimler
 
-Bildirim açıldığında:
-- **Saat 9:00** — Bugün ödemesi olan giderlere hatırlatma
-- **Maaş Günü 9:00** — PPF tutarı ve aylık mali özet
+Bildirim açıldığında (saat 9:00):
+- **Ödeme günü** — bugün ödemesi olan giderlere hatırlatma
+- **Maaş günü** — PPF tutarı ve aylık mali özet
+
+Üç kademe bildirim desteği:
+- **Web/PWA:** service worker + periodic sync (sınırlı).
+- **Native (Capacitor):** gerçek zamanlanmış local notification — uygulama kapalıyken de çalışır
+  (bu + sonrası ay için kurulur, her açılışta yenilenir).
+- **Sunucu push (opsiyonel):** Firebase Cloud Messaging ile uygulama hiç açılmasa bile bildirim —
+  kurulum: [PUSH-SETUP.md](PUSH-SETUP.md).
 
 ## Veri Gizliliği
 
-Tüm veriler tarayıcıda (localStorage) tutulur, sunucuya gönderilmez. Export ile yedekle.
+Tüm finansal veriler cihazda (localStorage) tutulur. **İstisna:** sunucu push'unu (PUSH-SETUP.md)
+etkinleştirirsen, yalnızca önceden render edilmiş bildirim metni + tetik tarihi Firebase'e gider
+(ham bütçe tablosu değil). Export ile yedekle.
 
 ## Proje Yapısı
 

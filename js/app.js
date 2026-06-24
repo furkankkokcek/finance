@@ -56,6 +56,8 @@ const loaded=loadS();
 if(typeof applyLocale==='function') applyLocale();
 // Native-only banner ads (no-op on web/PWA).
 if(typeof initAds==='function') initAds();
+// Native-only FCM push registration (no-op on web/PWA and until configured).
+if(typeof initPush==='function') initPush();
 if(loaded&&S.setupDone){
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='block';

@@ -50,12 +50,11 @@ async function cancelAllNativeNotifications(){
   }catch(e){}
 }
 
-// Build the future-dated notifications for one month. `startId` keeps IDs unique
-// and stable per month so re-scheduling cleanly replaces the previous set.
-function buildMonthNativeNotifs(year, month, startId){
-  const out = [];
-  const now = new Date();
-  let id = startId;
+// Collect every notification event for one month as {at:Date, title, body}.
+// Shared by the local-notification scheduler and the FCM push schedule builder so
+// the "what fires when" logic lives in exactly one place.
+function collectMonthNotifEvents(year, month){
+  const events = [];
 
   // Payment due reminders (unpaid, non-zero, with a due day)
   const yd = (typeof getYear === 'function') ? getYear(year) : {expenses:[]};
@@ -66,12 +65,10 @@ function buildMonthNativeNotifs(year, month, startId){
     if(exp.status && exp.status[month]==='paid') return;
     const at = getAdjustedDueDate(year, month, exp.dueDay);
     at.setHours(NATIVE_NOTIF_HOUR, 0, 0, 0);
-    if(at <= now) return;
-    out.push({
-      id: id++,
+    events.push({
+      at,
       title: '💳 ' + t('notif.paymentDay'),
-      body: t('notif.paymentBody', {name: exp.name, amount: fmtTRY(amt)}),
-      schedule: { at }
+      body: t('notif.paymentBody', {name: exp.name, amount: fmtTRY(amt)})
     });
   });
 
@@ -81,24 +78,30 @@ function buildMonthNativeNotifs(year, month, startId){
   const lastDay = new Date(year, month, 0).getDate();
   const sDay = Math.min(salaryDay, lastDay);
   const salaryAt = new Date(year, month-1, sDay, NATIVE_NOTIF_HOUR, 0, 0, 0);
-  if(salaryAt > now){
-    if(S.settings.ppfEnabled!==false && d.ppfTotal>0){
-      out.push({
-        id: id++,
-        title: '🏦 ' + t('notif.ppfTitle'),
-        body: t('notif.ppfBody', {amount: fmtTRY(d.ppfTotal)}),
-        schedule: { at: salaryAt }
-      });
-    }
-    const mname = MONTHS_FULL[month-1];
-    out.push({
-      id: id++,
-      title: '💵 ' + t('notif.monthlySummary'),
-      body: t('notif.summaryBodyLong', {month: mname, year, income: fmtTRY(d.totalIncome), expense: fmtTRY(d.totalExpense), cash: fmtTRY(d.cashLeft)}),
-      schedule: { at: salaryAt }
+  if(S.settings.ppfEnabled!==false && d.ppfTotal>0){
+    events.push({
+      at: new Date(salaryAt),
+      title: '🏦 ' + t('notif.ppfTitle'),
+      body: t('notif.ppfBody', {amount: fmtTRY(d.ppfTotal)})
     });
   }
-  return out;
+  const mname = MONTHS_FULL[month-1];
+  events.push({
+    at: new Date(salaryAt),
+    title: '💵 ' + t('notif.monthlySummary'),
+    body: t('notif.summaryBodyLong', {month: mname, year, income: fmtTRY(d.totalIncome), expense: fmtTRY(d.totalExpense), cash: fmtTRY(d.cashLeft)})
+  });
+  return events;
+}
+
+// Build the future-dated native notifications for one month. `startId` keeps IDs
+// unique and stable per month so re-scheduling cleanly replaces the previous set.
+function buildMonthNativeNotifs(year, month, startId){
+  const now = new Date();
+  let id = startId;
+  return collectMonthNotifEvents(year, month)
+    .filter(ev => ev.at > now)
+    .map(ev => ({ id: id++, title: ev.title, body: ev.body, schedule: { at: ev.at } }));
 }
 
 // (Re)schedule all native notifications for the current + next month.

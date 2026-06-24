@@ -21,3 +21,14 @@ build/
 www/
 android/
 ios/
+
+# Firebase (push backend) — local/secret artifacts, not committed
+functions/node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+# FCM config: lives in android/app/ (already ignored); never commit it anywhere
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json

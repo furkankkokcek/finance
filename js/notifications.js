@@ -40,6 +40,9 @@ async function toggleNotif(el){
       S.settings.notifEnabled=true;
       saveS();
       await scheduleNativeNotifications();
+      // Register for server push too (no-op until configured); saveS above
+      // already queued a schedule upload.
+      if(typeof initPush==='function') initPush();
       return;
     }
     // Native app but the LocalNotifications plugin is missing — `npm install` +
@@ -159,6 +162,9 @@ function syncNotifSchedule(){
   if(typeof scheduleNativeNotifications==='function' && typeof nativeNotifAvailable==='function' && nativeNotifAvailable()){
     scheduleNativeNotifications();
   }
+  // Native app: (re)upload the FCM push schedule to the server (debounced, no-op
+  // until push is configured).
+  if(typeof uploadPushSchedule==='function') uploadPushSchedule();
   if(!window.indexedDB) return;
   const now=new Date(); const year=now.getFullYear(); const month=now.getMonth()+1;
   const d=getMonthlyData(year,month);
