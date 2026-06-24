@@ -22,6 +22,10 @@
 /* Reserve space for the native AdMob banner (added only inside the Capacitor app). */
 body.has-banner-ad .nav{bottom:60px}
 body.has-banner-ad{padding-bottom:60px}
+/* Lift the scroll viewport + bottom-sheet modals above the banner so their bottom
+   content (year-table button, investment / cash-left rows, etc.) stays visible. */
+body.has-banner-ad .pages{bottom:calc(var(--nav) + 60px)}
+body.has-banner-ad .overlay{bottom:60px}
 /* Lift the FAB above the banner+nav so it never hides behind the bottom bar. */
 body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
 </style>
