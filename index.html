@@ -26,6 +26,9 @@ body.has-banner-ad{padding-bottom:60px}
    content (year-table button, investment / cash-left rows, etc.) stays visible. */
 body.has-banner-ad .pages{bottom:calc(var(--nav) + 60px)}
 body.has-banner-ad .overlay{bottom:60px}
+/* Setup screen is fixed inset:0 with its own z-index — also lift it above the
+   banner so the "Start" button doesn't end up hidden behind the ad. */
+body.has-banner-ad #setup{padding-bottom:calc(32px + 60px)}
 /* Lift the FAB above the banner+nav so it never hides behind the bottom bar. */
 body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
 </style>

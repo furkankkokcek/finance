@@ -1,6 +1,13 @@
 // Amounts grid helpers
 
 function pasteFromExcel(gridId){
+  // navigator.clipboard is unavailable in many Android WebViews and in non-HTTPS
+  // contexts; calling .readText() then throws synchronously, which the promise
+  // .catch() below cannot see — show the user a friendly message instead.
+  if(!navigator.clipboard||typeof navigator.clipboard.readText!=='function'){
+    alert(t('grid.clipboardDenied'));
+    return;
+  }
   navigator.clipboard.readText().then(text=>{
     const values=text.trim().split(/\t|\n/).map(v=>v.trim()).filter(v=>v);
     const inputs=document.querySelectorAll(`#${gridId} input[data-month]`);

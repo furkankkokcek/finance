@@ -31,7 +31,7 @@ function renderFetchLog(){
     return;
   }
   el.innerHTML=_fetchLog.map(e=>{
-    const t=new Date(e.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const t=new Date(e.ts).toLocaleTimeString(i18nLocaleCode(),{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const ok=e.status==='ok';
     return `<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--muted);flex-shrink:0;font-size:10px;font-family:monospace">${t}</span>
@@ -277,13 +277,15 @@ function exportPortfolioTxt(){
   const line=(ch=>'─')('─').repeat(46);
   const dbl='═'.repeat(46);
   const now=new Date();
-  const dateStr=now.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});
+  const dateStr=now.toLocaleDateString(i18nLocaleCode(),{day:'numeric',month:'long',year:'numeric'});
   const rows=[];
-  rows.push(`FinTrack Portföy Raporu — ${dateStr}`);
+  rows.push(`${t('inv.reportTitle')} — ${dateStr}`);
   rows.push(dbl);
   rows.push('');
 
   let grandCost=0,grandVal=0;
+  const unitGram=t('inv.unitGram');
+  const unitPiece=t('inv.unitPiece');
 
   port.forEach(inv=>{
     const c=calcInv(inv);
@@ -295,39 +297,40 @@ function exportPortfolioTxt(){
     const tickerLabel=inv.ticker?` · ${inv.ticker}`:'';
     rows.push(`${inv.name}  (${typeLabel}${subtypeLabel}${tickerLabel})`);
 
+    const isGoldUnit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22');
+    const unit=isGoldUnit?unitGram:unitPiece;
+
     const lots=inv.lots||[];
     if(lots.length){
-      rows.push('  Alımlar:');
+      rows.push('  '+t('inv.reportPurchases'));
       lots.forEach(l=>{
         const d=l.date?l.date.slice(0,10).split('-').reverse().join('.'):'—';
         const qty=parseFloat(l.qty||0);
         const price=parseFloat(l.price||0);
-        const unit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet';
         const total=qty*price;
-        rows.push(`    ${d}   ${pad(qty.toLocaleString('tr-TR'),8)} ${unit}   @ ${pad(fmtTRY(price),12)}  →  ${fmtTRY(total)}`);
+        rows.push(`    ${d}   ${pad(qty.toLocaleString(i18nLocaleCode()),8)} ${unit}   @ ${pad(fmtTRY(price),12)}  →  ${fmtTRY(total)}`);
       });
     }
 
-    const unit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet';
-    rows.push(`  Toplam: ${c.totalQty.toLocaleString('tr-TR')} ${unit}  |  Ort. maliyet: ${fmtTRY(c.avgCostTL)}  |  Toplam maliyet: ${fmtTRY(c.totalCostTL)}`);
+    rows.push(`  ${t('inv.reportTotal')} ${c.totalQty.toLocaleString(i18nLocaleCode())} ${unit}  |  ${t('inv.reportAvgCost')} ${fmtTRY(c.avgCostTL)}  |  ${t('inv.reportTotalCost')} ${fmtTRY(c.totalCostTL)}`);
     if(inv.currentPrice>0){
       const sign=c.pnlTL>=0?'+':'-';
-      rows.push(`  Güncel fiyat: ${fmtTRY(inv.currentPrice)}  |  Güncel değer: ${fmtTRY(c.currentValueTL)}`);
-      rows.push(`  Kâr/Zarar: ${sign}${fmtTRY(Math.abs(c.pnlTL))}  (${sign}${Math.abs(c.pnlPct).toFixed(1)}%)`);
+      rows.push(`  ${t('inv.reportCurPrice')} ${fmtTRY(inv.currentPrice)}  |  ${t('inv.reportCurValue')} ${fmtTRY(c.currentValueTL)}`);
+      rows.push(`  ${t('inv.reportPnL')} ${sign}${fmtTRY(Math.abs(c.pnlTL))}  (${sign}${Math.abs(c.pnlPct).toFixed(1)}%)`);
     } else {
-      rows.push('  Güncel fiyat: girilmemiş');
+      rows.push(`  ${t('inv.reportCurPrice')} ${t('inv.reportNotEntered')}`);
     }
     rows.push(line);
     rows.push('');
   });
 
-  rows.push('GENEL TOPLAM');
-  rows.push(`  Toplam maliyet : ${fmtTRY(grandCost)}`);
-  rows.push(`  Güncel değer   : ${fmtTRY(grandVal)}`);
+  rows.push(t('inv.reportGrandTotal'));
+  rows.push(`  ${t('inv.reportTotalCost')} ${fmtTRY(grandCost)}`);
+  rows.push(`  ${t('inv.reportCurValue')} ${fmtTRY(grandVal)}`);
   const grandPnl=grandVal-grandCost;
   const grandPct=grandCost>0?(grandPnl/grandCost)*100:0;
   const gs=grandPnl>=0?'+':'-';
-  rows.push(`  Kâr/Zarar      : ${gs}${fmtTRY(Math.abs(grandPnl))}  (${gs}${Math.abs(grandPct).toFixed(1)}%)`);
+  rows.push(`  ${t('inv.reportPnL')} ${gs}${fmtTRY(Math.abs(grandPnl))}  (${gs}${Math.abs(grandPct).toFixed(1)}%)`);
   rows.push('');
 
   const txt=rows.join('\n');

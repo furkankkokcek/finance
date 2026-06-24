@@ -170,7 +170,7 @@ function exportICS(year,month){
     const dEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
     const dateEndStr=`${dEnd.getFullYear()}${pad(dEnd.getMonth()+1)}${pad(dEnd.getDate())}`;
     const typeLabel=ev.type==='income'?t('calendar.income'):ev.isReminder?t('calendar.ppfReminder'):(CAT_LABELS[ev.type]||ev.type);
-    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
+    const amountStr=Math.round(ev.amount).toLocaleString(i18nLocaleCode())+' TL';
     const evUid=`ft-${year}-${pad(month)}-${pad(ev.day)}-${ev.expId||'inc'}-${Math.random().toString(36).slice(2,7)}@fintrack`;
     out.push('BEGIN:VEVENT');
     out.push(`UID:${evUid}`);
@@ -211,7 +211,7 @@ function showGCalLinks(year,month){
   const rows=events.map(ev=>{
     const dateStr=`${year}${pad(month)}${pad(ev.day)}`;
     const typeLabel=ev.type==='income'?t('calendar.income'):ev.isReminder?t('calendar.ppfReminder'):(CAT_LABELS[ev.type]||ev.type);
-    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
+    const amountStr=Math.round(ev.amount).toLocaleString(i18nLocaleCode())+' TL';
     const details=encodeURIComponent(amountStr+' - '+typeLabel);
     const title=encodeURIComponent(ev.name);
     const gcUrl=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}%2F${dateStr}&details=${details}`;
