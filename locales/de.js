@@ -23,6 +23,7 @@ window.I18N.de = {
 
   "header.investGoal": "Anlageziel",
   "header.toggleAmounts": "Beträge aus-/einblenden",
+  "header.notifications": "Benachrichtigungen",
   "header.settings": "Einstellungen",
 
   "cat.sabit": "Fixkosten",
@@ -253,6 +254,8 @@ window.I18N.de = {
 
   "notif.title": "Benachrichtigungen",
   "notif.empty": "Noch keine Benachrichtigungen",
+  "notif.upcoming": "Anstehend",
+  "notif.history": "Verlauf",
   "notif.justNow": "Gerade eben",
   "notif.minAgo": "vor {n} Min",
   "notif.hourAgo": "vor {n} Std",

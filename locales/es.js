@@ -23,6 +23,7 @@ window.I18N.es = {
 
   "header.investGoal": "Objetivo de inversión",
   "header.toggleAmounts": "Ocultar/Mostrar importes",
+  "header.notifications": "Notificaciones",
   "header.settings": "Ajustes",
 
   "cat.sabit": "Gastos fijos",
@@ -253,6 +254,8 @@ window.I18N.es = {
 
   "notif.title": "Notificaciones",
   "notif.empty": "Aún no hay notificaciones",
+  "notif.upcoming": "Próximos",
+  "notif.history": "Historial",
   "notif.justNow": "Ahora mismo",
   "notif.minAgo": "hace {n} min",
   "notif.hourAgo": "hace {n} h",

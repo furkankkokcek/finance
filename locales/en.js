@@ -23,6 +23,7 @@ window.I18N.en = {
 
   "header.investGoal": "Investment Goal",
   "header.toggleAmounts": "Hide/Show Amounts",
+  "header.notifications": "Notifications",
   "header.settings": "Settings",
 
   "cat.sabit": "Fixed Expenses",
@@ -253,6 +254,8 @@ window.I18N.en = {
 
   "notif.title": "Notifications",
   "notif.empty": "No notifications yet",
+  "notif.upcoming": "Upcoming",
+  "notif.history": "History",
   "notif.justNow": "Just now",
   "notif.minAgo": "{n} min ago",
   "notif.hourAgo": "{n} h ago",

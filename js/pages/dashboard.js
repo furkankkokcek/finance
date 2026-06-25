@@ -7,32 +7,10 @@ function renderDashboard(){
 
   buildMonthTabs('month-tabs','');
 
-  // Notification banners
+  // Upcoming payment / salary reminders no longer render on the summary page —
+  // they live in the notification center (bell icon). Keep the container empty.
   const banners=document.getElementById('notif-banners');
-  banners.innerHTML='';
-  const today=new Date();
-  getYear(year).expenses.forEach(exp=>{
-    if(!exp.dueDay) return;
-    const adj=getAdjustedDueDate(year,month,exp.dueDay);
-    const diff=Math.ceil((adj-today)/(1000*60*60*24));
-    if(diff>=0&&diff<=3){
-      const status=exp.status?.[month]||'unpaid';
-      if(status!=='paid'){
-        const amt=parseFloat(exp.amounts[month]||0);
-        if(amt===0) return;
-        const dayLbl=diff===0?t('dash.today'):diff===1?t('dash.tomorrow'):t('dash.inDays',{n:diff});
-        banners.innerHTML+=`<div class="notif-banner"><div class="notif-icon">⏰</div><div class="notif-text"><b>${dayLbl}:</b> ${exp.name} — <b>${fmtTRY(amt)}</b> ${t('dash.paymentSuffix')}</div></div>`;
-      }
-    }
-  });
-
-  // Salary day PPF
-  const sd=S.settings.salaryDay;
-  const daysToSalary=sd-today.getDate();
-  if(S.settings.ppfEnabled!==false&&daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
-    const salaryLbl=daysToSalary===0?t('dash.today'):daysToSalary===1?t('dash.tomorrow'):t('dash.inDays',{n:daysToSalary});
-    banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text"><b>${salaryLbl}</b> ${t('dash.salaryDayLabel')} <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
-  }
+  if(banners) banners.innerHTML='';
 
   // Stat cards
   document.getElementById('dash-stats').innerHTML=`
@@ -129,10 +107,10 @@ function renderSpendingPieChart(){
   });
   paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
   paths+=`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Outfit">${t('common.total')}</text>`;
-  paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit">${fmtTRY(total)}</text>`;
+  paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit" class="amt-hideable">${fmtTRY(total)}</text>`;
   const legendRows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0"></div><span style="font-size:12px;color:var(--muted)">${s.label}</span></div><div style="text-align:right"><span class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(s.val)}</span><span style="font-size:11px;color:var(--muted2);margin-left:4px">${Math.round(s.val/total*100)}%</span></div></div>`).join('');
   el.innerHTML=`
-    <div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div>
+    <div class="chart-title">${t('dash.spendingDist')} — ${MONTHS_FULL[month-1]}</div>
     <div style="display:flex;align-items:flex-start;gap:8px">
       <svg viewBox="0 0 156 164" width="156" height="164" style="flex-shrink:0">${paths}</svg>
       <div style="flex:1;padding-top:8px">${legendRows}</div>

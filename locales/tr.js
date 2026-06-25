@@ -27,6 +27,7 @@ window.I18N.tr = {
   // header
   "header.investGoal": "Yatırım Hedefi",
   "header.toggleAmounts": "Tutarları Gizle/Göster",
+  "header.notifications": "Bildirimler",
   "header.settings": "Ayarlar",
 
   // category / type label maps
@@ -267,6 +268,8 @@ window.I18N.tr = {
   // notification center / messages
   "notif.title": "Bildirimler",
   "notif.empty": "Henüz bildirim yok",
+  "notif.upcoming": "Yaklaşan",
+  "notif.history": "Geçmiş",
   "notif.justNow": "Az önce",
   "notif.minAgo": "{n} dk önce",
   "notif.hourAgo": "{n} saat önce",

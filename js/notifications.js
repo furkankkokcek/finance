@@ -129,22 +129,62 @@ function openNotifCenter(){
   openModal('overlay-notif');
 }
 
+// Live "upcoming" reminders (payment due / salary day within 3 days). These used
+// to render as banners on the summary page; now they live in the notification
+// center so the summary stays clean.
+function getUpcomingReminders(){
+  const year=S.settings.currentYear;
+  const month=S.settings.currentMonth;
+  const today=new Date();
+  const out=[];
+  getYear(year).expenses.forEach(exp=>{
+    if(!exp.dueDay) return;
+    const adj=getAdjustedDueDate(year,month,exp.dueDay);
+    const diff=Math.ceil((adj-today)/(1000*60*60*24));
+    if(diff<0||diff>3) return;
+    if((exp.status?.[month]||'unpaid')==='paid') return;
+    const amt=parseFloat(exp.amounts[month]||0);
+    if(amt===0) return;
+    const dayLbl=diff===0?t('dash.today'):diff===1?t('dash.tomorrow'):t('dash.inDays',{n:diff});
+    out.push({icon:'⏰',title:dayLbl,body:`${exp.name} — <b class="amt-hideable">${fmtTRY(amt)}</b> ${t('dash.paymentSuffix')}`});
+  });
+  const d=getMonthlyData(year,month);
+  const daysToSalary=S.settings.salaryDay-today.getDate();
+  if(S.settings.ppfEnabled!==false&&daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
+    const salaryLbl=daysToSalary===0?t('dash.today'):daysToSalary===1?t('dash.tomorrow'):t('dash.inDays',{n:daysToSalary});
+    out.push({icon:'🏦',title:salaryLbl,body:`${t('dash.salaryDayLabel')} <b class="amt-hideable">${fmtTRY(d.ppfTotal)}</b>`});
+  }
+  return out;
+}
+
 function renderNotifCenter(){
   const body=document.getElementById('notif-center-body');
   if(!body) return;
-  if(!S.notifLog||!S.notifLog.length){
+  const upcoming=getUpcomingReminders();
+  const log=S.notifLog||[];
+  if(!upcoming.length && !log.length){
     body.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:14px">'+t('notif.empty')+'</div>';
     return;
   }
-  body.innerHTML=S.notifLog.map(n=>`
+  const row=(icon,title,sub,meta)=>`
     <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:22px;line-height:1;padding-top:2px;flex-shrink:0">${n.icon}</div>
+      <div style="font-size:22px;line-height:1;padding-top:2px;flex-shrink:0">${icon}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;color:var(--text);font-size:14px">${n.title}</div>
-        <div style="color:var(--muted);font-size:13px;margin-top:2px;line-height:1.4">${n.body}</div>
-        <div style="color:var(--muted2,var(--muted));font-size:11px;margin-top:4px">${fmtRelTime(n.ts)}</div>
+        <div style="font-weight:600;color:var(--text);font-size:14px">${title}</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:2px;line-height:1.4">${sub}</div>
+        ${meta?`<div style="color:var(--muted2,var(--muted));font-size:11px;margin-top:4px">${meta}</div>`:''}
       </div>
-    </div>`).join('');
+    </div>`;
+  let html='';
+  if(upcoming.length){
+    html+=`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin:4px 0 2px">${t('notif.upcoming')}</div>`;
+    html+=upcoming.map(u=>row(u.icon,u.title,u.body,'')).join('');
+  }
+  if(log.length){
+    if(upcoming.length) html+=`<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;margin:14px 0 2px">${t('notif.history')}</div>`;
+    html+=log.map(n=>row(n.icon,n.title,n.body,fmtRelTime(n.ts))).join('');
+  }
+  body.innerHTML=html;
 }
 
 function fmtRelTime(ts){
