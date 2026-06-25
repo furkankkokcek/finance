@@ -61,6 +61,13 @@ firebase use --add          # 1. adımdaki projeyi seç, alias ver (örn. defaul
 cd functions && npm install && cd ..
 firebase deploy --only functions,firestore:rules
 ```
+
+> ⚠️ **`firebase login`/`deploy` "Premature close" / "Invalid response body" hatası veriyorsa:**
+> Bu **kurumsal proxy değil**, bazı Node.js sürümlerindeki yerleşik `fetch`/undici regresyonudur —
+> `*.googleapis.com` ve `accounts.google.com`'a giden istekleri düşürür. Çözüm: **Node 22.22.3**
+> (LTS) sürümüne geç (nvm-windows ile `nvm install 22.22.3 && nvm use 22.22.3`), sonra komutları
+> tekrar çalıştır. Doğrulanmış çözüm budur.
+
 Deploy bitince çıktıda **`registerSchedule`** fonksiyonunun URL'sini göreceksin, şuna benzer:
 ```
 Function URL (registerSchedule): https://europe-west1-<proje-id>.cloudfunctions.net/registerSchedule
