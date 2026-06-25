@@ -240,6 +240,7 @@ window.I18N.fr = {
   "settings.import": "📥 Importer",
   "settings.clearAll": "🗑️ Supprimer toutes les données",
   "settings.version": "Version",
+  "ads.rewardNeeded": "Regarde la pub jusqu’au bout pour continuer.",
   "drive.title": "SAUVEGARDE GOOGLE DRIVE",
   "drive.sub": "Sauvegarde/restaure sur ton compte Google (dossier privé de l’app)",
   "drive.backup": "☁️ Sauvegarder sur Drive",

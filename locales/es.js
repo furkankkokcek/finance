@@ -240,6 +240,7 @@ window.I18N.es = {
   "settings.import": "📥 Importar",
   "settings.clearAll": "🗑️ Eliminar todos los datos",
   "settings.version": "Versión",
+  "ads.rewardNeeded": "Mira el anuncio hasta el final para continuar.",
   "drive.title": "COPIA EN GOOGLE DRIVE",
   "drive.sub": "Haz copia/restaura en tu cuenta de Google (carpeta privada de la app)",
   "drive.backup": "☁️ Copia en Drive",

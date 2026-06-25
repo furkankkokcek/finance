@@ -37,6 +37,7 @@ async function driveAccessToken(){
 // Upload the current state as a timestamped JSON into the app-data folder.
 async function driveBackup(){
   if(!driveAvailable()){ alert(t('drive.notAvailable')); return; }
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const token=await driveAccessToken();
   if(!token){ alert(t('drive.signInFailed')); return; }
   const now=new Date();
@@ -63,6 +64,7 @@ async function driveBackup(){
 // Restore the most recent backup from the app-data folder.
 async function driveRestore(){
   if(!driveAvailable()){ alert(t('drive.notAvailable')); return; }
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const token=await driveAccessToken();
   if(!token){ alert(t('drive.signInFailed')); return; }
   try{

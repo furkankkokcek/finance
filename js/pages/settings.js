@@ -84,6 +84,7 @@ function removeHoliday(date){
 // ---- Data export/import ----
 
 async function exportData(){
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const ts=`${todayStr()}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
@@ -91,7 +92,6 @@ async function exportData(){
   await saveFile(`fintrack_${ts}.json`, json, 'application/json');
   S.settings.changeCount=0;
   saveS();
-  if(typeof showInterstitialAd==='function') showInterstitialAd();
 }
 
 function showBackupDialog(){
@@ -100,9 +100,11 @@ function showBackupDialog(){
   }
 }
 
-function importData(e){
+async function importData(e){
   const file=e.target.files[0];
+  e.target.value='';
   if(!file) return;
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const reader=new FileReader();
   reader.onload=()=>{
     try{
@@ -118,12 +120,10 @@ function importData(e){
         applyLocale();
         renderPage(currentPage);
         alert(t('settings.importSuccess'));
-        if(typeof showInterstitialAd==='function') showInterstitialAd();
       }
     }catch(err){alert(t('settings.fileReadError'));}
   };
   reader.readAsText(file);
-  e.target.value='';
 }
 
 function clearAllData(){

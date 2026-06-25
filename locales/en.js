@@ -240,6 +240,7 @@ window.I18N.en = {
   "settings.import": "📥 Import",
   "settings.clearAll": "🗑️ Delete All Data",
   "settings.version": "Version",
+  "ads.rewardNeeded": "Please watch the ad to the end to continue.",
   "drive.title": "GOOGLE DRIVE BACKUP",
   "drive.sub": "Back up / restore to your Google account (private app folder)",
   "drive.backup": "☁️ Back up to Drive",

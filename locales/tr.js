@@ -253,6 +253,7 @@ window.I18N.tr = {
   "settings.import": "📥 İçe Aktar",
   "settings.clearAll": "🗑️ Tüm Verileri Sil",
   "settings.version": "Sürüm",
+  "ads.rewardNeeded": "Devam etmek için lütfen reklamı sonuna kadar izleyin.",
   "drive.title": "GOOGLE DRIVE YEDEK",
   "drive.sub": "Yedeklerini Google hesabına (gizli uygulama klasörü) yükle/geri yükle",
   "drive.backup": "☁️ Drive'a Yedekle",

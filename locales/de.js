@@ -240,6 +240,7 @@ window.I18N.de = {
   "settings.import": "📥 Importieren",
   "settings.clearAll": "🗑️ Alle Daten löschen",
   "settings.version": "Version",
+  "ads.rewardNeeded": "Bitte sieh dir die Anzeige bis zum Ende an, um fortzufahren.",
   "drive.title": "GOOGLE DRIVE BACKUP",
   "drive.sub": "In deinem Google-Konto sichern/wiederherstellen (privater App-Ordner)",
   "drive.backup": "☁️ In Drive sichern",
