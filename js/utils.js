@@ -7,13 +7,23 @@
 async function saveFile(filename, content, mimeType){
   const Cap=window.Capacitor;
   const isNative=!!(Cap && typeof Cap.isNativePlatform==='function' && Cap.isNativePlatform());
-  if(isNative && Cap.Plugins && Cap.Plugins.Filesystem && Cap.Plugins.Share){
-    try{
-      await Cap.Plugins.Filesystem.writeFile({path:filename,data:content,directory:'CACHE',encoding:'utf8'});
-      const {uri}=await Cap.Plugins.Filesystem.getUri({path:filename,directory:'CACHE'});
-      await Cap.Plugins.Share.share({title:filename,url:uri});
-      return true;
-    }catch(e){ /* fall through to blob download */ }
+  if(isNative){
+    const tt=(k,fb)=>(typeof t==='function'?t(k):fb);
+    if(Cap.Plugins && Cap.Plugins.Filesystem && Cap.Plugins.Share){
+      try{
+        await Cap.Plugins.Filesystem.writeFile({path:filename,data:content,directory:'CACHE',encoding:'utf8'});
+        const {uri}=await Cap.Plugins.Filesystem.getUri({path:filename,directory:'CACHE'});
+        await Cap.Plugins.Share.share({title:filename,files:[uri]});
+        return true;
+      }catch(e){
+        alert(tt('settings.exportError','Export failed')+'\n'+(e&&e.message?e.message:e));
+        return false;
+      }
+    }
+    // Native build is missing @capacitor/filesystem / @capacitor/share — tell the
+    // user instead of silently falling through to a no-op blob download.
+    alert(tt('settings.exportPluginMissing','Export needs an app rebuild (npm install + npx cap sync).'));
+    return false;
   }
   try{
     const blob=new Blob([content],{type:mimeType||'text/plain;charset=utf-8'});

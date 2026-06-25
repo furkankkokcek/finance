@@ -11,6 +11,10 @@
       "scopes": ["https://www.googleapis.com/auth/drive.appdata"],
       "serverClientId": "REPLACE_WITH_YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com",
       "forceCodeForRefreshToken": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#7c5cff"
     }
   }
 }

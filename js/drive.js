@@ -11,9 +11,19 @@
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
 function getGoogleAuth(){ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) || null; }
-function driveAvailable(){
+function driveIsNative(){
   return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform==='function'
-    && window.Capacitor.isNativePlatform() && getGoogleAuth());
+    && window.Capacitor.isNativePlatform());
+}
+function driveAvailable(){
+  return !!(driveIsNative() && getGoogleAuth());
+}
+// Distinct message per failure: web (PWA) vs native build missing the GoogleAuth
+// plugin (needs npm install + npx cap sync + rebuild). Returns true if unavailable.
+function driveUnavailableMsg(){
+  if(!driveIsNative()){ alert(t('drive.notAvailable')); return true; }
+  if(!getGoogleAuth()){ alert(t('drive.pluginMissing')); return true; }
+  return false;
 }
 
 let _googleAuthInited=false;
@@ -36,7 +46,7 @@ async function driveAccessToken(){
 
 // Upload the current state as a timestamped JSON into the app-data folder.
 async function driveBackup(){
-  if(!driveAvailable()){ alert(t('drive.notAvailable')); return; }
+  if(driveUnavailableMsg()) return;
   if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const token=await driveAccessToken();
   if(!token){ alert(t('drive.signInFailed')); return; }
@@ -63,7 +73,7 @@ async function driveBackup(){
 
 // Restore the most recent backup from the app-data folder.
 async function driveRestore(){
-  if(!driveAvailable()){ alert(t('drive.notAvailable')); return; }
+  if(driveUnavailableMsg()) return;
   if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const token=await driveAccessToken();
   if(!token){ alert(t('drive.signInFailed')); return; }
