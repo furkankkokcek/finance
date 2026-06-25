@@ -334,13 +334,8 @@ function exportPortfolioTxt(){
   rows.push('');
 
   const txt=rows.join('\n');
-  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`portfoy_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const filename=`portfoy_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.txt`;
+  saveFile(filename, txt, 'text/plain;charset=utf-8');
 }
 
 function refreshPrices(){

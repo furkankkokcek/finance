@@ -188,11 +188,7 @@ function exportICS(year,month){
   });
 
   out.push('END:VCALENDAR');
-  const blob=new Blob([out.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`fintrack_${year}-${pad(month)}.ics`;a.click();
-  URL.revokeObjectURL(url);
+  saveFile(`fintrack_${year}-${pad(month)}.ics`, out.join('\r\n')+'\r\n', 'text/calendar;charset=utf-8');
 }
 
 function showGCalLinks(year,month){

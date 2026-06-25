@@ -1,5 +1,30 @@
 // Utilities - formatters, date helpers, data calculations
 
+// Save a generated file. In the browser this triggers a normal download; inside
+// the Capacitor native app a blob/`<a download>` does nothing, so we write the
+// file and open the OS share sheet instead (needs @capacitor/filesystem +
+// @capacitor/share). Returns a Promise<boolean>.
+async function saveFile(filename, content, mimeType){
+  const Cap=window.Capacitor;
+  const isNative=!!(Cap && typeof Cap.isNativePlatform==='function' && Cap.isNativePlatform());
+  if(isNative && Cap.Plugins && Cap.Plugins.Filesystem && Cap.Plugins.Share){
+    try{
+      await Cap.Plugins.Filesystem.writeFile({path:filename,data:content,directory:'CACHE',encoding:'utf8'});
+      const {uri}=await Cap.Plugins.Filesystem.getUri({path:filename,directory:'CACHE'});
+      await Cap.Plugins.Share.share({title:filename,url:uri});
+      return true;
+    }catch(e){ /* fall through to blob download */ }
+  }
+  try{
+    const blob=new Blob([content],{type:mimeType||'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename; a.click();
+    URL.revokeObjectURL(url);
+    return true;
+  }catch(e){ return false; }
+}
+
 function fmtTRY(n, showSign=false){
   if(n===undefined||n===null||isNaN(n)) return '—';
   const abs=Math.abs(n);

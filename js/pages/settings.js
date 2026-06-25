@@ -83,16 +83,12 @@ function removeHoliday(date){
 
 // ---- Data export/import ----
 
-function exportData(){
+async function exportData(){
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const ts=`${todayStr()}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
   const json=JSON.stringify(S,null,2);
-  const blob=new Blob([json],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`fintrack_${ts}.json`;a.click();
-  URL.revokeObjectURL(url);
+  await saveFile(`fintrack_${ts}.json`, json, 'application/json');
   S.settings.changeCount=0;
   saveS();
 }
