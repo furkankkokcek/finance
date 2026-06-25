@@ -15,7 +15,7 @@
 // SETUP: deploy the Firebase functions (see PUSH-SETUP.md), then paste your
 // deployed `registerSchedule` URL below. Empty = push disabled (local
 // notifications still work).
-const PUSH_ENDPOINT = '';
+const PUSH_ENDPOINT = 'https://europe-west1-fintrack-d74b7.cloudfunctions.net/registerSchedule';
 
 const PUSH_HORIZON_MONTHS = 6; // how far ahead to pre-render notifications
 
