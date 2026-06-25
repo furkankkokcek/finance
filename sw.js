@@ -1,4 +1,4 @@
-const CACHE = 'fintrack-v8';
+const CACHE = 'fintrack-v9';
 const ASSETS = [
   '/',
   '/index.html',
@@ -21,6 +21,7 @@ const ASSETS = [
   '/js/ads.js',
   '/js/native-notif.js',
   '/js/push.js',
+  '/js/drive.js',
   '/js/utils.js',
   '/js/components/modal.js',
   '/js/components/grid.js',

@@ -567,6 +567,14 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
         <button class="btn-danger" onclick="clearAllData()" data-i18n="settings.clearAll">🗑️ Tüm Verileri Sil</button>
       </div>
+
+      <!-- GOOGLE DRIVE -->
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+        <div class="section-title" style="margin-bottom:4px" data-i18n="drive.title">GOOGLE DRIVE YEDEK</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px" data-i18n="drive.sub">Yedeklerini Google hesabına (gizli uygulama klasörü) yükle/geri yükle</div>
+        <button class="btn-secondary" onclick="driveBackup()" data-i18n="drive.backup">☁️ Drive'a Yedekle</button>
+        <button class="btn-secondary" onclick="driveRestore()" data-i18n="drive.restore">⬇️ Drive'dan Geri Yükle</button>
+      </div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
         <div style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:.04em">FinTrack</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px"><span data-i18n="settings.version">Sürüm</span> 1.0.62</div>
@@ -613,6 +621,7 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
 <script src="js/ads.js" defer></script>
 <script src="js/native-notif.js" defer></script>
 <script src="js/push.js" defer></script>
+<script src="js/drive.js" defer></script>
 <script src="js/app.js" defer></script>
 </body>
 </html>

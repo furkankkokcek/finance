@@ -110,11 +110,18 @@ Bildirim açıldığında (saat 9:00):
 - **Sunucu push (opsiyonel):** Firebase Cloud Messaging ile uygulama hiç açılmasa bile bildirim —
   kurulum: [PUSH-SETUP.md](PUSH-SETUP.md).
 
+## Yedekleme
+
+- **Dışa/İçe Aktar** — JSON dosyası (native'de paylaşım sayfası, web'de indirme).
+- **Google Drive** (opsiyonel) — verini Google hesabındaki gizli uygulama klasörüne yükle/geri
+  yükle. Kurulum: [DRIVE-SETUP.md](DRIVE-SETUP.md).
+
 ## Veri Gizliliği
 
-Tüm finansal veriler cihazda (localStorage) tutulur. **İstisna:** sunucu push'unu (PUSH-SETUP.md)
-etkinleştirirsen, yalnızca önceden render edilmiş bildirim metni + tetik tarihi Firebase'e gider
-(ham bütçe tablosu değil). Export ile yedekle.
+Tüm finansal veriler cihazda (localStorage) tutulur. **İstisnalar (ikisi de opsiyonel):**
+sunucu push'u ([PUSH-SETUP.md](PUSH-SETUP.md)) açıkken yalnızca önceden render edilmiş bildirim
+metni + tetik tarihi Firebase'e gider; Google Drive yedeği ([DRIVE-SETUP.md](DRIVE-SETUP.md))
+açıkça tetiklendiğinde tüm yedek Drive'a yüklenir.
 
 ## Proje Yapısı
 
