@@ -20,6 +20,17 @@ const ADMOB_PROD_BANNER = {
   ios: null,
 };
 
+// Interstitial (full-screen) ads — shown after import/export. Google test units;
+// replace with real IDs before publishing.
+const ADMOB_TEST_INTERSTITIAL = {
+  android: 'ca-app-pub-3940256099942544/1033173712',
+  ios: 'ca-app-pub-3940256099942544/4411468910',
+};
+const ADMOB_PROD_INTERSTITIAL = {
+  android: null,
+  ios: null,
+};
+
 function isNativeApp() {
   return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
 }
@@ -37,8 +48,42 @@ async function initAds() {
   try {
     await AdMob.initialize({ initializeForTesting: true });
     await showBannerAd();
+    prepareInterstitial(); // preload so it's ready when import/export fires
   } catch (e) {
     // Ads are non-critical; never let an ad failure break the app.
+  }
+}
+
+let _interstitialReady = false;
+
+async function prepareInterstitial() {
+  if (!isNativeApp()) return;
+  const AdMob = getAdMob();
+  if (!AdMob) return;
+  const platform = window.Capacitor.getPlatform();
+  const adId = (ADMOB_PROD_INTERSTITIAL[platform]) || ADMOB_TEST_INTERSTITIAL[platform];
+  if (!adId) return;
+  try {
+    await AdMob.prepareInterstitial({ adId, isTesting: !ADMOB_PROD_INTERSTITIAL[platform] });
+    _interstitialReady = true;
+  } catch (e) { _interstitialReady = false; }
+}
+
+// Show a full-screen interstitial (used after import/export). No-op on web; never
+// throws to the caller, and preloads the next one for subsequent use.
+async function showInterstitialAd() {
+  if (!isNativeApp()) return;
+  const AdMob = getAdMob();
+  if (!AdMob) return;
+  try {
+    if (!_interstitialReady) await prepareInterstitial();
+    if (!_interstitialReady) return;
+    await AdMob.showInterstitial();
+  } catch (e) {
+    // ignore — ads must never block the actual import/export
+  } finally {
+    _interstitialReady = false;
+    prepareInterstitial();
   }
 }
 

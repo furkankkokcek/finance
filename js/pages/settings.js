@@ -91,6 +91,7 @@ async function exportData(){
   await saveFile(`fintrack_${ts}.json`, json, 'application/json');
   S.settings.changeCount=0;
   saveS();
+  if(typeof showInterstitialAd==='function') showInterstitialAd();
 }
 
 function showBackupDialog(){
@@ -117,6 +118,7 @@ function importData(e){
         applyLocale();
         renderPage(currentPage);
         alert(t('settings.importSuccess'));
+        if(typeof showInterstitialAd==='function') showInterstitialAd();
       }
     }catch(err){alert(t('settings.fileReadError'));}
   };
