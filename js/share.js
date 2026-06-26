@@ -1,6 +1,12 @@
 // WhatsApp share
 
-function shareWhatsApp(){
+async function shareWhatsApp(){
+  // Rewarded gate (native only): watch a short ad to share, then free for a few
+  // minutes. Kept native-only so the web window.open stays inside the user
+  // gesture (an await before it would let popup blockers cancel the share).
+  if(typeof isNativeApp==='function' && isNativeApp() && typeof showRewardedGate==='function'){
+    if(!(await showRewardedGate('share', 3*60*1000))){ alert(t('ads.rewardNeeded')); return; }
+  }
   const year=S.settings.currentYear;
   const month=S.settings.currentMonth;
   const d=getMonthlyData(year,month);
