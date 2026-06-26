@@ -15,6 +15,29 @@ function renderTakvim(){
   const byDay={};
   events.forEach(ev=>{ if(!byDay[ev.day]) byDay[ev.day]=[]; byDay[ev.day].push(ev); });
 
+  // Remaining (unpaid) payments for the displayed month: upcoming (today onward)
+  // vs already overdue. Income and PPF reminders don't count as payments.
+  const todayMid=new Date(); todayMid.setHours(0,0,0,0);
+  let remainTotal=0, remainCount=0, overdueTotal=0, overdueCount=0;
+  events.forEach(ev=>{
+    if(ev.isReminder||ev.type==='income'||ev.paid) return;
+    const evDate=new Date(displayYear,displayMonth-1,ev.day);
+    if(evDate>=todayMid){ remainTotal+=ev.amount||0; remainCount++; }
+    else { overdueTotal+=ev.amount||0; overdueCount++; }
+  });
+  let summaryHtml=`<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span style="font-size:12px;color:var(--muted)">${t('calendar.remainingThisMonth')} <span style="opacity:.7">(${t('calendar.paymentsCount',{n:remainCount})})</span></span>
+      <span style="font-size:18px;font-weight:800;color:${remainCount>0?'var(--accent)':'#22c55e'}">${remainCount>0?fmtTRY(remainTotal):t('calendar.allPaid')}</span>
+    </div>`;
+  if(overdueCount>0){
+    summaryHtml+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--danger)">${t('calendar.overdue')} <span style="opacity:.7">(${t('calendar.paymentsCount',{n:overdueCount})})</span></span>
+      <span style="font-size:13px;font-weight:700;color:var(--danger)">${fmtTRY(overdueTotal)}</span>
+    </div>`;
+  }
+  summaryHtml+=`</div>`;
+
   const firstDow=new Date(displayYear,displayMonth-1,1).getDay();
   const firstMon=firstDow===0?6:firstDow-1; // Mon=0..Sun=6
   const daysInMonth=new Date(displayYear,displayMonth,0).getDate();
@@ -26,6 +49,7 @@ function renderTakvim(){
       <div style="font-size:15px;font-weight:700;color:var(--text)">${MONTHS_FULL[displayMonth-1]} ${displayYear}</div>
       <button onclick="calStep++;renderTakvim()" style="padding:6px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--text);font-size:16px;cursor:pointer;line-height:1">›</button>
     </div>
+    ${summaryHtml}
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px">`;
 
   buildWeekdayShort().forEach(d=>{

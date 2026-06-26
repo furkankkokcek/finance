@@ -191,6 +191,10 @@ window.I18N.en = {
   "yeartable.investment": "💼 INVESTMENT",
   "yeartable.cashLeft": "💲 CASH LEFT",
 
+  "calendar.remainingThisMonth": "Remaining this month",
+  "calendar.paymentsCount": "{n} payments",
+  "calendar.allPaid": "All paid ✓",
+  "calendar.overdue": "Overdue (unpaid)",
   "calendar.officialHoliday": "Public Holiday",
   "calendar.noPaymentThisDay": "No payment this day",
   "calendar.income": "Income",

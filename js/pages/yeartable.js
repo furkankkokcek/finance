@@ -1,6 +1,11 @@
 // Year table modal
 
-function openYearTable(){
+async function openYearTable(){
+  // Rewarded gate: watch a short ad to open the detailed year table, then it's
+  // free for a few minutes (no ad on every re-open). Fails open if no ad loads.
+  if(typeof showRewardedGate==='function' && !(await showRewardedGate('yeartable', 5*60*1000))){
+    alert(t('ads.rewardNeeded')); return;
+  }
   const year=S.settings.currentYear;
   const yd=getYear(year);
   document.getElementById('yeartable-title').textContent=t('yeartable.title',{year});

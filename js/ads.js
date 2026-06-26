@@ -82,10 +82,31 @@ async function prepareRewarded() {
   } catch (e) { _rewardedReady = false; }
 }
 
+// Reward detection is event-driven: the `Reward` event fires when earned, and
+// `Dismissed` ALWAYS fires when the ad closes (earned or not). The promise from
+// showRewardVideoAd() is unreliable across versions (it can hang when the user
+// closes without a reward), so we resolve on Dismissed instead — this is what
+// fixes import/export hanging after the ad is closed.
+let _rewardListenersAdded = false;
+let _rewardEarned = false;
+let _rewardResolve = null;
+
+function _addRewardListeners(AdMob) {
+  if (_rewardListenersAdded) return;
+  _rewardListenersAdded = true;
+  AdMob.addListener('onRewardedVideoAdReward', () => { _rewardEarned = true; });
+  AdMob.addListener('onRewardedVideoAdDismissed', () => {
+    if (_rewardResolve) { const r = _rewardResolve; _rewardResolve = null; r(_rewardEarned); }
+  });
+  AdMob.addListener('onRewardedVideoAdFailedToShow', () => {
+    if (_rewardResolve) { const r = _rewardResolve; _rewardResolve = null; r(true); } // failed → don't block
+  });
+}
+
 // Gate an action behind a rewarded video. Resolves true when the action may
-// proceed: on web (no gating), when the plugin/ad can't load (never block a
-// backup over an ad failure), or when the user earned the reward. Resolves false
-// only when the ad showed but the user closed it before earning the reward.
+// proceed: on web (no gating), when the plugin/ad can't load (never block over an
+// ad failure), or when the user earned the reward. Resolves false only when the
+// ad showed but the user closed it before earning the reward.
 async function showRewardedThen() {
   if (!isNativeApp()) return true;
   const AdMob = getAdMob();
@@ -93,14 +114,37 @@ async function showRewardedThen() {
   try {
     if (!_rewardedReady) await prepareRewarded();
     if (!_rewardedReady) return true; // couldn't load → don't block the user
-    const reward = await AdMob.showRewardVideoAd();
-    return !!reward; // reward item present → earned
+    _addRewardListeners(AdMob);
+    _rewardEarned = false;
+    const earned = await new Promise((resolve) => {
+      _rewardResolve = resolve;
+      // Safety net: never hang forever if no close event ever arrives.
+      setTimeout(() => { if (_rewardResolve) { _rewardResolve = null; resolve(_rewardEarned); } }, 90000);
+      AdMob.showRewardVideoAd().catch(() => {
+        if (_rewardResolve) { const r = _rewardResolve; _rewardResolve = null; r(true); }
+      });
+    });
+    return earned;
   } catch (e) {
-    return true; // ad error must never block import/export/backup
+    return true; // ad error must never block the action
   } finally {
     _rewardedReady = false;
     prepareRewarded();
   }
+}
+
+// Frequency-capped rewarded gate. Within `cooldownMs` of the last successful
+// watch for `key`, the action is free (no ad); otherwise a rewarded ad is shown
+// and the action proceeds only if earned. Lets us monetize a repeatedly-opened
+// view (e.g. the year table) without forcing an ad on every single open.
+async function showRewardedGate(key, cooldownMs) {
+  if (!isNativeApp()) return true;
+  const k = 'ft_rw_' + key;
+  const last = parseInt(localStorage.getItem(k) || '0', 10) || 0;
+  if (cooldownMs > 0 && Date.now() - last < cooldownMs) return true;
+  const ok = await showRewardedThen();
+  if (ok) localStorage.setItem(k, String(Date.now()));
+  return ok;
 }
 
 let _interstitialReady = false;

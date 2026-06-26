@@ -191,6 +191,10 @@ window.I18N.fr = {
   "yeartable.investment": "💼 INVESTISSEMENT",
   "yeartable.cashLeft": "💲 RESTE EN CAISSE",
 
+  "calendar.remainingThisMonth": "Restant ce mois",
+  "calendar.paymentsCount": "{n} paiements",
+  "calendar.allPaid": "Tout payé ✓",
+  "calendar.overdue": "En retard (impayé)",
   "calendar.officialHoliday": "Jour férié",
   "calendar.noPaymentThisDay": "Aucun paiement ce jour",
   "calendar.income": "Revenu",

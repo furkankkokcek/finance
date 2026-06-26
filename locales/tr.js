@@ -203,6 +203,10 @@ window.I18N.tr = {
   "yeartable.cashLeft": "💲 NAKİT KALAN",
 
   // calendar
+  "calendar.remainingThisMonth": "Bu ay kalan ödeme",
+  "calendar.paymentsCount": "{n} ödeme",
+  "calendar.allPaid": "Tümü ödendi ✓",
+  "calendar.overdue": "Gecikmiş (ödenmemiş)",
   "calendar.officialHoliday": "Resmi Tatil",
   "calendar.noPaymentThisDay": "Bu gün ödeme yok",
   "calendar.income": "Gelir",

@@ -191,6 +191,10 @@ window.I18N.de = {
   "yeartable.investment": "💼 INVESTMENT",
   "yeartable.cashLeft": "💲 VERBLEIBEND",
 
+  "calendar.remainingThisMonth": "Diesen Monat offen",
+  "calendar.paymentsCount": "{n} Zahlungen",
+  "calendar.allPaid": "Alles bezahlt ✓",
+  "calendar.overdue": "Überfällig (unbezahlt)",
   "calendar.officialHoliday": "Feiertag",
   "calendar.noPaymentThisDay": "Keine Zahlung an diesem Tag",
   "calendar.income": "Einnahme",

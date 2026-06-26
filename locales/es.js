@@ -191,6 +191,10 @@ window.I18N.es = {
   "yeartable.investment": "💼 INVERSIÓN",
   "yeartable.cashLeft": "💲 EFECTIVO RESTANTE",
 
+  "calendar.remainingThisMonth": "Pendiente este mes",
+  "calendar.paymentsCount": "{n} pagos",
+  "calendar.allPaid": "Todo pagado ✓",
+  "calendar.overdue": "Vencido (sin pagar)",
   "calendar.officialHoliday": "Festivo oficial",
   "calendar.noPaymentThisDay": "Sin pago este día",
   "calendar.income": "Ingreso",
