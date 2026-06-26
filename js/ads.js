@@ -31,6 +31,18 @@ const ADMOB_PROD_REWARDED = {
   ios: null,
 };
 
+// Interstitial (full-screen) ad — shown ONLY at a page-switch transition, and
+// heavily frequency-capped (see maybeShowInterstitial) so it never interrupts a
+// task. Google test units; replace with real IDs before publishing.
+const ADMOB_TEST_INTERSTITIAL = {
+  android: 'ca-app-pub-3940256099942544/1033173712',
+  ios: 'ca-app-pub-3940256099942544/4411468910',
+};
+const ADMOB_PROD_INTERSTITIAL = {
+  android: null,
+  ios: null,
+};
+
 function isNativeApp() {
   return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
 }
@@ -48,7 +60,8 @@ async function initAds() {
   try {
     await AdMob.initialize({ initializeForTesting: true });
     await showBannerAd();
-    prepareRewarded(); // preload so it's ready when import/export/backup fires
+    prepareRewarded();     // preload for import/export/backup gating
+    prepareInterstitial(); // preload for the page-transition interstitial
   } catch (e) {
     // Ads are non-critical; never let an ad failure break the app.
   }
@@ -87,6 +100,59 @@ async function showRewardedThen() {
   } finally {
     _rewardedReady = false;
     prepareRewarded();
+  }
+}
+
+let _interstitialReady = false;
+
+async function prepareInterstitial() {
+  if (!isNativeApp()) return;
+  const AdMob = getAdMob();
+  if (!AdMob) return;
+  const platform = window.Capacitor.getPlatform();
+  const adId = (ADMOB_PROD_INTERSTITIAL[platform]) || ADMOB_TEST_INTERSTITIAL[platform];
+  if (!adId) return;
+  try {
+    await AdMob.prepareInterstitial({ adId, isTesting: !ADMOB_PROD_INTERSTITIAL[platform] });
+    _interstitialReady = true;
+  } catch (e) { _interstitialReady = false; }
+}
+
+// Frequency caps — keep the interstitial rare and only at clean transitions.
+const INTERSTITIAL_MIN_INTERVAL_MS = 3 * 60 * 1000; // ≥3 min between interstitials
+const INTERSTITIAL_MIN_NAVS = 7;                     // ≥7 page switches since last
+const INTERSTITIAL_SESSION_GRACE_MS = 90 * 1000;     // nothing in the first 90s
+const _adSessionStart = Date.now();
+let _navsSinceAd = 0;
+
+function _lastInterstitialAt() {
+  return parseInt(localStorage.getItem('ft_lastInterstitial') || '0', 10) || 0;
+}
+
+// Call on a page-switch transition. Shows a full-screen interstitial only when
+// ALL caps are satisfied (session grace passed, enough navigations since the last
+// ad, and the cool-down elapsed). Never awaited by the router and never throws to
+// it — an ad must not interrupt or break navigation.
+async function maybeShowInterstitial() {
+  if (!isNativeApp()) return;
+  const AdMob = getAdMob();
+  if (!AdMob) return;
+  _navsSinceAd++;
+  const now = Date.now();
+  if (now - _adSessionStart < INTERSTITIAL_SESSION_GRACE_MS) return;
+  if (_navsSinceAd < INTERSTITIAL_MIN_NAVS) return;
+  if (now - _lastInterstitialAt() < INTERSTITIAL_MIN_INTERVAL_MS) return;
+  try {
+    if (!_interstitialReady) await prepareInterstitial();
+    if (!_interstitialReady) return;
+    await AdMob.showInterstitial();
+    _navsSinceAd = 0;
+    localStorage.setItem('ft_lastInterstitial', String(Date.now()));
+  } catch (e) {
+    // ignore — navigation already happened; the ad is best-effort
+  } finally {
+    _interstitialReady = false;
+    prepareInterstitial(); // preload the next one
   }
 }
 

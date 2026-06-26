@@ -8,6 +8,9 @@ function showPage(page,btn){
   currentPage=page;
   ['gelir','gider','harcama','yatirim'].forEach(p=>{ document.getElementById('fab-'+p).style.display=(p===page?'flex':'none'); });
   renderPage(page);
+  // Non-intrusive: a frequency-capped interstitial may appear at this transition.
+  // Fire-and-forget; the manager enforces the caps and never breaks navigation.
+  if(typeof maybeShowInterstitial==='function') maybeShowInterstitial();
 }
 
 function renderPage(page){

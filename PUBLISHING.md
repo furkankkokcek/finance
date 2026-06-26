@@ -113,17 +113,22 @@ Güncelledikten sonra repo'yu commit + push et (GitHub Pages'te yayınlanır).
 
 ## 3. AdMob (Reklam)
 
-Uygulama `js/ads.js` üzerinden alt banner gösterir. **Şu an Google'ın resmi TEST reklam ID'leri**
-kullanılır — yayınlamadan önce gerçek ID'lerinle değiştir.
+Uygulama `js/ads.js` üzerinden **üç tür** reklam gösterir. **Şu an Google'ın resmi TEST reklam
+ID'leri** kullanılır — yayınlamadan önce gerçek ID'lerinle değiştir.
 
-1. [AdMob](https://admob.google.com) → uygulamanı ekle → bir **Banner** reklam birimi oluştur.
-2. **App ID** ve **Ad unit ID** değerlerini al.
-3. Gerçek ad unit ID'lerini `js/ads.js` içindeki `ADMOB_PROD_BANNER` nesnesine yaz:
+- **Banner** — alt kısımda kalıcı.
+- **Ödüllü (rewarded)** — içe/dışa aktar ve Drive yedek/geri yükleme bu kısa reklamla açılır.
+- **Geçiş (interstitial)** — yalnızca sayfa geçişlerinde, sıkı sıklık sınırıyla (ilk 90 sn yok,
+  ≥7 sayfa geçişi, son reklamdan beri ≥3 dk). Kullanıcıyı rahatsız etmemek için nadir gösterilir.
+
+1. [AdMob](https://admob.google.com) → uygulamanı ekle → **Banner**, **Rewarded** ve
+   **Interstitial** olmak üzere üç reklam birimi oluştur.
+2. **App ID** ve üç **Ad unit ID** değerini al.
+3. Gerçek ad unit ID'lerini `js/ads.js` içindeki ilgili nesnelere yaz:
    ```js
-   const ADMOB_PROD_BANNER = {
-     android: 'ca-app-pub-XXXX/YYYY',
-     ios: 'ca-app-pub-XXXX/ZZZZ',
-   };
+   const ADMOB_PROD_BANNER       = { android: 'ca-app-pub-XXXX/YYYY', ios: 'ca-app-pub-XXXX/...' };
+   const ADMOB_PROD_REWARDED     = { android: 'ca-app-pub-XXXX/RRRR', ios: 'ca-app-pub-XXXX/...' };
+   const ADMOB_PROD_INTERSTITIAL = { android: 'ca-app-pub-XXXX/IIII', ios: 'ca-app-pub-XXXX/...' };
    ```
 4. **App ID**'yi native projeye ekle:
    - Android: `android/app/src/main/AndroidManifest.xml` içine
