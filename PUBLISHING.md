@@ -117,7 +117,7 @@ Uygulama `js/ads.js` üzerinden **üç tür** reklam gösterir. **Şu an Google'
 ID'leri** kullanılır — yayınlamadan önce gerçek ID'lerinle değiştir.
 
 - **Banner** — alt kısımda kalıcı.
-- **Ödüllü (rewarded)** — içe/dışa aktar ve Drive yedek/geri yükleme bu kısa reklamla açılır.
+- **Ödüllü (rewarded)** — içe/dışa aktar, WhatsApp paylaşımı, yıllık tablo ve takvim entegrasyonu bu kısa reklamla açılır.
 - **Geçiş (interstitial)** — yalnızca sayfa geçişlerinde, sıkı sıklık sınırıyla (ilk 90 sn yok,
   ≥7 sayfa geçişi, son reklamdan beri ≥3 dk). Kullanıcıyı rahatsız etmemek için nadir gösterilir.
 

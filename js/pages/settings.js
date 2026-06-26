@@ -15,7 +15,6 @@ function openSettingsModal(){
   if(langSel) langSel.value=getLang();
   updatePpfInfoTexts();
   renderHolidayList();
-  if(typeof renderDriveStatus==='function') renderDriveStatus();
   openModal('overlay-settings');
 }
 

@@ -559,17 +559,6 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
         <button class="btn-danger" onclick="clearAllData()" data-i18n="settings.clearAll">🗑️ Tüm Verileri Sil</button>
       </div>
 
-      <!-- GOOGLE DRIVE -->
-      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-        <div class="section-title" style="margin-bottom:4px" data-i18n="drive.title">GOOGLE DRIVE YEDEK</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px" data-i18n="drive.sub">Yedeklerini Google hesabına (gizli uygulama klasörü) yükle/geri yükle</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px">
-          <span id="drive-status" style="flex:1;color:var(--muted)" data-i18n="drive.notConnected">Bağlı değil</span>
-          <button class="btn-secondary" id="drive-connect-btn" style="width:auto;margin:0;padding:6px 12px;font-size:12px" onclick="driveToggleConnect()" data-i18n="drive.connect">Bağlan</button>
-        </div>
-        <button class="btn-secondary" onclick="driveBackup()" data-i18n="drive.backup">☁️ Drive'a Yedekle</button>
-      </div>
-
       <!-- TAKVİM ENTEGRASYONU -->
       <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
         <div class="section-title" style="margin-bottom:4px" data-i18n="calint.title">TAKVİM ENTEGRASYONU</div>
@@ -624,7 +613,6 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
 <script src="js/ads.js" defer></script>
 <script src="js/native-notif.js" defer></script>
 <script src="js/push.js" defer></script>
-<script src="js/drive.js" defer></script>
 <script src="js/app.js" defer></script>
 </body>
 </html>
