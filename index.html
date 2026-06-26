@@ -44,11 +44,11 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
     <div class="setup-field">
       <label data-i18n="settings.language">Dil</label>
       <select id="setup-language" class="js-lang-select" onchange="changeLanguage(this)">
-        <option value="tr">Türkçe</option>
-        <option value="en">English</option>
-        <option value="de">Deutsch</option>
-        <option value="es">Español</option>
-        <option value="fr">Français</option>
+        <option value="tr">🇹🇷 Türkçe</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="fr">🇫🇷 Français</option>
       </select>
     </div>
     <div class="setup-field">
@@ -71,6 +71,8 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
       <label class="toggle"><input type="checkbox" id="s-ppf" checked><span class="toggle-slider"></span></label>
     </div>
     <button class="btn-setup" onclick="doSetup()" data-i18n="setup.start">Başla →</button>
+    <button class="btn-secondary" style="margin-top:10px" onclick="document.getElementById('setup-import-file').click()" data-i18n="setup.import">📥 Yedekten İçe Aktar</button>
+    <input type="file" id="setup-import-file" accept=".json" style="display:none" onchange="importAtSetup(event)">
   </div>
 </div>
 
@@ -506,7 +508,7 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
           <option value="fr">🇫🇷 Français</option>
         </select>
       </div>
-      <div class="field" style="margin-top:12px"><label data-i18n="settings.salaryDay">Maaş / Gelir Günü</label><input type="number" id="cfg-salary" min="1" max="31"></div>
+      <div class="field" style="margin-top:12px"><label data-i18n="settings.salaryDay">Maaş / Gelir Günü</label><input type="number" id="cfg-salary" min="1" max="31" onchange="saveSalaryDay(this.value)"></div>
       <div style="margin-top:12px">
         <div class="toggle-field">
           <div><div class="toggle-label" data-i18n="settings.lightTheme">Açık Tema</div><div class="toggle-sub" data-i18n="settings.lightThemeSub">Açık / Koyu modu seç</div></div>
@@ -534,18 +536,8 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
         </div>
       </div>
       <div style="margin-top:12px">
-        <div class="toggle-field">
-          <div>
-            <div class="toggle-label" data-i18n="settings.testMode">🧪 Test Modu</div>
-            <div class="toggle-sub" data-i18n="settings.testModeSub">Her 10 dakikada bir test bildirimi</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="cfg-test-notif" onchange="toggleTestNotif(this)"><span class="toggle-slider"></span></label>
-        </div>
-        <button class="btn-secondary" style="margin-top:8px" onclick="sendTestNotificationNow()" data-i18n="settings.testNow">🔔 Şimdi Test Bildirimi Gönder</button>
-        <button class="btn-secondary" style="margin-top:8px" onclick="showNotifDiagnostic()" data-i18n="settings.notifStatus">🔍 Bildirim Durumunu Göster</button>
-        <button class="btn-secondary" style="margin-top:8px" onclick="forceRefreshCache()" data-i18n="settings.clearCache">♻️ Önbelleği Temizle ve Yenile</button>
+        <button class="btn-secondary" onclick="showNotifDiagnostic()" data-i18n="settings.notifStatus">🔍 Bildirim Durumunu Göster</button>
       </div>
-      <button class="btn-primary" onclick="saveSettings()" data-i18n="common.save">Kaydet</button>
 
       <!-- TATİL GÜNLERİ -->
       <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
@@ -576,7 +568,15 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
           <button class="btn-secondary" id="drive-connect-btn" style="width:auto;margin:0;padding:6px 12px;font-size:12px" onclick="driveToggleConnect()" data-i18n="drive.connect">Bağlan</button>
         </div>
         <button class="btn-secondary" onclick="driveBackup()" data-i18n="drive.backup">☁️ Drive'a Yedekle</button>
-        <button class="btn-secondary" onclick="driveRestore()" data-i18n="drive.restore">⬇️ Drive'dan Geri Yükle</button>
+      </div>
+
+      <!-- TAKVİM ENTEGRASYONU -->
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+        <div class="section-title" style="margin-bottom:4px" data-i18n="calint.title">TAKVİM ENTEGRASYONU</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px" data-i18n="calint.sub">Bu ayın ödemelerini telefon takvimine aktar</div>
+        <button class="btn-secondary" onclick="calendarExportICS()" data-i18n="calendar.downloadIcs">📅 Takvime Aktar (.ics)</button>
+        <button class="btn-secondary" style="color:var(--accent);border-color:var(--accent)" onclick="calendarGCal()" data-i18n="calendar.googleCal">🗓️ Google Takvim</button>
+        <div id="gcal-links-panel" style="display:none"></div>
       </div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
         <div style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:.04em">FinTrack</div>

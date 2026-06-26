@@ -6,6 +6,7 @@ window.I18N.de = {
   "common.add": "Hinzufügen",
   "common.total": "Gesamt",
 
+  "setup.import": "📥 Aus Backup importieren",
   "setup.subtitle": "Persönliche Finanzverwaltung",
   "setup.startYear": "Startjahr",
   "setup.salaryDay": "Gehaltstag (welcher Tag im Monat?)",
@@ -252,6 +253,8 @@ window.I18N.de = {
   "drive.disconnect": "Trennen",
   "drive.notConnected": "Nicht verbunden",
   "drive.connectedAs": "Verbunden: {email}",
+  "calint.sub": "Zahlungen dieses Monats in den Telefonkalender exportieren",
+  "calint.title": "KALENDER-INTEGRATION",
   "drive.title": "GOOGLE DRIVE BACKUP",
   "drive.sub": "In deinem Google-Konto sichern/wiederherstellen (privater App-Ordner)",
   "drive.backup": "☁️ In Drive sichern",
@@ -327,6 +330,8 @@ window.I18N.de = {
   "notif.diagTestOff": "Aus",
   "notif.diagCount": "Anzahl der Einträge im Benachrichtigungscenter:",
 
+  "inv.tapHint": "Punkt antippen",
+  "inv.valueTrend": "Aktueller Wert (täglich)",
   "inv.investedTrend": "Investierter Betrag (täglich)",
   "inv.exportTxt": "⬇ Portfolio als TXT",
   "inv.addTitle": "Investment hinzufügen",

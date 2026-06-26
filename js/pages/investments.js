@@ -533,28 +533,33 @@ function renderAllocationChart(port){
   </div>`;
 }
 
-// Day-based cumulative invested-amount chart (TL/USD toggle). We don't store
-// historical market prices, so this charts how much money has been put in over
-// time (cost basis), stepping up on each purchase date and flat to today.
+// Day-based cumulative CURRENT-VALUE chart (TL/USD toggle, interactive). Each lot
+// is valued at its investment's current price (qty × currentPrice), accumulated by
+// purchase date and flat to today — so the line ends at today's total portfolio
+// value. Tapping a point shows that date and its value.
 let _invChartCur='try';
+let _invChartSel=-1;
 function setInvChartCur(c){ _invChartCur=c; renderYatirim(); }
+function selectInvChartPoint(i){ _invChartSel=(_invChartSel===i?-1:i); renderYatirim(); }
 
 function renderInvTrendChart(port){
   const evs=[];
-  port.forEach(inv=>(inv.lots||[]).forEach(l=>{
-    if(!l.date) return;
-    const costTL=parseFloat(l.qty||0)*parseFloat(l.price||0);
-    if(costTL<=0) return; // skip 0-cost lots (reinvested dividends)
-    const rate=parseFloat(l.usdRate||0);
-    const costUSD=rate>0?costTL/rate:(_currentUsdRate>0?costTL/_currentUsdRate:0);
-    evs.push({date:l.date.slice(0,10),costTL,costUSD});
-  }));
+  port.forEach(inv=>{
+    const price=parseFloat(inv.currentPrice||0);
+    (inv.lots||[]).forEach(l=>{
+      if(!l.date) return;
+      const valTL=parseFloat(l.qty||0)*price;
+      if(valTL<=0) return; // no current price yet → not valued
+      const valUSD=_currentUsdRate>0?valTL/_currentUsdRate:0;
+      evs.push({date:l.date.slice(0,10),valTL,valUSD});
+    });
+  });
   if(!evs.length) return '';
   evs.sort((a,b)=>a.date.localeCompare(b.date));
 
   const pts=[]; let cumTL=0,cumUSD=0;
   evs.forEach(e=>{
-    cumTL+=e.costTL; cumUSD+=e.costUSD;
+    cumTL+=e.valTL; cumUSD+=e.valUSD;
     const ts=new Date(e.date+'T00:00:00').getTime();
     const last=pts[pts.length-1];
     if(last&&last.t===ts){ last.vTL=cumTL; last.vUSD=cumUSD; }
@@ -563,6 +568,7 @@ function renderInvTrendChart(port){
   const nowT=Date.now();
   if(pts[pts.length-1].t<nowT){ const l=pts[pts.length-1]; pts.push({t:nowT,vTL:l.vTL,vUSD:l.vUSD}); }
   if(pts.length<2) return '';
+  if(_invChartSel>=pts.length) _invChartSel=-1;
 
   const usd=_invChartCur==='usd';
   const val=p=>usd?p.vUSD:p.vTL;
@@ -573,29 +579,42 @@ function renderInvTrendChart(port){
   const X=t=>padL+((t-minT)/spanT)*plotW;
   const Y=v=>padT+plotH-(v/maxV)*plotH;
   const col=usd?'#22c55e':'var(--accent)';
+  const fmtV=v=>usd?fmtUSD(v):fmtTRY(v);
+  const dlabel=ts=>new Date(ts).toLocaleDateString(i18nLocaleCode(),{day:'2-digit',month:'short',year:'2-digit'});
 
   const linePath=pts.map((p,i)=>`${i?'L':'M'}${X(p.t).toFixed(1)},${Y(val(p)).toFixed(1)}`).join(' ');
   const areaPath=`M${X(pts[0].t).toFixed(1)},${baseY.toFixed(1)} `+
     pts.map(p=>`L${X(p.t).toFixed(1)},${Y(val(p)).toFixed(1)}`).join(' ')+
     ` L${X(pts[pts.length-1].t).toFixed(1)},${baseY.toFixed(1)} Z`;
-  const endP=pts[pts.length-1];
-  const fmtV=v=>usd?fmtUSD(v):fmtTRY(v);
-  const dlabel=ts=>new Date(ts).toLocaleDateString(i18nLocaleCode(),{day:'2-digit',month:'short'});
+
+  // Interactive points: visible dot + a wide transparent tap target per point.
+  let dots='';
+  pts.forEach((p,i)=>{
+    const cx=X(p.t).toFixed(1), cy=Y(val(p)).toFixed(1), isSel=(i===_invChartSel);
+    if(isSel) dots+=`<line x1="${cx}" y1="${padT}" x2="${cx}" y2="${baseY}" stroke="${col}" stroke-width="1" stroke-dasharray="3,3" opacity=".6"/>`;
+    dots+=`<circle cx="${cx}" cy="${cy}" r="${isSel?4:2.5}" fill="${col}"/>`;
+    dots+=`<circle cx="${cx}" cy="${cy}" r="11" fill="transparent" style="cursor:pointer" onclick="selectInvChartPoint(${i})"/>`;
+  });
+
+  const sel=(_invChartSel>=0)?pts[_invChartSel]:null;
+  const headP=sel||pts[pts.length-1];
+  const headLabel=sel
+    ? `<span style="font-size:11px;color:var(--muted)">${dlabel(headP.t)} · </span><span class="inv-amount" style="font-size:16px;font-weight:800;color:${col}">${fmtV(val(headP))}</span>`
+    : `<span class="inv-amount" style="font-size:16px;font-weight:800;color:${col}">${fmtV(val(headP))}</span> <span style="font-size:10px;color:var(--muted)">· ${t('inv.tapHint')}</span>`;
 
   const btn=(cur,label)=>`<button onclick="setInvChartCur('${cur}')" style="padding:3px 10px;border-radius:var(--r3);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:${(_invChartCur===cur)?'var(--accent)':'var(--bg4)'};color:${(_invChartCur===cur)?'#000':'var(--text)'}">${label}</button>`;
 
   return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:8px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="section-title">${t('inv.investedTrend')}</div>
+      <div class="section-title">${t('inv.valueTrend')}</div>
       <div style="display:flex;gap:6px">${btn('try','₺')}${btn('usd','$')}</div>
     </div>
-    <div class="inv-amount" style="font-size:16px;font-weight:800;color:${col};margin-bottom:6px">${fmtV(val(endP))}</div>
+    <div style="margin-bottom:6px">${headLabel}</div>
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
       <line x1="${padL}" y1="${baseY}" x2="${W-padR}" y2="${baseY}" stroke="var(--border)" stroke-width="1"/>
       <path d="${areaPath}" fill="${col}" opacity="0.12"/>
       <path d="${linePath}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${X(endP.t).toFixed(1)}" cy="${Y(val(endP)).toFixed(1)}" r="3" fill="${col}"/>
-      <text x="${padL}" y="${(padT-4).toFixed(1)}" font-size="9" fill="var(--muted)" font-family="Outfit">${fmtV(maxV)}</text>
+      ${dots}
       <text x="${padL}" y="${(H-6).toFixed(1)}" font-size="9" fill="var(--muted)" font-family="Outfit">${dlabel(minT)}</text>
       <text x="${W-padR}" y="${(H-6).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Outfit">${dlabel(maxT)}</text>
     </svg>
@@ -682,9 +701,9 @@ function renderYatirim(){
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
-            <div style="font-size:10px;color:var(--muted)">${t('inv.avgCost')}</div>
-            <div class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.avgCostTL)}</div>
-            <div class="inv-amount" style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
+            <div style="font-size:10px;color:var(--muted)">${t('inv.currentValue')}</div>
+            <div class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.currentValueTL)}</div>
+            <div class="inv-amount" style="font-size:11px;color:var(--muted)">${c.currentValueUSD>0?fmtUSD(c.currentValueUSD):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${t('inv.curPriceShort')}</div>

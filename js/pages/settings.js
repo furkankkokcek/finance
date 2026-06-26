@@ -44,6 +44,40 @@ function saveSettings(){
   alert(t('settings.savedAlert'));
 }
 
+// Salary/income day now auto-saves on change (the explicit "Kaydet" button was removed).
+function saveSalaryDay(v){
+  S.settings.salaryDay=parseInt(v)||1;
+  saveS();
+  if(typeof renderPage==='function') renderPage(currentPage);
+}
+
+// Import a backup from the first-launch setup screen, then jump straight into the app.
+function importAtSetup(e){
+  const input=e.target;
+  const file=input.files[0];
+  if(!file){ input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data.settings){ alert(t('settings.invalidFile')); return; }
+      S=data;
+      if(!S.cards||!S.settings.customHolidays) migrateToV4(S);
+      S.setupDone=true;
+      saveS();
+      document.getElementById('setup').style.display='none';
+      document.getElementById('app').style.display='block';
+      applyTheme(S.settings.theme||'dark');
+      if(typeof applyLocale==='function') applyLocale();
+      initApp();
+    }catch(err){
+      alert(t('settings.fileReadError')+(err&&err.message?('\n\n['+err.message+']'):''));
+    }finally{ input.value=''; }
+  };
+  reader.onerror=()=>{ alert(t('settings.fileReadError')); input.value=''; };
+  reader.readAsText(file);
+}
+
 // ---- Holiday management ----
 
 function renderHolidayList(){

@@ -135,14 +135,8 @@ function renderTakvim(){
   html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></div><span style="font-size:11px;color:var(--muted)">${t('calendar.legendHoliday')}</span></div>`;
   html+=`</div>`;
 
-  html+=`<div style="font-size:11px;color:var(--muted);margin-top:12px;padding:8px 10px;background:var(--bg3);border-radius:var(--r2);line-height:1.6">
-    ${t('calendar.exportInfo')}
-  </div>`;
-  html+=`<div style="display:flex;gap:8px;margin-top:8px">
-    <button class="btn-secondary" style="flex:1" onclick="exportICS(${displayYear},${displayMonth})">${t('calendar.downloadIcs')}</button>
-    <button class="btn-secondary" style="flex:1;color:var(--accent);border-color:var(--accent)" onclick="showGCalLinks(${displayYear},${displayMonth})">${t('calendar.googleCal')}</button>
-  </div>`;
-  html+=`<div id="gcal-links-panel" style="display:none"></div>`;
+  // Calendar export (.ics / Google Calendar) now lives in Settings → Takvim
+  // Entegrasyonu (behind a rewarded ad), so no export buttons render here.
 
   el.innerHTML=html;
 }
@@ -213,6 +207,17 @@ function exportICS(year,month){
 
   out.push('END:VCALENDAR');
   saveFile(`fintrack_${year}-${pad(month)}.ics`, out.join('\r\n')+'\r\n', 'text/calendar;charset=utf-8');
+}
+
+// Settings → Takvim Entegrasyonu entry points: gate the export behind a rewarded
+// ad (watch once, free for 5 min), then export the CURRENT month.
+async function calendarExportICS(){
+  if(typeof showRewardedGate==='function' && !(await showRewardedGate('caltools',5*60*1000))){ alert(t('ads.rewardNeeded')); return; }
+  exportICS(S.settings.currentYear,S.settings.currentMonth);
+}
+async function calendarGCal(){
+  if(typeof showRewardedGate==='function' && !(await showRewardedGate('caltools',5*60*1000))){ alert(t('ads.rewardNeeded')); return; }
+  showGCalLinks(S.settings.currentYear,S.settings.currentMonth);
 }
 
 function showGCalLinks(year,month){

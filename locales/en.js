@@ -6,6 +6,7 @@ window.I18N.en = {
   "common.add": "Add",
   "common.total": "Total",
 
+  "setup.import": "📥 Import from backup",
   "setup.subtitle": "Personal Finance Manager",
   "setup.startYear": "Starting Year",
   "setup.salaryDay": "Salary Day (day of month?)",
@@ -252,6 +253,8 @@ window.I18N.en = {
   "drive.disconnect": "Disconnect",
   "drive.notConnected": "Not connected",
   "drive.connectedAs": "Connected: {email}",
+  "calint.sub": "Export this month’s payments to your phone calendar",
+  "calint.title": "CALENDAR INTEGRATION",
   "drive.title": "GOOGLE DRIVE BACKUP",
   "drive.sub": "Back up / restore to your Google account (private app folder)",
   "drive.backup": "☁️ Back up to Drive",
@@ -327,6 +330,8 @@ window.I18N.en = {
   "notif.diagTestOff": "Off",
   "notif.diagCount": "Notification center entry count:",
 
+  "inv.tapHint": "tap a point",
+  "inv.valueTrend": "Current Value (daily)",
   "inv.investedTrend": "Invested Amount (daily)",
   "inv.exportTxt": "⬇ Download portfolio TXT",
   "inv.addTitle": "Add Investment",

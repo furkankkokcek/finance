@@ -6,6 +6,7 @@ window.I18N.es = {
   "common.add": "Añadir",
   "common.total": "Total",
 
+  "setup.import": "📥 Importar desde copia",
   "setup.subtitle": "Gestión de Finanzas Personales",
   "setup.startYear": "Año de inicio",
   "setup.salaryDay": "Día de cobro (¿qué día del mes?)",
@@ -252,6 +253,8 @@ window.I18N.es = {
   "drive.disconnect": "Desconectar",
   "drive.notConnected": "No conectado",
   "drive.connectedAs": "Conectado: {email}",
+  "calint.sub": "Exporta los pagos de este mes a tu calendario",
+  "calint.title": "INTEGRACIÓN DE CALENDARIO",
   "drive.title": "COPIA EN GOOGLE DRIVE",
   "drive.sub": "Haz copia/restaura en tu cuenta de Google (carpeta privada de la app)",
   "drive.backup": "☁️ Copia en Drive",
@@ -327,6 +330,8 @@ window.I18N.es = {
   "notif.diagTestOff": "Desactivado",
   "notif.diagCount": "Número de entradas en el centro de notificaciones:",
 
+  "inv.tapHint": "toca un punto",
+  "inv.valueTrend": "Valor actual (diario)",
   "inv.investedTrend": "Importe invertido (diario)",
   "inv.exportTxt": "⬇ Descargar cartera TXT",
   "inv.addTitle": "Añadir inversión",

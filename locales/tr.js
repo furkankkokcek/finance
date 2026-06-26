@@ -8,6 +8,7 @@ window.I18N.tr = {
   "common.total": "Toplam",
 
   // setup
+  "setup.import": "📥 Yedekten İçe Aktar",
   "setup.subtitle": "Kişisel Finansal Yönetim",
   "setup.startYear": "Başlangıç Yılı",
   "setup.salaryDay": "Maaş Günü (Ayın kaçında?)",
@@ -265,6 +266,8 @@ window.I18N.tr = {
   "drive.disconnect": "Bağlantıyı Kes",
   "drive.notConnected": "Bağlı değil",
   "drive.connectedAs": "Bağlandı: {email}",
+  "calint.sub": "Bu ayın ödemelerini telefon takvimine aktar",
+  "calint.title": "TAKVİM ENTEGRASYONU",
   "drive.title": "GOOGLE DRIVE YEDEK",
   "drive.sub": "Yedeklerini Google hesabına (gizli uygulama klasörü) yükle/geri yükle",
   "drive.backup": "☁️ Drive'a Yedekle",
@@ -342,6 +345,8 @@ window.I18N.tr = {
   "notif.diagCount": "Bildirim merkezi kayıt sayısı:",
 
   // investments
+  "inv.tapHint": "noktaya dokun",
+  "inv.valueTrend": "Güncel Değer (gün bazlı)",
   "inv.investedTrend": "Yatırım Tutarı (gün bazlı)",
   "inv.exportTxt": "⬇ Portföyü TXT indir",
   "inv.addTitle": "Yatırım Ekle",
