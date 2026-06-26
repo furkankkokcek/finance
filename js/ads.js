@@ -119,29 +119,28 @@ async function prepareInterstitial() {
 }
 
 // Frequency caps — keep the interstitial rare and only at clean transitions.
+// The nav count alone prevents an ad right after opening the app (you won't
+// switch pages this many times without real intent), so there's no separate
+// open-grace delay that would otherwise also block the very first ad.
 const INTERSTITIAL_MIN_INTERVAL_MS = 3 * 60 * 1000; // ≥3 min between interstitials
 const INTERSTITIAL_MIN_NAVS = 7;                     // ≥7 page switches since last
-const INTERSTITIAL_SESSION_GRACE_MS = 90 * 1000;     // nothing in the first 90s
-const _adSessionStart = Date.now();
 let _navsSinceAd = 0;
 
 function _lastInterstitialAt() {
   return parseInt(localStorage.getItem('ft_lastInterstitial') || '0', 10) || 0;
 }
 
-// Call on a page-switch transition. Shows a full-screen interstitial only when
-// ALL caps are satisfied (session grace passed, enough navigations since the last
-// ad, and the cool-down elapsed). Never awaited by the router and never throws to
-// it — an ad must not interrupt or break navigation.
+// Call on a page-switch transition. Shows a full-screen interstitial only once
+// enough page switches have happened AND the cool-down since the last ad has
+// elapsed. Never awaited by the router and never throws to it — an ad must not
+// interrupt or break navigation.
 async function maybeShowInterstitial() {
   if (!isNativeApp()) return;
   const AdMob = getAdMob();
   if (!AdMob) return;
   _navsSinceAd++;
-  const now = Date.now();
-  if (now - _adSessionStart < INTERSTITIAL_SESSION_GRACE_MS) return;
   if (_navsSinceAd < INTERSTITIAL_MIN_NAVS) return;
-  if (now - _lastInterstitialAt() < INTERSTITIAL_MIN_INTERVAL_MS) return;
+  if (Date.now() - _lastInterstitialAt() < INTERSTITIAL_MIN_INTERVAL_MS) return;
   try {
     if (!_interstitialReady) await prepareInterstitial();
     if (!_interstitialReady) return;

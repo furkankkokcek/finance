@@ -33,21 +33,72 @@ async function initGoogleAuth(){
   try{ await GA.initialize({ scopes:[DRIVE_SCOPE], grantOfflineAccess:false }); _googleAuthInited=true; }catch(e){}
 }
 
-// Returns an OAuth access token with the drive.appdata scope, or null.
+// Returns an OAuth access token with the drive.appdata scope, or null. On a
+// successful sign-in the account email is cached so the settings UI can show the
+// connection status without prompting again.
 async function driveAccessToken(){
   const GA=getGoogleAuth();
   if(!GA) return null;
   await initGoogleAuth();
   try{
     const user=await GA.signIn();
+    if(user && user.email) localStorage.setItem('ft_driveEmail', user.email);
     return (user && user.authentication && user.authentication.accessToken) || null;
   }catch(e){ return null; }
+}
+
+// --- Connection status (shown in Settings; no ads here) ---
+
+function driveConnectedEmail(){ return localStorage.getItem('ft_driveEmail') || ''; }
+
+// Explicitly connect (sign in) from the settings button.
+async function driveConnect(){
+  if(driveUnavailableMsg()) return;
+  const token=await driveAccessToken();
+  if(!token){ alert(t('drive.signInFailed')); return; }
+  renderDriveStatus();
+}
+
+// Disconnect (sign out) and forget the cached account.
+async function driveDisconnect(){
+  const GA=getGoogleAuth();
+  try{ if(GA) await GA.signOut(); }catch(e){}
+  localStorage.removeItem('ft_driveEmail');
+  _googleAuthInited=false;
+  renderDriveStatus();
+}
+
+function driveToggleConnect(){
+  if(driveConnectedEmail()) driveDisconnect();
+  else driveConnect();
+}
+
+// Reflect the current Drive connection state into the settings UI.
+function renderDriveStatus(){
+  const el=document.getElementById('drive-status');
+  const btn=document.getElementById('drive-connect-btn');
+  if(!el) return;
+  if(!driveIsNative()){
+    el.textContent=t('drive.notAvailable');
+    el.style.color='var(--muted)';
+    if(btn) btn.style.display='none';
+    return;
+  }
+  const email=driveConnectedEmail();
+  if(email){
+    el.textContent='✓ '+t('drive.connectedAs',{email});
+    el.style.color='var(--green, #2ecc71)';
+    if(btn){ btn.style.display=''; btn.textContent=t('drive.disconnect'); }
+  }else{
+    el.textContent=t('drive.notConnected');
+    el.style.color='var(--muted)';
+    if(btn){ btn.style.display=''; btn.textContent=t('drive.connect'); }
+  }
 }
 
 // Upload the current state as a timestamped JSON into the app-data folder.
 async function driveBackup(){
   if(driveUnavailableMsg()) return;
-  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const token=await driveAccessToken();
   if(!token){ alert(t('drive.signInFailed')); return; }
   const now=new Date();
@@ -74,7 +125,6 @@ async function driveBackup(){
 // Restore the most recent backup from the app-data folder.
 async function driveRestore(){
   if(driveUnavailableMsg()) return;
-  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const token=await driveAccessToken();
   if(!token){ alert(t('drive.signInFailed')); return; }
   try{
