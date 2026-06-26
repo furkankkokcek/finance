@@ -41,9 +41,9 @@ function checkMonthlyCalendarPrompt(){
 
 // Silent save on tab hide / page unload
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'&&typeof saveS==='function') saveS();
+  if(document.visibilityState==='hidden'&&!_skipAutoSave&&typeof saveS==='function') saveS();
 });
-window.addEventListener('pagehide',()=>{ if(typeof saveS==='function') saveS(); });
+window.addEventListener('pagehide',()=>{ if(!_skipAutoSave&&typeof saveS==='function') saveS(); });
 
 // Service worker
 if('serviceWorker' in navigator){

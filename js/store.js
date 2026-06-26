@@ -22,6 +22,9 @@ const giderOpenCats = new Set();
 // — it used to be created implicitly only on the first showPage() call, so
 // importing data before tapping any nav tab threw "currentPage is not defined".
 let currentPage = 'dashboard';
+// When true, the unload/visibility autosave is suppressed. Set before wiping data
+// + reloading so the in-memory (still-full) S isn't written straight back.
+let _skipAutoSave = false;
 
 function getYear(y){
   y = y || S.settings.currentYear;

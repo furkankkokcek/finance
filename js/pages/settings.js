@@ -138,6 +138,9 @@ async function importData(e){
 function clearAllData(){
   if(!confirm(t('settings.clearConfirm1'))) return;
   if(!confirm(t('settings.clearConfirm2'))) return;
+  // Stop the pagehide/visibilitychange autosave from writing the still-full
+  // in-memory S back to storage during the reload (that's why it "didn't work").
+  _skipAutoSave=true;
   localStorage.removeItem('fintrack_v4');
   localStorage.removeItem('fintrack_v3');
   location.reload();
