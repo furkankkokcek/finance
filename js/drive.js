@@ -37,6 +37,15 @@ async function initGoogleAuth(){
 // successful sign-in the account email is cached so the settings UI can show the
 // connection status without prompting again.
 let _driveLastError='';
+function _driveErrStr(e){
+  if(!e) return '';
+  if(typeof e==='string') return e;
+  if(e.message) return e.message;
+  if(e.errorMessage) return e.errorMessage;
+  if(e.code) return 'code '+e.code;
+  if(e.error) return String(e.error);
+  try{ return JSON.stringify(e); }catch(_){ return String(e); }
+}
 async function driveAccessToken(){
   const GA=getGoogleAuth();
   if(!GA) return null;
@@ -44,12 +53,15 @@ async function driveAccessToken(){
   try{
     const user=await GA.signIn();
     if(user && user.email) localStorage.setItem('ft_driveEmail', user.email);
-    _driveLastError='';
-    return (user && user.authentication && user.authentication.accessToken) || null;
+    const tok=(user && user.authentication && user.authentication.accessToken) || null;
+    // signIn can resolve without a usable token when the OAuth client is
+    // misconfigured (e.g. wrong/placeholder serverClientId) — flag that case.
+    _driveLastError = tok ? '' : 'auth ok ama access token boş (serverClientId/Web Client ID kontrol et)';
+    return tok;
   }catch(e){
-    // Surface the underlying error/code (e.g. "10" = SHA-1/client mismatch,
-    // "12501" = user cancelled) so config problems are diagnosable.
-    _driveLastError=(e && (e.message||e.code||e.error))||(e?String(e):'');
+    // Surface the underlying error/code (e.g. "10"/DEVELOPER_ERROR = SHA-1 or
+    // OAuth-client mismatch, "12501" = user cancelled) so config is diagnosable.
+    _driveLastError=_driveErrStr(e);
     return null;
   }
 }
