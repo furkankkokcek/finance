@@ -18,6 +18,10 @@ let S = {
   years:{}, notifLog:[]
 };
 const giderOpenCats = new Set();
+// Active page. Declared here (loaded first) with a default so it's ALWAYS defined
+// — it used to be created implicitly only on the first showPage() call, so
+// importing data before tapping any nav tab threw "currentPage is not defined".
+let currentPage = 'dashboard';
 
 function getYear(y){
   y = y || S.settings.currentYear;
