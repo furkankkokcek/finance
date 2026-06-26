@@ -102,10 +102,10 @@ function showBackupDialog(){
 }
 
 async function importData(e){
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file) return;
-  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
+  const input=e.target;
+  const file=input.files[0];
+  if(!file){ input.value=''; return; }
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); input.value=''; return; }
   const reader=new FileReader();
   reader.onload=()=>{
     try{
@@ -122,8 +122,16 @@ async function importData(e){
         renderPage(currentPage);
         alert(t('settings.importSuccess'));
       }
-    }catch(err){alert(t('settings.fileReadError'));}
+    }catch(err){
+      alert(t('settings.fileReadError')+(err&&err.message?('\n\n['+err.message+']'):''));
+    }finally{
+      // Clear the input ONLY after the read finished. Clearing it earlier (before
+      // readAsText) releases the file's content:// URI on Android, so the read
+      // returns empty/partial data and JSON.parse fails ("file unreadable").
+      input.value='';
+    }
   };
+  reader.onerror=()=>{ alert(t('settings.fileReadError')); input.value=''; };
   reader.readAsText(file);
 }
 
