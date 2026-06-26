@@ -327,6 +327,8 @@ window.I18N.fr = {
   "notif.diagTestOff": "Désactivé",
   "notif.diagCount": "Nombre d'entrées dans le centre de notifications :",
 
+  "inv.investedTrend": "Montant investi (par jour)",
+  "inv.exportTxt": "⬇ Télécharger le portefeuille TXT",
   "inv.addTitle": "Ajouter un investissement",
   "inv.editTitle": "Modifier l'investissement",
   "inv.name": "Nom de l'actif",

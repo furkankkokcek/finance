@@ -327,6 +327,8 @@ window.I18N.en = {
   "notif.diagTestOff": "Off",
   "notif.diagCount": "Notification center entry count:",
 
+  "inv.investedTrend": "Invested Amount (daily)",
+  "inv.exportTxt": "⬇ Download portfolio TXT",
   "inv.addTitle": "Add Investment",
   "inv.editTitle": "Edit Investment",
   "inv.name": "Asset Name",

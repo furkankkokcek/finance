@@ -533,6 +533,75 @@ function renderAllocationChart(port){
   </div>`;
 }
 
+// Day-based cumulative invested-amount chart (TL/USD toggle). We don't store
+// historical market prices, so this charts how much money has been put in over
+// time (cost basis), stepping up on each purchase date and flat to today.
+let _invChartCur='try';
+function setInvChartCur(c){ _invChartCur=c; renderYatirim(); }
+
+function renderInvTrendChart(port){
+  const evs=[];
+  port.forEach(inv=>(inv.lots||[]).forEach(l=>{
+    if(!l.date) return;
+    const costTL=parseFloat(l.qty||0)*parseFloat(l.price||0);
+    if(costTL<=0) return; // skip 0-cost lots (reinvested dividends)
+    const rate=parseFloat(l.usdRate||0);
+    const costUSD=rate>0?costTL/rate:(_currentUsdRate>0?costTL/_currentUsdRate:0);
+    evs.push({date:l.date.slice(0,10),costTL,costUSD});
+  }));
+  if(!evs.length) return '';
+  evs.sort((a,b)=>a.date.localeCompare(b.date));
+
+  const pts=[]; let cumTL=0,cumUSD=0;
+  evs.forEach(e=>{
+    cumTL+=e.costTL; cumUSD+=e.costUSD;
+    const ts=new Date(e.date+'T00:00:00').getTime();
+    const last=pts[pts.length-1];
+    if(last&&last.t===ts){ last.vTL=cumTL; last.vUSD=cumUSD; }
+    else pts.push({t:ts,vTL:cumTL,vUSD:cumUSD});
+  });
+  const nowT=Date.now();
+  if(pts[pts.length-1].t<nowT){ const l=pts[pts.length-1]; pts.push({t:nowT,vTL:l.vTL,vUSD:l.vUSD}); }
+  if(pts.length<2) return '';
+
+  const usd=_invChartCur==='usd';
+  const val=p=>usd?p.vUSD:p.vTL;
+  const maxV=Math.max(...pts.map(val),1);
+  const minT=pts[0].t, maxT=pts[pts.length-1].t, spanT=Math.max(1,maxT-minT);
+  const W=320,H=150,padL=10,padR=10,padT=14,padB=22;
+  const plotW=W-padL-padR, plotH=H-padT-padB, baseY=padT+plotH;
+  const X=t=>padL+((t-minT)/spanT)*plotW;
+  const Y=v=>padT+plotH-(v/maxV)*plotH;
+  const col=usd?'#22c55e':'var(--accent)';
+
+  const linePath=pts.map((p,i)=>`${i?'L':'M'}${X(p.t).toFixed(1)},${Y(val(p)).toFixed(1)}`).join(' ');
+  const areaPath=`M${X(pts[0].t).toFixed(1)},${baseY.toFixed(1)} `+
+    pts.map(p=>`L${X(p.t).toFixed(1)},${Y(val(p)).toFixed(1)}`).join(' ')+
+    ` L${X(pts[pts.length-1].t).toFixed(1)},${baseY.toFixed(1)} Z`;
+  const endP=pts[pts.length-1];
+  const fmtV=v=>usd?fmtUSD(v):fmtTRY(v);
+  const dlabel=ts=>new Date(ts).toLocaleDateString(i18nLocaleCode(),{day:'2-digit',month:'short'});
+
+  const btn=(cur,label)=>`<button onclick="setInvChartCur('${cur}')" style="padding:3px 10px;border-radius:var(--r3);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:${(_invChartCur===cur)?'var(--accent)':'var(--bg4)'};color:${(_invChartCur===cur)?'#000':'var(--text)'}">${label}</button>`;
+
+  return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title">${t('inv.investedTrend')}</div>
+      <div style="display:flex;gap:6px">${btn('try','₺')}${btn('usd','$')}</div>
+    </div>
+    <div class="inv-amount" style="font-size:16px;font-weight:800;color:${col};margin-bottom:6px">${fmtV(val(endP))}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
+      <line x1="${padL}" y1="${baseY}" x2="${W-padR}" y2="${baseY}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${areaPath}" fill="${col}" opacity="0.12"/>
+      <path d="${linePath}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${X(endP.t).toFixed(1)}" cy="${Y(val(endP)).toFixed(1)}" r="3" fill="${col}"/>
+      <text x="${padL}" y="${(padT-4).toFixed(1)}" font-size="9" fill="var(--muted)" font-family="Outfit">${fmtV(maxV)}</text>
+      <text x="${padL}" y="${(H-6).toFixed(1)}" font-size="9" fill="var(--muted)" font-family="Outfit">${dlabel(minT)}</text>
+      <text x="${W-padR}" y="${(H-6).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Outfit">${dlabel(maxT)}</text>
+    </svg>
+  </div>`;
+}
+
 function renderYatirim(){
   const el=document.getElementById('yatirim-content');
   if(!el) return;
@@ -561,8 +630,6 @@ function renderYatirim(){
         <div class="section-title">${t('inv.portfolio')}</div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:10px;color:var(--muted)">${lastFetchStr}</span>
-          <button onclick="openFetchLog()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Fiyat günlüğü">📋</button>
-          <button onclick="exportPortfolioTxt()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Portföyü dışa aktar">⬇ TXT</button>
           <button onclick="refreshPrices()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--accent);cursor:pointer" title="Fiyatları yenile">↻</button>
         </div>
       </div>
@@ -637,12 +704,15 @@ function renderYatirim(){
         </div>
       </div>`;
     });
+
+    // Day-based invested-amount chart, then the TXT export at the very bottom.
+    html+=renderInvTrendChart(port);
+    html+=`<button onclick="exportPortfolioTxt()" class="btn-secondary" style="width:100%;margin-top:4px">${t('inv.exportTxt')}</button>`;
   } else {
     html+=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">${t('inv.empty')}</div><div class="empty-sub">${t('inv.emptySub')}</div></div>`;
   }
 
   el.innerHTML=html;
-  updateGoalProgressBtn();
 }
 
 // ── Investment CRUD ───────────────────────────────────────────────────────────

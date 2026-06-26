@@ -327,6 +327,8 @@ window.I18N.es = {
   "notif.diagTestOff": "Desactivado",
   "notif.diagCount": "Número de entradas en el centro de notificaciones:",
 
+  "inv.investedTrend": "Importe invertido (diario)",
+  "inv.exportTxt": "⬇ Descargar cartera TXT",
   "inv.addTitle": "Añadir inversión",
   "inv.editTitle": "Editar inversión",
   "inv.name": "Nombre del activo",

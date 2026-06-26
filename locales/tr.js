@@ -342,6 +342,8 @@ window.I18N.tr = {
   "notif.diagCount": "Bildirim merkezi kayıt sayısı:",
 
   // investments
+  "inv.investedTrend": "Yatırım Tutarı (gün bazlı)",
+  "inv.exportTxt": "⬇ Portföyü TXT indir",
   "inv.addTitle": "Yatırım Ekle",
   "inv.editTitle": "Yatırım Düzenle",
   "inv.name": "Varlık Adı",
