@@ -19,18 +19,20 @@
 <link rel="stylesheet" href="css/app.css">
 <style>
 .nav{grid-template-columns:repeat(6,1fr)}
-/* Reserve space for the native AdMob banner (added only inside the Capacitor app). */
-body.has-banner-ad .nav{bottom:60px}
-body.has-banner-ad{padding-bottom:60px}
+/* Reserve space for the native AdMob banner (added only inside the Capacitor app).
+   --banner-h is set to the banner's REAL height from the bannerAdSizeChanged event
+   (adaptive banners aren't always 60px); falls back to 60px until it fires. */
+body.has-banner-ad .nav{bottom:var(--banner-h,60px)}
+body.has-banner-ad{padding-bottom:var(--banner-h,60px)}
 /* Lift the scroll viewport + bottom-sheet modals above the banner so their bottom
    content (year-table button, investment / cash-left rows, etc.) stays visible. */
-body.has-banner-ad .pages{bottom:calc(var(--nav) + 60px)}
-body.has-banner-ad .overlay{bottom:60px}
+body.has-banner-ad .pages{bottom:calc(var(--nav) + var(--banner-h,60px))}
+body.has-banner-ad .overlay{bottom:var(--banner-h,60px)}
 /* Setup screen is fixed inset:0 with its own z-index — also lift it above the
-   banner so the "Start" button doesn't end up hidden behind the ad. */
-body.has-banner-ad #setup{padding-bottom:calc(32px + 60px)}
+   banner so the "Start"/"Import" buttons don't end up hidden behind the ad. */
+body.has-banner-ad #setup{padding-bottom:calc(32px + var(--banner-h,60px))}
 /* Lift the FAB above the banner+nav so it never hides behind the bottom bar. */
-body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
+body.has-banner-ad .fab{bottom:calc(var(--nav) + var(--banner-h,60px) + 16px)}
 </style>
 </head>
 <body>
@@ -532,11 +534,7 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + 76px)}
           <div style="margin-top:4px" id="notif-info-ppf" data-i18n="settings.notifInfoPpf">🔔 Maaş günü PPF ve aylık özet bildirimi gönderilir.</div>
           <div style="margin-top:4px" id="notif-info-noppf" style="display:none" data-i18n="settings.notifInfoNoPpf">🔔 Maaş günü aylık özet bildirimi gönderilir.</div>
           <div style="margin-top:4px" data-i18n="settings.notifInfo3">💳 Ödeme günleri tutarı ve hatırlatma bildirimi gönderilir.</div>
-          <div style="margin-top:4px" data-i18n="settings.notifInfo4">📅 Arka plan bildirimi için Takvim sekmesinden .ics export edin.</div>
         </div>
-      </div>
-      <div style="margin-top:12px">
-        <button class="btn-secondary" onclick="showNotifDiagnostic()" data-i18n="settings.notifStatus">🔍 Bildirim Durumunu Göster</button>
       </div>
 
       <!-- TATİL GÜNLERİ -->

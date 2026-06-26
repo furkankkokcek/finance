@@ -199,6 +199,23 @@ async function maybeShowInterstitial() {
   }
 }
 
+let _bannerSizeListenerAdded = false;
+
+// The adaptive banner's height isn't fixed (it depends on screen width/density),
+// so reserve space using its REAL height reported by the bannerAdSizeChanged
+// event. Without this the bottom nav can sit behind a too-tall banner.
+function addBannerSizeListener(AdMob) {
+  if (_bannerSizeListenerAdded) return;
+  _bannerSizeListenerAdded = true;
+  AdMob.addListener('bannerAdSizeChanged', (info) => {
+    const h = info && (info.height || (info.size && info.size.height));
+    if (h > 0) {
+      document.documentElement.style.setProperty('--banner-h', h + 'px');
+      document.body.classList.add('has-banner-ad');
+    }
+  });
+}
+
 async function showBannerAd() {
   if (!isNativeApp()) return;
   const AdMob = getAdMob();
@@ -207,6 +224,7 @@ async function showBannerAd() {
   const adId = (ADMOB_PROD_BANNER[platform]) || ADMOB_TEST_BANNER[platform];
   if (!adId) return;
   try {
+    addBannerSizeListener(AdMob);
     await AdMob.showBanner({
       adId,
       adSize: 'ADAPTIVE_BANNER',
@@ -214,7 +232,8 @@ async function showBannerAd() {
       margin: 0,
       isTesting: !ADMOB_PROD_BANNER[platform],
     });
-    // Reserve space so the banner never covers the bottom nav / content.
+    // Reserve space so the banner never covers the bottom nav / content. The
+    // size listener refines --banner-h once the real height is known.
     document.body.classList.add('has-banner-ad');
   } catch (e) {}
 }
