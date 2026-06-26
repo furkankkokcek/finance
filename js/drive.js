@@ -36,6 +36,7 @@ async function initGoogleAuth(){
 // Returns an OAuth access token with the drive.appdata scope, or null. On a
 // successful sign-in the account email is cached so the settings UI can show the
 // connection status without prompting again.
+let _driveLastError='';
 async function driveAccessToken(){
   const GA=getGoogleAuth();
   if(!GA) return null;
@@ -43,8 +44,17 @@ async function driveAccessToken(){
   try{
     const user=await GA.signIn();
     if(user && user.email) localStorage.setItem('ft_driveEmail', user.email);
+    _driveLastError='';
     return (user && user.authentication && user.authentication.accessToken) || null;
-  }catch(e){ return null; }
+  }catch(e){
+    // Surface the underlying error/code (e.g. "10" = SHA-1/client mismatch,
+    // "12501" = user cancelled) so config problems are diagnosable.
+    _driveLastError=(e && (e.message||e.code||e.error))||(e?String(e):'');
+    return null;
+  }
+}
+function driveSignInFailMsg(){
+  return t('drive.signInFailed')+(_driveLastError?('\n\n['+_driveLastError+']'):'');
 }
 
 // --- Connection status (shown in Settings; no ads here) ---
@@ -55,7 +65,7 @@ function driveConnectedEmail(){ return localStorage.getItem('ft_driveEmail') || 
 async function driveConnect(){
   if(driveUnavailableMsg()) return;
   const token=await driveAccessToken();
-  if(!token){ alert(t('drive.signInFailed')); return; }
+  if(!token){ alert(driveSignInFailMsg()); return; }
   renderDriveStatus();
 }
 
@@ -100,7 +110,7 @@ function renderDriveStatus(){
 async function driveBackup(){
   if(driveUnavailableMsg()) return;
   const token=await driveAccessToken();
-  if(!token){ alert(t('drive.signInFailed')); return; }
+  if(!token){ alert(driveSignInFailMsg()); return; }
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const name=`fintrack_${todayStr()}_${pad(now.getHours())}-${pad(now.getMinutes())}.json`;
@@ -126,7 +136,7 @@ async function driveBackup(){
 async function driveRestore(){
   if(driveUnavailableMsg()) return;
   const token=await driveAccessToken();
-  if(!token){ alert(t('drive.signInFailed')); return; }
+  if(!token){ alert(driveSignInFailMsg()); return; }
   try{
     const listRes=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&orderBy=modifiedTime%20desc&pageSize=10&fields=files(id,name,modifiedTime)',{
       headers:{ 'Authorization':'Bearer '+token }
