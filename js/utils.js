@@ -35,13 +35,32 @@ async function saveFile(filename, content, mimeType){
   }catch(e){ return false; }
 }
 
+// Currency catalogue. Default per locale lets us pick a sensible currency on
+// first launch from the chosen language, but the user can override it in Setup
+// or Settings. Code stays "fmtTRY" for historical reasons — it now formats in
+// the user's chosen currency, not just TRY.
+const CURRENCIES = {
+  TRY: { symbol: '₺', name: 'Türk Lirası' },
+  USD: { symbol: '$', name: 'US Dollar' },
+  EUR: { symbol: '€', name: 'Euro' },
+  GBP: { symbol: '£', name: 'British Pound' },
+};
+const LANG_DEFAULT_CURRENCY = { tr:'TRY', en:'USD', de:'EUR', es:'EUR', fr:'EUR' };
+
+function getCurrencyCode(){
+  return (S && S.settings && S.settings.currency && CURRENCIES[S.settings.currency])
+    ? S.settings.currency : 'TRY';
+}
+function getCurrencySymbol(){ return CURRENCIES[getCurrencyCode()].symbol; }
+
 function fmtTRY(n, showSign=false){
   if(n===undefined||n===null||isNaN(n)) return '—';
   const abs=Math.abs(n);
   const loc=(typeof i18nLocaleCode==='function')?i18nLocaleCode():'tr-TR';
   const str=abs.toLocaleString(loc,{minimumFractionDigits:0,maximumFractionDigits:0});
-  if(showSign) return (n>=0?'+':'-')+str+' ₺';
-  return str+' ₺';
+  const sym=getCurrencySymbol();
+  if(showSign) return (n>=0?'+':'-')+str+' '+sym;
+  return str+' '+sym;
 }
 
 function fmtPct(n){ return isNaN(n)?'%0':'%'+n.toFixed(1); }

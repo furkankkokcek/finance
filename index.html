@@ -45,12 +45,21 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + var(--banner-h,60px) + 16px)}
   <div class="setup-card">
     <div class="setup-field">
       <label data-i18n="settings.language">Dil</label>
-      <select id="setup-language" class="js-lang-select" onchange="changeLanguage(this)">
+      <select id="setup-language" class="js-lang-select" onchange="changeLanguage(this);suggestCurrencyForLang(this.value,'setup-currency')">
         <option value="tr">🇹🇷 Türkçe</option>
         <option value="en">🇬🇧 English</option>
         <option value="de">🇩🇪 Deutsch</option>
         <option value="es">🇪🇸 Español</option>
         <option value="fr">🇫🇷 Français</option>
+      </select>
+    </div>
+    <div class="setup-field">
+      <label data-i18n="settings.currency">Para Birimi</label>
+      <select id="setup-currency">
+        <option value="TRY">🇹🇷 ₺ TRY</option>
+        <option value="USD">🇺🇸 $ USD</option>
+        <option value="EUR">🇪🇺 € EUR</option>
+        <option value="GBP">🇬🇧 £ GBP</option>
       </select>
     </div>
     <div class="setup-field">
@@ -508,6 +517,14 @@ body.has-banner-ad .fab{bottom:calc(var(--nav) + var(--banner-h,60px) + 16px)}
           <option value="de">🇩🇪 Deutsch</option>
           <option value="es">🇪🇸 Español</option>
           <option value="fr">🇫🇷 Français</option>
+        </select>
+      </div>
+      <div class="field" style="margin-top:12px"><label data-i18n="settings.currency">Para Birimi</label>
+        <select id="cfg-currency" onchange="changeCurrency(this.value)">
+          <option value="TRY">🇹🇷 ₺ TRY</option>
+          <option value="USD">🇺🇸 $ USD</option>
+          <option value="EUR">🇪🇺 € EUR</option>
+          <option value="GBP">🇬🇧 £ GBP</option>
         </select>
       </div>
       <div class="field" style="margin-top:12px"><label data-i18n="settings.salaryDay">Maaş / Gelir Günü</label><input type="number" id="cfg-salary" min="1" max="31" onchange="saveSalaryDay(this.value)"></div>

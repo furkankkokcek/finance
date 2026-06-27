@@ -229,6 +229,7 @@ window.I18N.tr = {
   "calendar.gcalAdd": "+ Ekle",
 
   // settings
+  "settings.currency": "Para Birimi",
   "settings.title": "Ayarlar",
   "settings.salaryDay": "Maaş / Gelir Günü",
   "settings.language": "Dil",

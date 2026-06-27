@@ -216,6 +216,7 @@ window.I18N.de = {
   "calendar.gcalInfo": "Tippe für jedes Ereignis auf <strong style=\"color:var(--text)\">+ Hinzufügen</strong> — Google Kalender öffnet sich, dann speichern.",
   "calendar.gcalAdd": "+ Hinzufügen",
 
+  "settings.currency": "Währung",
   "settings.title": "Einstellungen",
   "settings.salaryDay": "Gehalts-/Einnahmetag",
   "settings.language": "Sprache",

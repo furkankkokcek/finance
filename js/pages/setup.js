@@ -9,6 +9,8 @@ function doSetup(){
   S.settings.currentMonth=new Date().getMonth()+1;
   S.settings.netWorth=nw;
   S.settings.ppfEnabled=document.getElementById('s-ppf').checked;
+  const curSel=document.getElementById('setup-currency');
+  if(curSel && CURRENCIES[curSel.value]) S.settings.currency=curSel.value;
   S.setupDone=true;
   getYear(year); // init year
   saveS();

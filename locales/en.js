@@ -216,6 +216,7 @@ window.I18N.en = {
   "calendar.gcalInfo": "Tap <strong style=\"color:var(--text)\">+ Add</strong> for each event — Google Calendar opens, then save.",
   "calendar.gcalAdd": "+ Add",
 
+  "settings.currency": "Currency",
   "settings.title": "Settings",
   "settings.salaryDay": "Salary / Income Day",
   "settings.language": "Language",

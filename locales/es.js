@@ -216,6 +216,7 @@ window.I18N.es = {
   "calendar.gcalInfo": "Pulsa <strong style=\"color:var(--text)\">+ Añadir</strong> para cada evento — se abre Google Calendar, luego guarda.",
   "calendar.gcalAdd": "+ Añadir",
 
+  "settings.currency": "Moneda",
   "settings.title": "Ajustes",
   "settings.salaryDay": "Día de salario / ingreso",
   "settings.language": "Idioma",

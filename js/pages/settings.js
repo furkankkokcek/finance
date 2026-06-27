@@ -13,6 +13,8 @@ function openSettingsModal(){
   if(testEl) testEl.checked=S.settings.testNotifEnabled===true;
   const langSel=document.getElementById('cfg-language');
   if(langSel) langSel.value=getLang();
+  const curSel=document.getElementById('cfg-currency');
+  if(curSel) curSel.value=getCurrencyCode();
   updatePpfInfoTexts();
   renderHolidayList();
   openModal('overlay-settings');
@@ -48,6 +50,24 @@ function saveSalaryDay(v){
   S.settings.salaryDay=parseInt(v)||1;
   saveS();
   if(typeof renderPage==='function') renderPage(currentPage);
+}
+
+// Currency selection. Affects every amount via fmtTRY() (which reads the symbol
+// from settings). All historical numbers stay numerically the same — only the
+// displayed symbol changes (no exchange-rate conversion).
+function changeCurrency(code){
+  if(!CURRENCIES[code]) return;
+  S.settings.currency=code;
+  saveS();
+  if(typeof renderPage==='function') renderPage(currentPage);
+}
+
+// On language change, suggest the matching default currency for that language —
+// only if the user hasn't deliberately picked one yet (state is still 'TRY').
+function suggestCurrencyForLang(lang, selectId){
+  const def=(typeof LANG_DEFAULT_CURRENCY!=='undefined' && LANG_DEFAULT_CURRENCY[lang])||'TRY';
+  const sel=document.getElementById(selectId);
+  if(sel) sel.value=def;
 }
 
 // Import a backup from the first-launch setup screen, then jump straight into the app.

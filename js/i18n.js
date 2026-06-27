@@ -79,6 +79,13 @@ function applyLocale() {
   applyTranslations(document);
   // Keep any on-screen language picker (setup + settings) in sync.
   document.querySelectorAll('.js-lang-select').forEach(sel => { sel.value = getLang(); });
+  // Before first setup, default the setup-screen currency to the locale's natural
+  // pick (TR→TRY, EN→USD, DE/ES/FR→EUR). After setup, leave the user's choice alone.
+  if (typeof S !== 'undefined' && !S.setupDone) {
+    const cur = document.getElementById('setup-currency');
+    const def = (typeof LANG_DEFAULT_CURRENCY !== 'undefined') ? LANG_DEFAULT_CURRENCY[getLang()] : null;
+    if (cur && def) cur.value = def;
+  }
 }
 
 // Walks the DOM applying translations to data-i18n* attributes.

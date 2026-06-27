@@ -216,6 +216,7 @@ window.I18N.fr = {
   "calendar.gcalInfo": "Appuie sur <strong style=\"color:var(--text)\">+ Ajouter</strong> pour chaque événement — Google Agenda s'ouvre, puis enregistre.",
   "calendar.gcalAdd": "+ Ajouter",
 
+  "settings.currency": "Devise",
   "settings.title": "Paramètres",
   "settings.salaryDay": "Jour de salaire / revenu",
   "settings.language": "Langue",
