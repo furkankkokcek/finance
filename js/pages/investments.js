@@ -715,7 +715,12 @@ function renderYatirim(){
             <div class="inv-amount" style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
             <div style="font-size:10px;color:var(--muted);margin-top:3px">${inv.priceUpdatedAt?fmtRelTime(inv.priceUpdatedAt):t('inv.notUpdated')}</div>
           </div>
-          <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
+          <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
+            <div style="font-size:10px;color:var(--muted)">${t('inv.avgCost')}</div>
+            <div class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.avgCostTL)}</div>
+            <div class="inv-amount" style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
+          </div>
+          <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
             <div style="font-size:10px;color:var(--muted)">${t('inv.pnl')}</div>
             <div class="inv-amount" style="font-size:13px;font-weight:700;color:${pnlColor(c.pnlTL)}">${pnlSign(c.pnlTL)}${fmtTRY(c.pnlTL)} (${pnlSign(c.pnlPct)}${c.pnlPct.toFixed(1)}%)</div>
             <div class="inv-amount" style="font-size:11px;color:${c.hasUsd?pnlColor(c.pnlUSD):'var(--muted)'}">${c.hasUsd?pnlSign(c.pnlUSD)+fmtUSD(c.pnlUSD):'—'}</div>
