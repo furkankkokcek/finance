@@ -191,10 +191,31 @@ async function patchSplash() {
   console.log(`✓ Replaced splash screen with dark theme (${SPLASH_BG}) + launcher icon`);
 }
 
+// Mirror the npm version into android/app/build.gradle's `versionName` so the
+// store listing matches package.json. Bumping `versionCode` for each upload
+// stays manual (Play Console rejects duplicate codes; the human picks the bump).
+async function syncVersionName() {
+  const gradlePath = join(root, 'android', 'app', 'build.gradle');
+  if (!existsSync(gradlePath)) return;
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+  let gradle = await readFile(gradlePath, 'utf8');
+  const re = /versionName\s+["'][^"']*["']/;
+  if (!re.test(gradle)) return;
+  const before = gradle;
+  gradle = gradle.replace(re, `versionName "${pkg.version}"`);
+  if (gradle !== before) {
+    await writeFile(gradlePath, gradle);
+    console.log(`✓ Synced versionName -> ${pkg.version} in android/app/build.gradle`);
+  } else {
+    console.log(`✓ versionName already ${pkg.version} in android/app/build.gradle`);
+  }
+}
+
 async function main() {
   await patchManifest();
   await generateIcons();
   await patchSplash();
+  await syncVersionName();
 }
 
 main().catch((err) => {

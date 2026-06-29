@@ -1,198 +1,132 @@
-# FinTrack'i Mağazada Yayınlama (Capacitor)
+# FinTrack — Google Play Yayınlama Rehberi
 
-Bu rehber, FinTrack PWA'sını **Capacitor** ile gerçek bir native mobil uygulamaya dönüştürüp
-**Google Play** ve **App Store**'da yayınlamayı adım adım anlatır.
+Bu doküman, FinTrack'i Google Play Store'a yayınlamak için **kalan tüm adımları** sırasıyla
+listeler. Kod tarafı hazır; aşağıdakilerin tamamı senin tarafında yapılacak.
 
-> **Neden Capacitor?** Mevcut HTML/CSS/JS kodu uygulamanın içine paketlenir; gerçek `android/` ve
-> `ios/` native projeler oluşur. Bu bir "tarayıcı kabuğu" (TWA/PWABuilder) değildir — internet
-> olmadan, siteye bağlı kalmadan çalışan gerçek bir uygulamadır.
+> Versiyon: **1.1.0** · Paket: `io.github.furkankkokcek.finance`
 
 ---
 
-## 0. Önkoşullar
+## ✅ Kod tarafında hazır olanlar (zaten yapıldı)
 
-| Platform | Gerekli araçlar |
-|----------|-----------------|
-| Her ikisi | [Node.js 18+](https://nodejs.org), npm |
-| Android | [Android Studio](https://developer.android.com/studio) (+ Android SDK) |
-| iOS | **macOS** + [Xcode](https://developer.apple.com/xcode/) (iOS yalnız Mac'te derlenir) |
+- Capacitor 6 + Android projesi (`npm run sync`)
+- AdMob banner + ödüllü + geçiş reklamları (şu an Google **TEST** ID'leri)
+- Yerel bildirimler (`@capacitor/local-notifications`)
+- Splash screen + launcher icon + bildirim ikonu — `npm run sync`'te logodan üretiliyor
+- 5 dil (TR/EN/DE/ES/FR) + 4 para birimi (TRY/USD/EUR/GBP)
+- Dışa/içe aktarma, takvim entegrasyonu (.ics + Google Calendar), WhatsApp paylaşımı
+- Açılış ekranında "Yedekten İçe Aktar"
 
-Geliştirici hesapları (yayınlamak için zorunlu):
-- **Google Play Console** — tek seferlik **$25** ([play.google.com/console](https://play.google.com/console))
-- **Apple Developer Program** — yıllık **$99** ([developer.apple.com](https://developer.apple.com/programs/))
-- **AdMob** hesabı (reklam için, ücretsiz) — [admob.google.com](https://admob.google.com)
+## ❌ Senin yapacakların (sıralı)
 
----
+### 1. Geliştirici hesapları
+- [ ] **Google Play Console** kaydı — tek seferlik **\$25** · [play.google.com/console](https://play.google.com/console)
+- [ ] **AdMob** hesabı — ücretsiz · [admob.google.com](https://admob.google.com)
 
-## 1. Projeyi Capacitor'a hazırlama
+### 2. AdMob: gerçek reklam ID'leri al ve yaz
 
-Repo köküne klonladıktan sonra:
+AdMob'da uygulamanı oluştur → **dört ID** al:
 
-```bash
-npm install            # Capacitor + AdMob bağımlılıklarını kurar
-npm run build          # web dosyalarını www/ klasörüne kopyalar
+| Tür | Nereye |
+|-----|--------|
+| App ID (`ca-app-pub-XXX~APPID`) | `scripts/patch-android.mjs` → `ADMOB_APP_ID` |
+| Banner ad unit (`ca-app-pub-XXX/YYY`) | `js/ads.js` → `ADMOB_PROD_BANNER.android` |
+| Rewarded ad unit | `js/ads.js` → `ADMOB_PROD_REWARDED.android` |
+| Interstitial ad unit | `js/ads.js` → `ADMOB_PROD_INTERSTITIAL.android` |
+
+> App ID'de `~`, ad unit'te `/` — karıştırma. Bittiğinde `npm run sync`.
+
+> ⚠️ **Yayında test ID kullanma, kendi reklamına tıklama** — AdMob hesabın askıya alınabilir.
+
+### 3. Release keystore oluştur
+
+```cmd
+keytool -genkey -v -keystore fintrack-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias fintrack
 ```
 
-`npm run build`, `index.html`, `css/`, `js/`, `locales/`, `icons/`, `manifest.json`, `sw.js`
-dosyalarını `www/`'ye kopyalar (Capacitor bu klasörü native projeye gömecek — bkz.
-`capacitor.config.json` → `webDir`).
+- Çıkan `.jks` ve şifreleri **çok güvenli sakla** (örn. parola yöneticisi + offline yedek).
+  **Kaybedersen uygulamayı bir daha güncelleyemezsin.**
+- Repo'ya **commit ETME**.
 
-`appId` ve `appName` `capacitor.config.json` içinde tanımlı:
-- `appId`: `io.github.furkankkokcek.finance`
-- `appName`: `FinTrack`
+### 4. İmzalı AAB üret
+
+Android Studio'da:
+1. **Build → Generate Signed Bundle / APK → Android App Bundle**
+2. 3. adımdaki `.jks` ile imzala
+3. **release** seçili, **Finish**
+4. Çıkan `.aab` dosyası → `app/build/outputs/bundle/release/app-release.aab`
+
+### 5. Play Console — uygulama oluştur ve yükle
+
+Play Console → **Create app**:
+- **App name:** FinTrack
+- **Default language:** Türkçe (5 dil için sonradan store listing eklenir)
+- **App or game:** App · **Free or paid:** Free
+- Yönetmeliklere onay
+
+#### 5.1 Mağaza listesi (store listing)
+- **Uygulama ikonu** — 512×512 (kullan: `icons/icon-512.png`)
+- **Feature graphic** — 1024×500 (manuel hazırlanır)
+- **Phone screenshots** — en az 2 adet (önerilen 4–6)
+- **Kısa açıklama** (80 karakter): örn. *"Aylık gelir-gider, kredi kartı, yatırım takibi — reklamlı ücretsiz."*
+- **Uzun açıklama** (4000 karakter)
+- Çoklu dil için her dilde tekrarla (TR/EN/DE/ES/FR)
+
+#### 5.2 Data Safety formu
+
+| Veri türü | Cihazda | Sunucuya gönderiliyor? |
+|-----------|---------|------------------------|
+| Finansal işlemler, gelir, harcamalar | localStorage | Hayır |
+| AdMob reklam ID'si | — | AdMob'a (reklam için) |
+| FCM cihaz token'ı (bildirim için) | — | Kendi sunucuna (varsa) |
+
+- Şifreleme: HTTPS (reklam/push istekleri için)
+- Veri silme: kullanıcı "Tüm Verileri Sil" butonuyla silebilir → bunu belirt
+
+#### 5.3 Content Rating
+- Anketi cevapla → büyük ihtimal **Everyone** çıkar (finansal araç, hassas içerik yok)
+
+#### 5.4 Gizlilik politikası URL'si (zorunlu)
+- Basit bir `privacy.html` yaz → GitHub Pages'e koy → URL'sini gir
+- İçerikte mutlaka olmalı: "veriler cihazda saklanır, AdMob reklam gösterir, FCM bildirim için cihaz token'ı kullanılır"
+
+#### 5.5 AAB yükle
+- **Production** track → **Create new release** → AAB sürükle-bırak
+- Release notes (5 dilde) → **Save → Review release → Start rollout to production**
+
+İlk gönderim incelemesi genelde **birkaç gün – 1 hafta** sürer.
+
+> 💡 Önce **Internal testing** track'ine yükleyip kendi cihazında deneyip sonra Production'a almak
+> en güvenlisi (yanlış imza/AdMob ID hataları erkenden yakalanır).
+
+### 6. (Sonradan) Güncelleme akışı
+
+Her yeni sürümde:
+1. `package.json` ve `index.html` içindeki versiyonu artır (örn. 1.1.0 → 1.1.1)
+2. Android Studio → `android/app/build.gradle` → `versionCode` **+1**, `versionName` aynı string
+3. `npm run sync` → yeni signed AAB üret → Play Console'a yükle
 
 ---
 
-## 2. Android (Google Play)
+## Kısa referans — komutlar
 
-### 2.1 Native Android projesini oluştur
+```cmd
+:: Geliştirme döngüsü
+npm install
+npm run sync         :: build + cap sync + android patch (ikon/splash/manifest)
+npx cap open android :: Android Studio'da aç
 
-```bash
-npx cap add android     # android/ klasörünü üretir (tek seferlik)
-npm run sync            # build + cap sync + AdMob manifest yamasını uygular
-npx cap open android    # Android Studio'da açar
+:: Yayın öncesi son senkron
+npm run sync
+:: Android Studio → Build → Generate Signed Bundle / APK → AAB
 ```
 
-> Kod her değiştiğinde: **`npm run sync`** (sadece `npx cap sync` değil — aşağıdaki AdMob yaması da
-> bununla çalışır).
+## Sık karşılaşılan hatalar
 
-### 2.2 AdMob App ID (manifest) — otomatik hallolur
-
-Google Mobile Ads SDK, **test reklamlarında bile** `AndroidManifest.xml` içinde bir App ID arar.
-Eksikse uygulama açılır açılmaz native seviyede crash eder (`js/ads.js`'teki `try/catch` bunu
-yakalayamaz).
-
-`scripts/patch-android.mjs` bunu **otomatik** ekler: `npm run sync` her çalıştığında
-`android/app/src/main/AndroidManifest.xml`'e `com.google.android.gms.ads.APPLICATION_ID` meta-data'sını
-(yoksa) enjekte eder. `android/` klasörü `.gitignore`'da olduğu için her `npx cap add android`
-sonrası elle eklemen gerekmez — sadece `npm run sync` çalıştır.
-
-> Geliştirmede Google'ın resmi **test App ID**'si kullanılır
-> (`ca-app-pub-3940256099942544~3347511713`). Yayın öncesi `scripts/patch-android.mjs` içindeki
-> `ADMOB_APP_ID`'yi kendi gerçek App ID'nle, `js/ads.js`'teki ad unit ID'lerini de gerçek ID'lerinle
-> değiştir (bkz. §3). Dikkat: App ID'de `~`, reklam birimi ID'sinde `/` kullanılır.
-
-Yamayı tek başına çalıştırmak için: `npm run patch:android`.
-
-### 2.3 Emülatörde / cihazda dene
-Android Studio'da **Run ▶** ile uygulamayı çalıştır. Alt kısımda **test reklam banner'ı** görünmeli
-(gerçek reklam değil — bkz. AdMob bölümü).
-
-### 2.4 İmzalı AAB üret
-1. Android Studio → **Build → Generate Signed Bundle / APK → Android App Bundle**.
-2. **Create new keystore** ile bir keystore (`.jks`) oluştur. **Bu dosyayı ve şifrelerini güvenle
-   sakla** — kaybedersen uygulamayı bir daha güncelleyemezsin.
-3. Release `.aab` dosyası üretilir.
-
-### 2.5 Digital Asset Links (önemli)
-Repo'da `/.well-known/assetlinks.json` mevcut ve paket adı doğru. İçindeki
-`BURAYA_PWABUILDER_SHA256_HASH_GIRILECEK` placeholder'ını **imzalama anahtarının SHA256 parmak izi**
-ile değiştir:
-
-```bash
-keytool -list -v -keystore yol/anahtar.jks -alias <alias>
-# "SHA256:" satırındaki değeri kopyala
-```
-
-Play App Signing kullanıyorsan parmak izini **Play Console → Setup → App integrity** sayfasından al.
-Güncelledikten sonra repo'yu commit + push et (GitHub Pages'te yayınlanır).
-
-### 2.6 Play Console'a yükle
-1. [Play Console](https://play.google.com/console) → **Create app**.
-2. Mağaza listesi varlıkları:
-   - Uygulama ikonu (512×512 — `icons/icon-512.png` kullanılabilir)
-   - **Feature graphic** 1024×500 (manuel hazırla)
-   - En az 2 telefon ekran görüntüsü
-   - Kısa + uzun açıklama (çoklu dil için her dilde girilebilir)
-   - **Gizlilik politikası URL'si** — veriler cihazda (localStorage) tutulduğu için basit bir metin
-     yeterli; GitHub Pages'te bir `privacy.html` olarak yayınlayabilirsin.
-3. **Data safety** ve **Content rating** formlarını doldur.
-4. `.aab` dosyasını **Production** (veya önce **Internal testing**) track'ine yükle, incelemeye gönder.
-
----
-
-## 3. AdMob (Reklam)
-
-Uygulama `js/ads.js` üzerinden **üç tür** reklam gösterir. **Şu an Google'ın resmi TEST reklam
-ID'leri** kullanılır — yayınlamadan önce gerçek ID'lerinle değiştir.
-
-- **Banner** — alt kısımda kalıcı.
-- **Ödüllü (rewarded)** — içe/dışa aktar, WhatsApp paylaşımı, yıllık tablo ve takvim entegrasyonu bu kısa reklamla açılır.
-- **Geçiş (interstitial)** — yalnızca sayfa geçişlerinde, sıkı sıklık sınırıyla (ilk 90 sn yok,
-  ≥7 sayfa geçişi, son reklamdan beri ≥3 dk). Kullanıcıyı rahatsız etmemek için nadir gösterilir.
-
-1. [AdMob](https://admob.google.com) → uygulamanı ekle → **Banner**, **Rewarded** ve
-   **Interstitial** olmak üzere üç reklam birimi oluştur.
-2. **App ID** ve üç **Ad unit ID** değerini al.
-3. Gerçek ad unit ID'lerini `js/ads.js` içindeki ilgili nesnelere yaz:
-   ```js
-   const ADMOB_PROD_BANNER       = { android: 'ca-app-pub-XXXX/YYYY', ios: 'ca-app-pub-XXXX/...' };
-   const ADMOB_PROD_REWARDED     = { android: 'ca-app-pub-XXXX/RRRR', ios: 'ca-app-pub-XXXX/...' };
-   const ADMOB_PROD_INTERSTITIAL = { android: 'ca-app-pub-XXXX/IIII', ios: 'ca-app-pub-XXXX/...' };
-   ```
-4. **App ID**'yi native projeye ekle:
-   - Android: `android/app/src/main/AndroidManifest.xml` içine
-     ```xml
-     <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
-                android:value="ca-app-pub-XXXX~APPID"/>
-     ```
-   - iOS: `ios/App/App/Info.plist` içine `GADApplicationIdentifier` anahtarı.
-5. `npm run build && npx cap sync` ile yeniden senkronize et.
-
-> ⚠️ Kendi gerçek reklamlarına tıklama veya yayında test ID kullanma AdMob hesabının
-> askıya alınmasına yol açabilir.
-
----
-
-## 4. iOS (App Store) — Mac gerekir
-
-```bash
-npx cap add ios
-npx cap sync
-npx cap open ios        # Xcode'da açar
-```
-
-1. Xcode → **Signing & Capabilities** → Apple Developer hesabınla imzala.
-2. **Product → Archive** ile arşiv üret, **Distribute App → App Store Connect**.
-3. [App Store Connect](https://appstoreconnect.apple.com) → uygulama kaydı, ekran görüntüleri,
-   açıklama, gizlilik bilgileri → incelemeye gönder.
-
-> **Apple Guideline 4.2 notu:** Salt web sarmalayıcılar reddedilebilir. FinTrack'in native değer
-> kattığını vurgula: çevrimdışı çalışma, yerel bildirimler, takvim entegrasyonu.
-
----
-
-## 5. Güncelleme akışı
-
-Kod değiştiğinde:
-
-```bash
-npm run build
-npx cap sync
-```
-
-Sonra sürüm numarasını artır:
-- Android: `android/app/build.gradle` → `versionCode` (+1) ve `versionName`.
-- iOS: Xcode → target → **Version** / **Build**.
-
-Yeniden derleyip mağazaya yükle.
-
----
-
-## 6. Bildirimler (native + web)
-
-Native uygulamada bildirimler **`@capacitor/local-notifications`** ile çalışır: ödeme günleri,
-maaş günü PPF ve aylık özet, içinde bulunulan + gelecek ay için **gerçek zamanlanmış** bildirimler
-olarak kurulur (uygulama kapalıyken bile saat 09:00'da tetiklenir). Her veri/dil değişiminde
-otomatik yeniden zamanlanır (`js/native-notif.js`). Web/PWA'da eski `Notification` API + service
-worker yolu devrede kalır.
-
-- **İzin:** Android 13+ için `POST_NOTIFICATIONS` izni gerekir; plugin çalışma anında otomatik sorar
-  (Ayarlar → Bildirimler toggle'ı açılınca). Manifest izni de `npx cap sync` ile eklenir.
-- **Test:** Ayarlar → "🔔 Şimdi Test Bildirimi Gönder" anlık native bildirim atar; "🔍 Bildirim
-  Durumunu Göster" native modun aktif olduğunu yazar.
-
-## 7. İleri / takip işleri (bu sürümde dahil değil)
-
-- **Çoklu para birimi:** Arayüz 5 dilde; tutarlar ₺ (TRY) olarak kalır.
-- **RTL diller** (Arapça vb.): mevcut 5 dil soldan-sağa; ileride eklenebilir.
+| Sorun | Sebep / Çözüm |
+|-------|---------------|
+| Açılışta beyaz flaş | Çözüldü — `patch-android.mjs` koyu splash üretiyor |
+| Bildirim ikonu gri kare | Çözüldü — beyaz silüet üretiliyor |
+| AdMob bağlanmadı / native crash | `patch-android.mjs` App ID enjekte ediyor; yine sorun varsa `ADMOB_APP_ID` doğru mu kontrol et |
+| Reklam gelmiyor | Test ID'leri çalışıyor; prod ID'leriniz AdMob'da "Active" mi? Yeni hesapta onay 1-2 gün sürer |
+| AAB upload reddedildi | `versionCode` aynı kalmış olabilir — her yüklemede +1 |
