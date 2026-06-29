@@ -5,7 +5,7 @@
 // makes those edits automatic and idempotent. It runs as part of `npm run sync`
 // and is safe to run any time — it no-ops if android/ is missing.
 //
-// It does three things:
+// It does four things:
 //   1. Injects the AdMob `APPLICATION_ID` meta-data (without it the app crashes
 //      at startup once the Ads SDK is present — even with test ads).
 //   2. Generates the launcher icon + the notification status-bar icon from the
@@ -14,6 +14,9 @@
 //      instead of a gray square. Needs `sharp` (a devDependency).
 //   3. Adds the FCM `default_notification_icon` meta-data so push notifications
 //      pick up that same status-bar icon.
+//   4. Replaces the WHITE Capacitor splash screen with a dark-themed one matching
+//      the app: dark background (#09090c) + the centered launcher icon. Without
+//      this the user sees a jarring white flash with a generic icon at launch.
 //
 // ⚠️ Before publishing, replace ADMOB_APP_ID with your REAL AdMob App ID (and the
 // real ad unit IDs in js/ads.js — see PUBLISHING.md "AdMob"). To change the logo,
@@ -36,6 +39,9 @@ const logoPath = join(root, 'icons', 'icon-512.png');
 const ADMOB_META = 'com.google.android.gms.ads.APPLICATION_ID';
 const FCM_ICON_META = 'com.google.firebase.messaging.default_notification_icon';
 const NOTIF_ICON = 'ic_stat_icon';
+// Splash background must match capacitor.config.json `backgroundColor`. If you
+// change one, change the other.
+const SPLASH_BG = '#09090c';
 
 // Mipmap density buckets → launcher icon pixel size.
 const DENSITIES = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
@@ -130,9 +136,65 @@ async function generateIcons() {
   console.log('✓ Generated launcher + notification icons from icons/icon-512.png');
 }
 
+// Replace Capacitor's white splash with a dark, branded one. Three pieces:
+//   - values/colors.xml: define/override `splash_background` so themes can refer
+//     to it instead of hard-coding a colour string.
+//   - drawable/splash.xml: a layer-list with the dark colour + the launcher icon
+//     centered. Capacitor's default theme (AppTheme.NoActionBarLaunch) already
+//     points android:windowBackground at @drawable/splash, so this is enough.
+//   - drawable-v26/splash.xml: same layer-list, but uses @mipmap/ic_launcher
+//     which on API 26+ is the adaptive icon when present.
+async function patchSplash() {
+  if (!existsSync(resDir)) return; // android/ not generated; manifest step already warned
+
+  // 1. colors.xml — add (or update) splash_background
+  const valuesDir = join(resDir, 'values');
+  await mkdir(valuesDir, { recursive: true });
+  const colorsPath = join(valuesDir, 'colors.xml');
+  let colorsXml = existsSync(colorsPath) ? await readFile(colorsPath, 'utf8') : '';
+  if (!colorsXml.trim()) {
+    colorsXml = `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n`;
+  }
+  const colorTag = `    <color name="splash_background">${SPLASH_BG}</color>\n`;
+  if (colorsXml.includes('name="splash_background"')) {
+    colorsXml = colorsXml.replace(
+      /<color\s+name="splash_background">[^<]*<\/color>/,
+      `<color name="splash_background">${SPLASH_BG}</color>`
+    );
+  } else {
+    colorsXml = colorsXml.replace('</resources>', colorTag + '</resources>');
+  }
+  await writeFile(colorsPath, colorsXml);
+
+  // 2. drawable/splash.xml — dark bg + centered launcher icon (any-density).
+  const splashXml =
+    `<?xml version="1.0" encoding="utf-8"?>\n` +
+    `<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n` +
+    `    <item android:drawable="@color/splash_background"/>\n` +
+    `    <item>\n` +
+    `        <bitmap android:src="@mipmap/ic_launcher" android:gravity="center"/>\n` +
+    `    </item>\n` +
+    `</layer-list>\n`;
+  const drawableDir = join(resDir, 'drawable');
+  await mkdir(drawableDir, { recursive: true });
+  await writeFile(join(drawableDir, 'splash.png'), Buffer.alloc(0)).catch(() => {}); // overwritten below if exists
+  // Capacitor sometimes ships splash.png too — remove it so the XML always wins.
+  await rm(join(drawableDir, 'splash.png'), { force: true });
+  await writeFile(join(drawableDir, 'splash.xml'), splashXml);
+
+  // 3. drawable-v26/splash.xml — same, but kept so adaptive launcher behaviour
+  //    looks correct on API 26+.
+  const drawableV26Dir = join(resDir, 'drawable-v26');
+  await mkdir(drawableV26Dir, { recursive: true });
+  await writeFile(join(drawableV26Dir, 'splash.xml'), splashXml);
+
+  console.log(`✓ Replaced splash screen with dark theme (${SPLASH_BG}) + launcher icon`);
+}
+
 async function main() {
   await patchManifest();
   await generateIcons();
+  await patchSplash();
 }
 
 main().catch((err) => {
