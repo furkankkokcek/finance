@@ -27,11 +27,11 @@ function renderFetchLog(){
   const el=document.getElementById('price-log-body');
   if(!el) return;
   if(!_fetchLog.length){
-    el.innerHTML='<div style="text-align:center;color:var(--muted);padding:28px 0;font-size:13px">Henüz log yok — fiyatlar yüklendikten sonra tekrar açın</div>';
+    el.innerHTML='<div style="text-align:center;color:var(--muted);padding:28px 0;font-size:13px">'+t('inv.logEmpty')+'</div>';
     return;
   }
   el.innerHTML=_fetchLog.map(e=>{
-    const t=new Date(e.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const t=new Date(e.ts).toLocaleTimeString(i18nLocaleCode(),{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const ok=e.status==='ok';
     return `<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--muted);flex-shrink:0;font-size:10px;font-family:monospace">${t}</span>
@@ -272,18 +272,20 @@ async function fetchAllInvPrices(){
 
 function exportPortfolioTxt(){
   const port=getPortfolio();
-  if(!port.length){ alert('Portföyde kayıt yok.'); return; }
+  if(!port.length){ alert(t('inv.portfolioEmpty')); return; }
   const pad=(s,n)=>String(s).padStart(n,' ');
   const line=(ch=>'─')('─').repeat(46);
   const dbl='═'.repeat(46);
   const now=new Date();
-  const dateStr=now.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});
+  const dateStr=now.toLocaleDateString(i18nLocaleCode(),{day:'numeric',month:'long',year:'numeric'});
   const rows=[];
-  rows.push(`FinTrack Portföy Raporu — ${dateStr}`);
+  rows.push(`${t('inv.reportTitle')} — ${dateStr}`);
   rows.push(dbl);
   rows.push('');
 
   let grandCost=0,grandVal=0;
+  const unitGram=t('inv.unitGram');
+  const unitPiece=t('inv.unitPiece');
 
   port.forEach(inv=>{
     const c=calcInv(inv);
@@ -295,49 +297,45 @@ function exportPortfolioTxt(){
     const tickerLabel=inv.ticker?` · ${inv.ticker}`:'';
     rows.push(`${inv.name}  (${typeLabel}${subtypeLabel}${tickerLabel})`);
 
+    const isGoldUnit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22');
+    const unit=isGoldUnit?unitGram:unitPiece;
+
     const lots=inv.lots||[];
     if(lots.length){
-      rows.push('  Alımlar:');
+      rows.push('  '+t('inv.reportPurchases'));
       lots.forEach(l=>{
         const d=l.date?l.date.slice(0,10).split('-').reverse().join('.'):'—';
         const qty=parseFloat(l.qty||0);
         const price=parseFloat(l.price||0);
-        const unit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet';
         const total=qty*price;
-        rows.push(`    ${d}   ${pad(qty.toLocaleString('tr-TR'),8)} ${unit}   @ ${pad(fmtTRY(price),12)}  →  ${fmtTRY(total)}`);
+        rows.push(`    ${d}   ${pad(qty.toLocaleString(i18nLocaleCode()),8)} ${unit}   @ ${pad(fmtTRY(price),12)}  →  ${fmtTRY(total)}`);
       });
     }
 
-    const unit=inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet';
-    rows.push(`  Toplam: ${c.totalQty.toLocaleString('tr-TR')} ${unit}  |  Ort. maliyet: ${fmtTRY(c.avgCostTL)}  |  Toplam maliyet: ${fmtTRY(c.totalCostTL)}`);
+    rows.push(`  ${t('inv.reportTotal')} ${c.totalQty.toLocaleString(i18nLocaleCode())} ${unit}  |  ${t('inv.reportAvgCost')} ${fmtTRY(c.avgCostTL)}  |  ${t('inv.reportTotalCost')} ${fmtTRY(c.totalCostTL)}`);
     if(inv.currentPrice>0){
       const sign=c.pnlTL>=0?'+':'-';
-      rows.push(`  Güncel fiyat: ${fmtTRY(inv.currentPrice)}  |  Güncel değer: ${fmtTRY(c.currentValueTL)}`);
-      rows.push(`  Kâr/Zarar: ${sign}${fmtTRY(Math.abs(c.pnlTL))}  (${sign}${Math.abs(c.pnlPct).toFixed(1)}%)`);
+      rows.push(`  ${t('inv.reportCurPrice')} ${fmtTRY(inv.currentPrice)}  |  ${t('inv.reportCurValue')} ${fmtTRY(c.currentValueTL)}`);
+      rows.push(`  ${t('inv.reportPnL')} ${sign}${fmtTRY(Math.abs(c.pnlTL))}  (${sign}${Math.abs(c.pnlPct).toFixed(1)}%)`);
     } else {
-      rows.push('  Güncel fiyat: girilmemiş');
+      rows.push(`  ${t('inv.reportCurPrice')} ${t('inv.reportNotEntered')}`);
     }
     rows.push(line);
     rows.push('');
   });
 
-  rows.push('GENEL TOPLAM');
-  rows.push(`  Toplam maliyet : ${fmtTRY(grandCost)}`);
-  rows.push(`  Güncel değer   : ${fmtTRY(grandVal)}`);
+  rows.push(t('inv.reportGrandTotal'));
+  rows.push(`  ${t('inv.reportTotalCost')} ${fmtTRY(grandCost)}`);
+  rows.push(`  ${t('inv.reportCurValue')} ${fmtTRY(grandVal)}`);
   const grandPnl=grandVal-grandCost;
   const grandPct=grandCost>0?(grandPnl/grandCost)*100:0;
   const gs=grandPnl>=0?'+':'-';
-  rows.push(`  Kâr/Zarar      : ${gs}${fmtTRY(Math.abs(grandPnl))}  (${gs}${Math.abs(grandPct).toFixed(1)}%)`);
+  rows.push(`  ${t('inv.reportPnL')} ${gs}${fmtTRY(Math.abs(grandPnl))}  (${gs}${Math.abs(grandPct).toFixed(1)}%)`);
   rows.push('');
 
   const txt=rows.join('\n');
-  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`portfoy_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const filename=`portfoy_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.txt`;
+  saveFile(filename, txt, 'text/plain;charset=utf-8');
 }
 
 function refreshPrices(){
@@ -368,24 +366,53 @@ function getPortfolio(){
   return S.investmentPortfolio;
 }
 
+// Running average-cost accounting. Lots are replayed in date order; buys and
+// dividends ADD to holdings + cost basis, sells RELEASE units at the running
+// average cost (the difference between sell price and that average is locked in
+// as realized P&L). After replay: remaining qty × current price is the live
+// value, and total P&L = realized (closed positions) + unrealized (open
+// position vs current price).
 function calcInv(inv){
-  const lots=inv.lots||[];
-  const totalQty=lots.reduce((s,l)=>s+parseFloat(l.qty||0),0);
-  const totalCostTL=lots.reduce((s,l)=>s+parseFloat(l.qty||0)*parseFloat(l.price||0),0);
-  const totalCostUSD=lots.reduce((s,l)=>{
+  const lots=(inv.lots||[]).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  let totalQty=0, totalCostTL=0, totalCostUSD=0;
+  let realizedTL=0, realizedUSD=0;
+  for(const l of lots){
+    const qty=parseFloat(l.qty||0);
+    const price=parseFloat(l.price||0);
     const rate=parseFloat(l.usdRate||0);
-    return s+(rate>0?(parseFloat(l.qty||0)*parseFloat(l.price||0))/rate:0);
-  },0);
-  const avgCostTL=totalQty>0?totalCostTL/totalQty:0;
-  const avgCostUSD=totalQty>0?totalCostUSD/totalQty:0;
+    if(l.lotType==='satim'){
+      if(totalQty<=0) continue; // can't sell what we don't have
+      const sellQty=Math.min(qty, totalQty);
+      const avgTL = totalCostTL/totalQty;
+      const avgUSD = totalCostUSD>0 ? totalCostUSD/totalQty : 0;
+      realizedTL += sellQty*(price - avgTL);
+      if(rate>0 && avgUSD>0) realizedUSD += sellQty*((price/rate) - avgUSD);
+      totalCostTL  -= sellQty*avgTL;
+      if(avgUSD>0) totalCostUSD -= sellQty*avgUSD;
+      totalQty     -= sellQty;
+    } else {
+      totalQty += qty;
+      totalCostTL += qty*price;
+      if(rate>0) totalCostUSD += (qty*price)/rate;
+    }
+  }
+  const avgCostTL = totalQty>0 ? totalCostTL/totalQty : 0;
+  const avgCostUSD = totalQty>0 ? (totalCostUSD>0?totalCostUSD/totalQty:0) : 0;
   const cur=parseFloat(inv.currentPrice||0);
   const currentValueTL=totalQty*cur;
   const currentValueUSD=_currentUsdRate>0?currentValueTL/_currentUsdRate:0;
-  const pnlTL=currentValueTL-totalCostTL;
-  const hasUsd=totalCostUSD>0&&_currentUsdRate>0;
-  const pnlUSD=hasUsd?currentValueUSD-totalCostUSD:0;
-  const pnlPct=totalCostTL>0?(pnlTL/totalCostTL)*100:0;
-  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,currentValueTL,currentValueUSD,pnlTL,pnlUSD,pnlPct,hasUsd};
+  const unrealizedTL=currentValueTL-totalCostTL;
+  const hasUsd=(totalCostUSD>0||realizedUSD!==0)&&_currentUsdRate>0;
+  const unrealizedUSD=hasUsd?currentValueUSD-totalCostUSD:0;
+  const pnlTL=unrealizedTL+realizedTL;
+  const pnlUSD=hasUsd?(unrealizedUSD+realizedUSD):0;
+  // Percent is on capital invested in the still-open portion (avoid divide-by-0
+  // for fully-closed positions where totalCostTL is 0).
+  const pnlPct=totalCostTL>0?(pnlTL/totalCostTL)*100:(realizedTL!==0?100:0);
+  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,
+    currentValueTL,currentValueUSD,
+    realizedTL,realizedUSD,
+    pnlTL,pnlUSD,pnlPct,hasUsd};
 }
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -426,22 +453,22 @@ function renderInvGoal(port){
       :fmtTRY(remaining);
     progressHtml=`
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px">
-        <span>Mevcut: <span class="inv-amount" style="font-weight:600;color:var(--text)">${fmtTRY(totalValueTL)}</span></span>
-        <span>Hedef: <span class="inv-amount">${goalLabel}</span></span>
+        <span>${t('inv.current')} <span class="inv-amount" style="font-weight:600;color:var(--text)">${fmtTRY(totalValueTL)}</span></span>
+        <span>${t('inv.target')} <span class="inv-amount">${goalLabel}</span></span>
       </div>
       <div style="background:var(--bg4);border-radius:4px;height:10px;overflow:hidden;margin-bottom:6px">
         <div style="height:100%;width:${pct.toFixed(1)}%;background:${progressColor};border-radius:4px;transition:width .3s"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px">
-        <span style="color:var(--muted)">${reached?'🎯 Hedefe ulaşıldı!':'Kalan: <span class="inv-amount">'+remainLabel+'</span>'}</span>
-        <span style="color:${progressColor};font-weight:700">${pct.toFixed(1)}% tamamlandı</span>
+        <span style="color:var(--muted)">${reached?t('inv.goalReached'):t('inv.remaining')+' <span class="inv-amount">'+remainLabel+'</span>'}</span>
+        <span style="color:${progressColor};font-weight:700">${pct.toFixed(1)}% ${t('inv.completed')}</span>
       </div>`;
   }
 
   return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
-    <div class="section-title" style="margin-bottom:10px">HEDEF</div>
+    <div class="section-title" style="margin-bottom:10px">${t('inv.goal')}</div>
     <div style="display:flex;gap:6px;align-items:stretch;margin-bottom:${goalAmt>0?'10':'0'}px">
-      <input id="inv-goal-input" type="number" min="0" step="any" value="${goalAmt||''}" placeholder="Hedef tutarı girin…"
+      <input id="inv-goal-input" type="number" min="0" step="any" value="${goalAmt||''}" placeholder="${t('inv.goalPh')}"
         onchange="saveInvGoal(this.value,'${goalCur}')"
         style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--text);font-size:14px;font-weight:700;padding:8px 10px;outline:none">
       <button onclick="saveInvGoal(document.getElementById('inv-goal-input').value,'usd')"
@@ -514,7 +541,7 @@ function renderAllocationChart(port){
     angle=ea;
   });
   paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
-  paths+=`<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="Outfit">${segs.length} varlık</text>`;
+  paths+=`<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="Outfit">${t('inv.assets',{n:segs.length})}</text>`;
   paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="700" font-family="Outfit">${fmtTRY(total)}</text>`;
   const rows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:7px">
     <div style="display:flex;align-items:center;gap:5px">
@@ -527,11 +554,105 @@ function renderAllocationChart(port){
     </div>
   </div>`).join('');
   return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
-    <div class="section-title" style="margin-bottom:10px">DAĞILIM</div>
+    <div class="section-title" style="margin-bottom:10px">${t('inv.allocation')}</div>
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg viewBox="0 0 120 120" width="110" height="110" style="flex-shrink:0">${paths}</svg>
       <div style="flex:1;padding-top:6px">${rows}</div>
     </div>
+  </div>`;
+}
+
+// Day-based cumulative CURRENT-VALUE chart (TL/USD toggle, interactive). Each lot
+// is valued at its investment's current price (qty × currentPrice), accumulated by
+// purchase date and flat to today — so the line ends at today's total portfolio
+// value. Tapping a point shows that date and its value.
+let _invChartCur='try';
+let _invChartSel=-1;
+function setInvChartCur(c){ _invChartCur=c; renderYatirim(); }
+function selectInvChartPoint(i){ _invChartSel=(_invChartSel===i?-1:i); renderYatirim(); }
+
+function renderInvTrendChart(port){
+  const evs=[];
+  port.forEach(inv=>{
+    const price=parseFloat(inv.currentPrice||0);
+    (inv.lots||[]).forEach(l=>{
+      if(!l.date) return;
+      // Sells release units, so they REDUCE the line (negative delta in qty ×
+      // current price). Skip 0-cost lots (reinvested dividends already counted
+      // by their qty).
+      const qty=parseFloat(l.qty||0);
+      if(qty<=0) return;
+      const sign=l.lotType==='satim'?-1:1;
+      const valTL=sign*qty*price;
+      if(valTL===0) return;
+      const valUSD=_currentUsdRate>0?valTL/_currentUsdRate:0;
+      evs.push({date:l.date.slice(0,10),valTL,valUSD});
+    });
+  });
+  if(!evs.length) return '';
+  evs.sort((a,b)=>a.date.localeCompare(b.date));
+
+  const pts=[]; let cumTL=0,cumUSD=0;
+  evs.forEach(e=>{
+    cumTL+=e.valTL; cumUSD+=e.valUSD;
+    const ts=new Date(e.date+'T00:00:00').getTime();
+    const last=pts[pts.length-1];
+    if(last&&last.t===ts){ last.vTL=cumTL; last.vUSD=cumUSD; }
+    else pts.push({t:ts,vTL:cumTL,vUSD:cumUSD});
+  });
+  const nowT=Date.now();
+  if(pts[pts.length-1].t<nowT){ const l=pts[pts.length-1]; pts.push({t:nowT,vTL:l.vTL,vUSD:l.vUSD}); }
+  if(pts.length<2) return '';
+  if(_invChartSel>=pts.length) _invChartSel=-1;
+
+  const usd=_invChartCur==='usd';
+  const val=p=>usd?p.vUSD:p.vTL;
+  const maxV=Math.max(...pts.map(val),1);
+  const minT=pts[0].t, maxT=pts[pts.length-1].t, spanT=Math.max(1,maxT-minT);
+  const W=320,H=150,padL=10,padR=10,padT=14,padB=22;
+  const plotW=W-padL-padR, plotH=H-padT-padB, baseY=padT+plotH;
+  const X=t=>padL+((t-minT)/spanT)*plotW;
+  const Y=v=>padT+plotH-(v/maxV)*plotH;
+  const col=usd?'#22c55e':'var(--accent)';
+  const fmtV=v=>usd?fmtUSD(v):fmtTRY(v);
+  const dlabel=ts=>new Date(ts).toLocaleDateString(i18nLocaleCode(),{day:'2-digit',month:'short',year:'2-digit'});
+
+  const linePath=pts.map((p,i)=>`${i?'L':'M'}${X(p.t).toFixed(1)},${Y(val(p)).toFixed(1)}`).join(' ');
+  const areaPath=`M${X(pts[0].t).toFixed(1)},${baseY.toFixed(1)} `+
+    pts.map(p=>`L${X(p.t).toFixed(1)},${Y(val(p)).toFixed(1)}`).join(' ')+
+    ` L${X(pts[pts.length-1].t).toFixed(1)},${baseY.toFixed(1)} Z`;
+
+  // Interactive points: visible dot + a wide transparent tap target per point.
+  let dots='';
+  pts.forEach((p,i)=>{
+    const cx=X(p.t).toFixed(1), cy=Y(val(p)).toFixed(1), isSel=(i===_invChartSel);
+    if(isSel) dots+=`<line x1="${cx}" y1="${padT}" x2="${cx}" y2="${baseY}" stroke="${col}" stroke-width="1" stroke-dasharray="3,3" opacity=".6"/>`;
+    dots+=`<circle cx="${cx}" cy="${cy}" r="${isSel?4:2.5}" fill="${col}"/>`;
+    dots+=`<circle cx="${cx}" cy="${cy}" r="11" fill="transparent" style="cursor:pointer" onclick="selectInvChartPoint(${i})"/>`;
+  });
+
+  const sel=(_invChartSel>=0)?pts[_invChartSel]:null;
+  const headP=sel||pts[pts.length-1];
+  const headLabel=sel
+    ? `<span style="font-size:11px;color:var(--muted)">${dlabel(headP.t)} · </span><span class="inv-amount" style="font-size:16px;font-weight:800;color:${col}">${fmtV(val(headP))}</span>`
+    : `<span class="inv-amount" style="font-size:16px;font-weight:800;color:${col}">${fmtV(val(headP))}</span> <span style="font-size:10px;color:var(--muted)">· ${t('inv.tapHint')}</span>`;
+
+  const btn=(cur,label)=>`<button onclick="setInvChartCur('${cur}')" style="padding:3px 10px;border-radius:var(--r3);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:${(_invChartCur===cur)?'var(--accent)':'var(--bg4)'};color:${(_invChartCur===cur)?'#000':'var(--text)'}">${label}</button>`;
+
+  return `<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title">${t('inv.valueTrend')}</div>
+      <div style="display:flex;gap:6px">${btn('try','₺')}${btn('usd','$')}</div>
+    </div>
+    <div style="margin-bottom:6px">${headLabel}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
+      <line x1="${padL}" y1="${baseY}" x2="${W-padR}" y2="${baseY}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${areaPath}" fill="${col}" opacity="0.12"/>
+      <path d="${linePath}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      <text x="${padL}" y="${(H-6).toFixed(1)}" font-size="9" fill="var(--muted)" font-family="Outfit">${dlabel(minT)}</text>
+      <text x="${W-padR}" y="${(H-6).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Outfit">${dlabel(maxT)}</text>
+    </svg>
   </div>`;
 }
 
@@ -546,7 +667,7 @@ function renderYatirim(){
 
   const usdReady=_currentUsdRate>0;
   const fetchDone=_lastPriceFetch>0&&!_fetchingPrices;
-  const usdNote=usdReady?`$1 = ${_currentUsdRate.toFixed(2)}₺`:'kur yükleniyor...';
+  const usdNote=usdReady?`$1 = ${_currentUsdRate.toFixed(2)}₺`:t('inv.rateLoading');
 
   let totalCostTL=0,totalCostUSD=0,totalValueTL=0,totalValueUSD=0;
   port.forEach(inv=>{ const c=calcInv(inv); totalCostTL+=c.totalCostTL; totalCostUSD+=c.totalCostUSD; totalValueTL+=c.currentValueTL; totalValueUSD+=c.currentValueUSD; });
@@ -557,31 +678,29 @@ function renderYatirim(){
   let html='';
 
   if(port.length>0){
-    const lastFetchStr=fetchDone?`Son güncelleme: ${new Date(_lastPriceFetch).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}`:'Fiyatlar yükleniyor...';
+    const lastFetchStr=fetchDone?t('inv.lastUpdate',{time:new Date(_lastPriceFetch).toLocaleTimeString(i18nLocaleCode(),{hour:'2-digit',minute:'2-digit'})}):t('inv.pricesLoading');
     html+=`<div style="padding:14px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="section-title">PORTFÖY</div>
+        <div class="section-title">${t('inv.portfolio')}</div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:10px;color:var(--muted)">${lastFetchStr}</span>
-          <button onclick="openFetchLog()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Fiyat günlüğü">📋</button>
-          <button onclick="exportPortfolioTxt()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--muted);cursor:pointer" title="Portföyü dışa aktar">⬇ TXT</button>
           <button onclick="refreshPrices()" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);font-size:11px;color:var(--accent);cursor:pointer" title="Fiyatları yenile">↻</button>
         </div>
       </div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${usdNote}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam Maliyet</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${t('inv.totalCost')}</div>
           <div class="inv-amount" style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalCostTL)}</div>
           <div class="inv-amount" style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalCostUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3)">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Değer</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${t('inv.currentValue')}</div>
           <div class="inv-amount" style="font-size:13px;font-weight:700;color:var(--text)">${fmtTRY(totalValueTL)}</div>
           <div class="inv-amount" style="font-size:11px;color:var(--muted)">${usdReady?fmtUSD(totalValueUSD):'—'}</div>
         </div>
         <div style="background:var(--bg4);padding:10px;border-radius:var(--r3);grid-column:1/-1">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Toplam K/Z</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${t('inv.totalPnl')}</div>
           <div class="inv-amount" style="font-size:15px;font-weight:700;color:${pnlColor(totalPnlTL)}">${pnlSign(totalPnlTL)}${fmtTRY(totalPnlTL)} (${pnlSign(totalPnlPct)}${totalPnlPct.toFixed(1)}%)</div>
           <div class="inv-amount" style="font-size:12px;color:${usdReady?pnlColor(totalPnlUSD):'var(--muted)'}">${usdReady?pnlSign(totalPnlUSD)+fmtUSD(totalPnlUSD):'—'}</div>
         </div>
@@ -598,7 +717,7 @@ function renderYatirim(){
       const statusBadge=_fetchingPrices&&!status
         ?`<span style="font-size:9px;color:var(--muted)"> ↻</span>`
         :status==='err'
-        ?`<span style="font-size:9px;color:var(--danger)" title="Fiyat alınamadı"> !</span>`
+        ?`<span style="font-size:9px;color:var(--danger)" title="${t('inv.priceFailed')}"> !</span>`
         :'';
       html+=`<div style="padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);border-left:3px solid ${tc};margin-bottom:8px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
@@ -608,7 +727,7 @@ function renderYatirim(){
               <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${tc}22;color:${tc};font-weight:700">${INV_TYPES[inv.type]||inv.type}</span>
               ${inv.ticker?`<span style="font-size:10px;color:var(--muted)">${inv.ticker}</span>`:inv.type==='altin'&&inv.goldSubtype?`<span style="font-size:10px;color:var(--muted)">${ALTIN_SUBTYPES[inv.goldSubtype]||inv.goldSubtype}</span>`:''}
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?'gram':'adet'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.totalQty} ${inv.type==='altin'&&(inv.goldSubtype==='gram'||inv.goldSubtype==='ayar22')?t('inv.unitGram'):t('inv.unitPiece')}</div>
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="openAddLot('${inv.id}')" style="padding:5px 10px;background:var(--accent);border:none;border-radius:var(--r3);color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Alım</button>
@@ -617,34 +736,42 @@ function renderYatirim(){
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
-            <div style="font-size:10px;color:var(--muted)">Ort. Maliyet</div>
+            <div style="font-size:10px;color:var(--muted)">${t('inv.currentValue')}</div>
+            <div class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.currentValueTL)}</div>
+            <div class="inv-amount" style="font-size:11px;color:var(--muted)">${c.currentValueUSD>0?fmtUSD(c.currentValueUSD):'—'}</div>
+          </div>
+          <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${t('inv.curPriceShort')}</div>
+            <input class="inv-amount" type="number" min="0" step="any"
+              value="${parseFloat(inv.currentPrice||0)||''}"
+              placeholder="${t('inv.priceGet')}"
+              onchange="updateInvPrice('${inv.id}',this.value)"
+              style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:2px 0;outline:none">
+            <div class="inv-amount" style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">${inv.priceUpdatedAt?fmtRelTime(inv.priceUpdatedAt):t('inv.notUpdated')}</div>
+          </div>
+          <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
+            <div style="font-size:10px;color:var(--muted)">${t('inv.avgCost')}</div>
             <div class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(c.avgCostTL)}</div>
             <div class="inv-amount" style="font-size:11px;color:var(--muted)">${c.totalCostUSD>0?fmtUSD(c.avgCostUSD):'—'}</div>
           </div>
           <div style="background:var(--bg4);padding:8px;border-radius:var(--r3)">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Güncel Fiyat</div>
-            <input class="inv-amount" type="number" min="0" step="any"
-              value="${parseFloat(inv.currentPrice||0)||''}"
-              placeholder="Gir…"
-              onchange="updateInvPrice('${inv.id}',this.value)"
-              style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:2px 0;outline:none">
-            <div class="inv-amount" style="font-size:11px;color:var(--muted);margin-top:2px">${usdReady&&inv.currentPrice?fmtUSD(parseFloat(inv.currentPrice)/_currentUsdRate):'—'}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">${inv.priceUpdatedAt?fmtRelTime(inv.priceUpdatedAt):'güncellenmedi'}</div>
-          </div>
-          <div style="background:var(--bg4);padding:8px;border-radius:var(--r3);grid-column:1/-1">
-            <div style="font-size:10px;color:var(--muted)">Kâr / Zarar</div>
+            <div style="font-size:10px;color:var(--muted)">${t('inv.pnl')}</div>
             <div class="inv-amount" style="font-size:13px;font-weight:700;color:${pnlColor(c.pnlTL)}">${pnlSign(c.pnlTL)}${fmtTRY(c.pnlTL)} (${pnlSign(c.pnlPct)}${c.pnlPct.toFixed(1)}%)</div>
             <div class="inv-amount" style="font-size:11px;color:${c.hasUsd?pnlColor(c.pnlUSD):'var(--muted)'}">${c.hasUsd?pnlSign(c.pnlUSD)+fmtUSD(c.pnlUSD):'—'}</div>
           </div>
         </div>
       </div>`;
     });
+
+    // Day-based invested-amount chart, then the TXT export at the very bottom.
+    html+=renderInvTrendChart(port);
+    html+=`<button onclick="exportPortfolioTxt()" class="btn-secondary" style="width:100%;margin-top:4px">${t('inv.exportTxt')}</button>`;
   } else {
-    html+=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">Henüz yatırım kaydı yok</div><div class="empty-sub">Sağ alttaki + butonuna bas</div></div>`;
+    html+=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">${t('inv.empty')}</div><div class="empty-sub">${t('inv.emptySub')}</div></div>`;
   }
 
   el.innerHTML=html;
-  updateGoalProgressBtn();
 }
 
 // ── Investment CRUD ───────────────────────────────────────────────────────────
@@ -661,21 +788,21 @@ function onInvTypeChange(){
     tickerField.style.display='none';
     if(goldSubField) goldSubField.style.display='block';
     autoNote.style.display='block';
-    autoNote.textContent='✓ Fiyat anlikaltinfiyatlari.com\'dan otomatik çekilir';
+    autoNote.textContent=t('inv.autoGold');
   } else if(type==='btc'){
     tickerField.style.display='none';
     autoNote.style.display='block';
-    autoNote.textContent='✓ BTC/TRY fiyatı otomatik çekilir (CoinGecko)';
+    autoNote.textContent=t('inv.autoBtc');
   } else if(type==='kripto'){
     tickerField.style.display='block';
     autoNote.style.display='none';
-    tickerLabel.textContent='CoinGecko ID';
-    tickerEl.placeholder='örn: ethereum, solana, cardano';
+    tickerLabel.textContent=t('inv.coingeckoId');
+    tickerEl.placeholder=t('inv.coingeckoPh');
   } else if(type==='hisse'||type==='fon'){
     tickerField.style.display='block';
     autoNote.style.display='none';
-    tickerLabel.textContent='Borsa Sembolü';
-    tickerEl.placeholder=type==='hisse'?'örn: GARAN, THYAO':'örn: YFAS';
+    tickerLabel.textContent=t('inv.exchangeSymbol');
+    tickerEl.placeholder=type==='hisse'?t('inv.stockPh'):t('inv.fundPh');
   } else {
     tickerField.style.display='none';
     autoNote.style.display='none';
@@ -683,7 +810,7 @@ function onInvTypeChange(){
 }
 
 function openAddInv(){
-  document.getElementById('inv-modal-title').textContent='Yatırım Ekle';
+  document.getElementById('inv-modal-title').textContent=t('inv.addTitle');
   document.getElementById('inv-id').value='';
   document.getElementById('inv-name').value='';
   document.getElementById('inv-type').value='hisse';
@@ -699,7 +826,7 @@ function openAddInv(){
 function openEditInv(id){
   const inv=(S.investmentPortfolio||[]).find(x=>x.id===id);
   if(!inv) return;
-  document.getElementById('inv-modal-title').textContent='Yatırım Düzenle';
+  document.getElementById('inv-modal-title').textContent=t('inv.editTitle');
   document.getElementById('inv-id').value=id;
   document.getElementById('inv-name').value=inv.name;
   document.getElementById('inv-type').value=inv.type||'hisse';
@@ -718,33 +845,39 @@ function renderInvLots(inv){
   if(!el) return;
   const lots=(inv.lots||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(lots.length===0){
-    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">Henüz alım yok</div>`;
+    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">${t('inv.noLot')}</div>`;
     return;
   }
   el.innerHTML=lots.map(l=>{
     if(l.lotType==='temettu'){
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
         <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text)">${l.date} · ${l.qty} adet</div>
-          <div style="font-size:11px;color:#f59e0b">💰 Temettü · ${fmtTRY(l.totalDiv||0)} → 0₺ maliyet</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${l.date} · ${l.qty} ${t('inv.unitPiece')}</div>
+          <div style="font-size:11px;color:#f59e0b">${t('inv.lotDividend',{amount:fmtTRY(l.totalDiv||0)})}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;font-weight:700;color:var(--success)">0 ₺</div>
-          <button onclick="deleteLot('${inv.id}','${l.id}')" style="font-size:10px;padding:1px 7px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);cursor:pointer;margin-top:2px">Sil</button>
+          <button onclick="deleteLot('${inv.id}','${l.id}')" style="font-size:10px;padding:1px 7px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);cursor:pointer;margin-top:2px">${t('common.delete')}</button>
         </div>
       </div>`;
     }
     const total=parseFloat(l.qty||0)*parseFloat(l.price||0);
     const usdTotal=parseFloat(l.usdRate||0)>0?total/parseFloat(l.usdRate):0;
+    const isSell=l.lotType==='satim';
+    const sideLabel=isSell?t('inv.lotSellSide'):t('inv.lotBuySide');
+    const sideColor=isSell?'var(--danger)':'var(--success)';
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
       <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${l.date} · ${l.qty} adet @ ${fmtTRY(l.price)}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">
+          <span style="display:inline-block;padding:1px 6px;border-radius:10px;background:${sideColor}22;color:${sideColor};font-weight:700;font-size:10px;margin-right:4px">${sideLabel}</span>
+          ${l.date} · ${l.qty} ${t('inv.unitPiece')} @ ${fmtTRY(l.price)}
+        </div>
         <div style="font-size:11px;color:var(--muted)">$1 = ${parseFloat(l.usdRate||0).toFixed(4)}₺</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;font-weight:700;color:var(--text)">${fmtTRY(total)}</div>
+        <div style="font-size:12px;font-weight:700;color:${isSell?'var(--danger)':'var(--text)'}">${isSell?'-':''}${fmtTRY(total)}</div>
         <div style="font-size:11px;color:var(--muted)">${fmtUSD(usdTotal)}</div>
-        <button onclick="deleteLot('${inv.id}','${l.id}')" style="font-size:10px;padding:1px 7px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);cursor:pointer;margin-top:2px">Sil</button>
+        <button onclick="deleteLot('${inv.id}','${l.id}')" style="font-size:10px;padding:1px 7px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);cursor:pointer;margin-top:2px">${t('common.delete')}</button>
       </div>
     </div>`;
   }).join('');
@@ -753,7 +886,7 @@ function renderInvLots(inv){
 function saveInv(){
   const id=document.getElementById('inv-id').value;
   const name=document.getElementById('inv-name').value.trim();
-  if(!name){alert('Yatırım adı girin');return;}
+  if(!name){alert(t('inv.nameRequired'));return;}
   if(!S.investmentPortfolio) S.investmentPortfolio=[];
   const existing=id?S.investmentPortfolio.find(x=>x.id===id):null;
   const type=document.getElementById('inv-type').value;
@@ -786,7 +919,7 @@ function saveInv(){
 
 function deleteInv(){
   const id=document.getElementById('inv-id').value;
-  if(!confirm('Bu yatırımı ve tüm alım geçmişini silmek istiyor musunuz?')) return;
+  if(!confirm(t('inv.deleteConfirm'))) return;
   S.investmentPortfolio=(S.investmentPortfolio||[]).filter(x=>x.id!==id);
   delete _priceStatus[id];
   saveS();
@@ -807,9 +940,16 @@ function openAddLot(invId){
   document.getElementById('lot-usd-status').textContent='';
   const typeField=document.getElementById('lot-type-field');
   const typeSel=document.getElementById('lot-type-sel');
-  if(typeSel) typeSel.value='alim';
-  const isStock=inv&&(inv.type==='hisse'||inv.type==='fon');
-  if(typeField) typeField.style.display=isStock?'':'none';
+  if(typeSel){
+    typeSel.value='alim';
+    // Show/hide the temettu (reinvested dividend) option per asset class — only
+    // makes sense for stocks/funds. Sell is universal so it's always available.
+    const divOpt=typeSel.querySelector('option[value="temettu"]');
+    if(divOpt) divOpt.style.display=(inv&&(inv.type==='hisse'||inv.type==='fon'))?'':'none';
+  }
+  // The lot-type field itself now always shows (was hidden for non-stocks);
+  // every asset can have buys AND sells, so a chooser is always useful.
+  if(typeField) typeField.style.display='';
   onLotTypeChange('alim');
   fetchUsdRate(todayStr());
   openModal('overlay-lot');
@@ -825,7 +965,7 @@ function onLotTypeChange(type){
     const invId=document.getElementById('lot-inv-id').value;
     const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
     const curQtyEl=document.getElementById('lot-cur-qty-display');
-    if(inv&&curQtyEl){ const c=calcInv(inv); curQtyEl.value=c.totalQty+' adet'; }
+    if(inv&&curQtyEl){ const c=calcInv(inv); curQtyEl.value=c.totalQty+' '+t('inv.unitPiece'); }
     const divEl=document.getElementById('lot-div-per-share');
     const rebuyEl=document.getElementById('lot-div-rebuy-price');
     if(divEl) divEl.value='';
@@ -847,12 +987,12 @@ function calcDivFields(){
   const newQtyEl=document.getElementById('lot-div-new-qty-display');
   const infoEl=document.getElementById('lot-div-info');
   if(totalEl) totalEl.value=divPerShare>0?fmtTRY(totalDiv):'—';
-  if(newQtyEl) newQtyEl.value=newQty>0?newQty+' adet':'—';
+  if(newQtyEl) newQtyEl.value=newQty>0?newQty+' '+t('inv.unitPiece'):'—';
   if(infoEl){
     if(newQty>0){
       const newTotal=c.totalQty+newQty;
       const newAvg=newTotal>0?c.totalCostTL/newTotal:0;
-      infoEl.innerHTML=`${newQty} adet 0₺ maliyetle eklenir. Yeni ort. maliyet: <strong>${fmtTRY(newAvg)}</strong>`;
+      infoEl.innerHTML=`${t('inv.dividendInfo',{n:newQty})}<strong>${fmtTRY(newAvg)}</strong>`;
     } else { infoEl.innerHTML=''; }
   }
 }
@@ -861,7 +1001,7 @@ async function fetchUsdRate(date){
   if(!date) return;
   const statusEl=document.getElementById('lot-usd-status');
   const rateEl=document.getElementById('lot-usd-rate');
-  if(statusEl) statusEl.textContent='Kur yükleniyor...';
+  if(statusEl) statusEl.textContent=t('inv.rateLoadingShort');
   try{
     const url=`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.json`;
     const res=await fetch(url,{cache:'force-cache'});
@@ -869,35 +1009,43 @@ async function fetchUsdRate(date){
     const rate=data?.usd?.try;
     if(rate>0){
       if(rateEl) rateEl.value=rate.toFixed(4);
-      if(statusEl) statusEl.textContent=`✓ ${date} kuru`;
+      if(statusEl) statusEl.textContent=t('inv.rateOk',{date});
     } else throw new Error();
   }catch{
-    if(statusEl) statusEl.textContent='Kur alınamadı — manuel girin';
+    if(statusEl) statusEl.textContent=t('inv.rateFail');
   }
 }
 
 function saveLot(){
   const invId=document.getElementById('lot-inv-id').value;
   const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
-  if(!inv){alert('Yatırım bulunamadı');return;}
+  if(!inv){alert(t('inv.notFound'));return;}
   const date=document.getElementById('lot-date').value;
-  const isTemettu=document.getElementById('lot-type-sel')?.value==='temettu';
+  const lotType=document.getElementById('lot-type-sel')?.value||'alim';
   if(!inv.lots) inv.lots=[];
-  if(isTemettu){
+  if(lotType==='temettu'){
     const divPerShare=parseFloat(document.getElementById('lot-div-per-share').value)||0;
     const rebuyPrice=parseFloat(document.getElementById('lot-div-rebuy-price').value)||0;
-    if(!date||!(divPerShare>0)||!(rebuyPrice>0)){alert('Tarih, pay başına temettü ve yeniden alış fiyatı zorunludur');return;}
+    if(!date||!(divPerShare>0)||!(rebuyPrice>0)){alert(t('inv.divRequired'));return;}
     const c=calcInv(inv);
     const totalDiv=c.totalQty*divPerShare;
     const newQty=Math.floor(totalDiv/rebuyPrice*10000)/10000;
-    if(!(newQty>0)){alert('Hesaplanan yeni pay adedi 0 — fiyat veya temettü miktarını kontrol edin');return;}
+    if(!(newQty>0)){alert(t('inv.divZero'));return;}
     inv.lots.push({id:uid('lot'),date,qty:newQty,price:0,usdRate:0,lotType:'temettu',divPerShare,totalDiv});
   } else {
     const qty=parseFloat(document.getElementById('lot-qty').value);
     const price=parseFloat(document.getElementById('lot-price').value);
     const usdRate=parseFloat(document.getElementById('lot-usd-rate').value)||0;
-    if(!date||!(qty>0)||!(price>0)){alert('Tarih, adet ve fiyat zorunludur');return;}
-    inv.lots.push({id:uid('lot'),date,qty,price,usdRate});
+    if(!date||!(qty>0)||!(price>0)){alert(t('inv.lotRequired'));return;}
+    if(lotType==='satim'){
+      // Defensive: warn if the user is trying to sell more than they hold (lots
+      // are replayed in date order, so we re-check at this lot's date).
+      const cNow=calcInv(inv);
+      if(qty>cNow.totalQty+1e-9 && !confirm(t('inv.sellOverQty',{have:cNow.totalQty,want:qty}))){ return; }
+      inv.lots.push({id:uid('lot'),date,qty,price,usdRate,lotType:'satim'});
+    } else {
+      inv.lots.push({id:uid('lot'),date,qty,price,usdRate,lotType:'alim'});
+    }
   }
   saveS();
   closeModal('overlay-lot');
@@ -907,7 +1055,7 @@ function saveLot(){
 }
 
 function deleteLot(invId,lotId){
-  if(!confirm('Bu alımı silmek istiyor musunuz?')) return;
+  if(!confirm(t('inv.deleteLotConfirm'))) return;
   const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
   if(!inv) return;
   inv.lots=(inv.lots||[]).filter(l=>l.id!==lotId);

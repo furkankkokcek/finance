@@ -15,6 +15,29 @@ function renderTakvim(){
   const byDay={};
   events.forEach(ev=>{ if(!byDay[ev.day]) byDay[ev.day]=[]; byDay[ev.day].push(ev); });
 
+  // Remaining (unpaid) payments for the displayed month: upcoming (today onward)
+  // vs already overdue. Income and PPF reminders don't count as payments.
+  const todayMid=new Date(); todayMid.setHours(0,0,0,0);
+  let remainTotal=0, remainCount=0, overdueTotal=0, overdueCount=0;
+  events.forEach(ev=>{
+    if(ev.isReminder||ev.type==='income'||ev.paid) return;
+    const evDate=new Date(displayYear,displayMonth-1,ev.day);
+    if(evDate>=todayMid){ remainTotal+=ev.amount||0; remainCount++; }
+    else { overdueTotal+=ev.amount||0; overdueCount++; }
+  });
+  let summaryHtml=`<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span style="font-size:12px;color:var(--muted)">${t('calendar.remainingThisMonth')} <span style="opacity:.7">(${t('calendar.paymentsCount',{n:remainCount})})</span></span>
+      <span style="font-size:18px;font-weight:800;color:${remainCount>0?'var(--accent)':'#22c55e'}">${remainCount>0?fmtTRY(remainTotal):t('calendar.allPaid')}</span>
+    </div>`;
+  if(overdueCount>0){
+    summaryHtml+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--danger)">${t('calendar.overdue')} <span style="opacity:.7">(${t('calendar.paymentsCount',{n:overdueCount})})</span></span>
+      <span style="font-size:13px;font-weight:700;color:var(--danger)">${fmtTRY(overdueTotal)}</span>
+    </div>`;
+  }
+  summaryHtml+=`</div>`;
+
   const firstDow=new Date(displayYear,displayMonth-1,1).getDay();
   const firstMon=firstDow===0?6:firstDow-1; // Mon=0..Sun=6
   const daysInMonth=new Date(displayYear,displayMonth,0).getDate();
@@ -26,9 +49,10 @@ function renderTakvim(){
       <div style="font-size:15px;font-weight:700;color:var(--text)">${MONTHS_FULL[displayMonth-1]} ${displayYear}</div>
       <button onclick="calStep++;renderTakvim()" style="padding:6px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r3);color:var(--text);font-size:16px;cursor:pointer;line-height:1">›</button>
     </div>
+    ${summaryHtml}
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px">`;
 
-  ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(d=>{
+  buildWeekdayShort().forEach(d=>{
     html+=`<div style="text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:3px 0">${d}</div>`;
   });
   html+=`</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`;
@@ -78,15 +102,15 @@ function renderTakvim(){
     const selDate=new Date(displayYear,displayMonth-1,_calSelDay);
     const selIsHol=isPublicHoliday(selDate);
     html+=`<div style="margin-top:10px;padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">${_calSelDay} ${MONTHS_FULL[displayMonth-1]} ${displayYear}${selIsHol?'<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">Resmi Tatil</span>':''}</div>`;
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">${_calSelDay} ${MONTHS_FULL[displayMonth-1]} ${displayYear}${selIsHol?'<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">'+t('calendar.officialHoliday')+'</span>':''}</div>`;
     if(dayEvs.length===0){
-      html+=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:4px 0">Bu gün ödeme yok</div>`;
+      html+=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:4px 0">${t('calendar.noPaymentThisDay')}</div>`;
     } else {
       dayEvs.forEach(ev=>{
-        const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatırlatma':(CAT_LABELS[ev.type]||ev.type);
+        const typeLabel=ev.type==='income'?t('calendar.income'):ev.isReminder?t('calendar.ppfReminder'):(CAT_LABELS[ev.type]||ev.type);
         const canMark=!ev.isReminder&&ev.type!=='income'&&ev.expId;
         const paidBtn=canMark
-          ?`<button onclick="togglePaymentPaid('${ev.expId}',${displayYear},${displayMonth})" style="margin-top:4px;padding:3px 10px;border-radius:20px;border:1px solid ${ev.paid?'#22c55e':'var(--border)'};background:${ev.paid?'rgba(34,197,94,.15)':'transparent'};color:${ev.paid?'#22c55e':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer">${ev.paid?'✓ Ödendi':'Ödenmedi'}</button>`
+          ?`<button onclick="togglePaymentPaid('${ev.expId}',${displayYear},${displayMonth})" style="margin-top:4px;padding:3px 10px;border-radius:20px;border:1px solid ${ev.paid?'#22c55e':'var(--border)'};background:${ev.paid?'rgba(34,197,94,.15)':'transparent'};color:${ev.paid?'#22c55e':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer">${ev.paid?t('calendar.paid'):t('calendar.unpaid')}</button>`
           :'';
         const nameColor=ev.paid?'#22c55e':ev.color;
         html+=`<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
@@ -104,21 +128,15 @@ function renderTakvim(){
 
   // Legend
   html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding:8px 10px;background:var(--bg3);border-radius:var(--r2)">`;
-  [{c:'#3b82f6',l:'Sabit'},{c:'#ef4444',l:'Kredi'},{c:'#f59e0b',l:'KK'},{c:'#a855f7',l:'PPF Hatırl.'},{c:'#22c55e',l:'Maaş/Gelir'}].forEach(({c,l})=>{
+  [{c:'#3b82f6',l:t('calendar.legendFixed')},{c:'#ef4444',l:t('calendar.legendLoan')},{c:'#f59e0b',l:t('calendar.legendKk')},{c:'#a855f7',l:t('calendar.legendPpf')},{c:'#22c55e',l:t('calendar.legendSalary')}].forEach(({c,l})=>{
     html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:${c}"></div><span style="font-size:11px;color:var(--muted)">${l}</span></div>`;
   });
-  html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:rgba(34,197,94,.45);border:1px solid rgba(34,197,94,.7)"></div><span style="font-size:11px;color:var(--muted)">Ödendi</span></div>`;
-  html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></div><span style="font-size:11px;color:var(--muted)">Tatil/Haftasonu</span></div>`;
+  html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:rgba(34,197,94,.45);border:1px solid rgba(34,197,94,.7)"></div><span style="font-size:11px;color:var(--muted)">${t('calendar.legendPaid')}</span></div>`;
+  html+=`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--muted)"></div><span style="font-size:11px;color:var(--muted)">${t('calendar.legendHoliday')}</span></div>`;
   html+=`</div>`;
 
-  html+=`<div style="font-size:11px;color:var(--muted);margin-top:12px;padding:8px 10px;background:var(--bg3);border-radius:var(--r2);line-height:1.6">
-    📱 <strong style="color:var(--text)">Takvime Aktar</strong> — <strong style="color:var(--text)">Google Takvim</strong> butonunu kullan (mobilden çalışır). <code style="font-size:10px;background:var(--bg4);padding:1px 4px;border-radius:3px">.ics</code> dosyası ise Apple Takvim ve masaüstü için.
-  </div>`;
-  html+=`<div style="display:flex;gap:8px;margin-top:8px">
-    <button class="btn-secondary" style="flex:1" onclick="exportICS(${displayYear},${displayMonth})">📥 .ics İndir</button>
-    <button class="btn-secondary" style="flex:1;color:var(--accent);border-color:var(--accent)" onclick="showGCalLinks(${displayYear},${displayMonth})">📅 Google Takvim</button>
-  </div>`;
-  html+=`<div id="gcal-links-panel" style="display:none"></div>`;
+  // Calendar export (.ics / Google Calendar) now lives in Settings → Takvim
+  // Entegrasyonu (behind a rewarded ad), so no export buttons render here.
 
   el.innerHTML=html;
 }
@@ -169,8 +187,8 @@ function exportICS(year,month){
     const dateStr=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
     const dEnd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
     const dateEndStr=`${dEnd.getFullYear()}${pad(dEnd.getMonth()+1)}${pad(dEnd.getDate())}`;
-    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatirlatma':(CAT_LABELS[ev.type]||ev.type);
-    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
+    const typeLabel=ev.type==='income'?t('calendar.income'):ev.isReminder?t('calendar.ppfReminder'):(CAT_LABELS[ev.type]||ev.type);
+    const amountStr=Math.round(ev.amount).toLocaleString(i18nLocaleCode())+' TL';
     const evUid=`ft-${year}-${pad(month)}-${pad(ev.day)}-${ev.expId||'inc'}-${Math.random().toString(36).slice(2,7)}@fintrack`;
     out.push('BEGIN:VEVENT');
     out.push(`UID:${evUid}`);
@@ -188,11 +206,18 @@ function exportICS(year,month){
   });
 
   out.push('END:VCALENDAR');
-  const blob=new Blob([out.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`fintrack_${year}-${pad(month)}.ics`;a.click();
-  URL.revokeObjectURL(url);
+  saveFile(`fintrack_${year}-${pad(month)}.ics`, out.join('\r\n')+'\r\n', 'text/calendar;charset=utf-8');
+}
+
+// Settings → Takvim Entegrasyonu entry points: gate the export behind a rewarded
+// ad (watch once, free for 5 min), then export the CURRENT month.
+async function calendarExportICS(){
+  if(typeof showRewardedGate==='function' && !(await showRewardedGate('caltools',5*60*1000))){ alert(t('ads.rewardNeeded')); return; }
+  exportICS(S.settings.currentYear,S.settings.currentMonth);
+}
+async function calendarGCal(){
+  if(typeof showRewardedGate==='function' && !(await showRewardedGate('caltools',5*60*1000))){ alert(t('ads.rewardNeeded')); return; }
+  showGCalLinks(S.settings.currentYear,S.settings.currentMonth);
 }
 
 function showGCalLinks(year,month){
@@ -204,14 +229,14 @@ function showGCalLinks(year,month){
   const events=getMonthEvents(year,month);
   if(!events.length){
     panel.style.display='block';
-    panel.innerHTML=`<div style="padding:10px;font-size:12px;color:var(--muted);text-align:center">Bu ayda etkinlik yok</div>`;
+    panel.innerHTML=`<div style="padding:10px;font-size:12px;color:var(--muted);text-align:center">${t('calendar.noEventThisMonth')}</div>`;
     return;
   }
 
   const rows=events.map(ev=>{
     const dateStr=`${year}${pad(month)}${pad(ev.day)}`;
-    const typeLabel=ev.type==='income'?'Gelir':ev.isReminder?'PPF hatirlatma':(CAT_LABELS[ev.type]||ev.type);
-    const amountStr=Math.round(ev.amount).toLocaleString('tr-TR')+' TL';
+    const typeLabel=ev.type==='income'?t('calendar.income'):ev.isReminder?t('calendar.ppfReminder'):(CAT_LABELS[ev.type]||ev.type);
+    const amountStr=Math.round(ev.amount).toLocaleString(i18nLocaleCode())+' TL';
     const details=encodeURIComponent(amountStr+' - '+typeLabel);
     const title=encodeURIComponent(ev.name);
     const gcUrl=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}%2F${dateStr}&details=${details}`;
@@ -222,13 +247,13 @@ function showGCalLinks(year,month){
         <div style="font-size:11px;color:var(--muted)">${dayLabel} · ${amountStr}</div>
       </div>
       <a href="${gcUrl}" target="_blank" rel="noopener"
-        style="padding:5px 11px;background:var(--accent);border-radius:var(--r3);font-size:11px;font-weight:700;color:#000;text-decoration:none;flex-shrink:0">+ Ekle</a>
+        style="padding:5px 11px;background:var(--accent);border-radius:var(--r3);font-size:11px;font-weight:700;color:#000;text-decoration:none;flex-shrink:0">${t('calendar.gcalAdd')}</a>
     </div>`;
   }).join('');
 
   panel.style.display='block';
   panel.innerHTML=`<div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Her etkinlik için <strong style="color:var(--text)">+ Ekle</strong>'ye bas — Google Takvim açılır, kaydet.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${t('calendar.gcalInfo')}</div>
     ${rows}
   </div>`;
 }

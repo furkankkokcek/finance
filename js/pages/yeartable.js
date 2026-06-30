@@ -1,11 +1,16 @@
 // Year table modal
 
-function openYearTable(){
+async function openYearTable(){
+  // Rewarded gate: watch a short ad to open the detailed year table, then it's
+  // free for a few minutes (no ad on every re-open). Fails open if no ad loads.
+  if(typeof showRewardedGate==='function' && !(await showRewardedGate('yeartable', 5*60*1000))){
+    alert(t('ads.rewardNeeded')); return;
+  }
   const year=S.settings.currentYear;
   const yd=getYear(year);
-  document.getElementById('yeartable-title').textContent=`${year} Yıllık Tablo`;
+  document.getElementById('yeartable-title').textContent=t('yeartable.title',{year});
 
-  const header=`<tr><th>Kalem</th>${MONTHS.map(m=>`<th>${m}</th>`).join('')}<th>Toplam</th></tr>`;
+  const header=`<tr><th>${t('yeartable.item')}</th>${MONTHS.map(m=>`<th>${m}</th>`).join('')}<th>${t('common.total')}</th></tr>`;
   let rows='';
 
   const addSection=(label,items)=>{
@@ -20,20 +25,20 @@ function openYearTable(){
         const amt=parseFloat(exp.amounts[m]||0);
         const st=exp.status?.[m]||'unpaid';
         const c=st==='paid'?'var(--success)':st==='partial'?'var(--accent)':'var(--text)';
-        rows+=`<td style="color:${c}">${amt>0?amt.toLocaleString('tr-TR',{maximumFractionDigits:0}):'-'}</td>`;
+        rows+=`<td style="color:${c}">${amt>0?amt.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0}):'-'}</td>`;
         secTotals[i]+=amt;
         itemTotal+=amt;
       });
-      rows+=`<td style="font-weight:700">${itemTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+      rows+=`<td style="font-weight:700">${itemTotal.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td></tr>`;
     });
     const secTotal=secTotals.reduce((a,b)=>a+b,0);
-    rows+=`<tr class="total-row"><td>${label} TOPLAM</td>${secTotals.map(v=>`<td>${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${secTotal.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+    rows+=`<tr class="total-row"><td>${t('yeartable.sectionTotal',{label})}</td>${secTotals.map(v=>`<td>${v.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td>`).join('')}<td>${secTotal.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td></tr>`;
   };
 
-  addSection('SABİT GİDERLER',yd.expenses.filter(e=>e.category==='sabit'));
-  addSection('KREDİLER',yd.expenses.filter(e=>e.category==='kredi'));
-  addSection('KREDİ KARTLARI',yd.expenses.filter(e=>e.category==='kk'));
-  addSection('ABONELİKLER',yd.expenses.filter(e=>e.category==='abonelik'));
+  addSection(t('yeartable.fixedExpenses'),yd.expenses.filter(e=>e.category==='sabit'));
+  addSection(t('yeartable.loans'),yd.expenses.filter(e=>e.category==='kredi'));
+  addSection(t('yeartable.creditCards'),yd.expenses.filter(e=>e.category==='kk'));
+  addSection(t('yeartable.subscriptions'),yd.expenses.filter(e=>e.category==='abonelik'));
 
   let gTotals=Array(12).fill(0);
   let iTotals=Array(12).fill(0);
@@ -45,11 +50,11 @@ function openYearTable(){
     cashTotals[m-1]=d.cashLeft;
   }
   rows+=`<tr class="grand-divider"><td colspan="14"></td></tr>`;
-  rows+=`<tr class="total-row"><td>🤑 TOPLAM GELİR</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  rows+=`<tr class="total-row"><td>💸 TOPLAM GİDER</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.totalIncome')}</td>${iTotals.map(v=>`<td style="color:var(--success)">${v.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td>`).join('')}<td>${iTotals.reduce((a,b)=>a+b,0).toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.totalExpense')}</td>${gTotals.map(v=>`<td style="color:var(--danger)">${v.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td>`).join('')}<td>${gTotals.reduce((a,b)=>a+b,0).toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td></tr>`;
   const invTotals=Array.from({length:12},(_,i)=>getMonthlyInvestmentFromLots(year,i+1));
-  rows+=`<tr class="total-row"><td>💼 YATIRIM</td>${invTotals.map(v=>`<td style="color:var(--info)">${v>0?v.toLocaleString('tr-TR',{maximumFractionDigits:0}):'-'}</td>`).join('')}<td>${invTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
-  rows+=`<tr class="total-row"><td>💲 NAKİT KALAN</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString('tr-TR',{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR',{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.investment')}</td>${invTotals.map(v=>`<td style="color:var(--info)">${v>0?v.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0}):'-'}</td>`).join('')}<td>${invTotals.reduce((a,b)=>a+b,0).toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td></tr>`;
+  rows+=`<tr class="total-row"><td>${t('yeartable.cashLeft')}</td>${cashTotals.map(v=>`<td style="color:${v>=0?'var(--success)':'var(--danger)'}">${v.toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td>`).join('')}<td>${cashTotals.reduce((a,b)=>a+b,0).toLocaleString(i18nLocaleCode(),{maximumFractionDigits:0})}</td></tr>`;
 
   document.getElementById('year-table-content').innerHTML=`<table class="year-table"><thead>${header}</thead><tbody>${rows}</tbody></table>`;
   openModal('overlay-yeartable');

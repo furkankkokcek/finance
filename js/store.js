@@ -11,13 +11,20 @@ let S = {
   investmentPortfolio:[],
   settings:{
     salaryDay:1, currentYear:new Date().getFullYear(), currentMonth:new Date().getMonth()+1,
-    netWorth:0, invGoal:{amount:0,currency:'usd'}, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true,
+    netWorth:0, currency:'TRY', invGoal:{amount:0,currency:'usd'}, notifEnabled:false, lastNotifDate:'', theme:'dark', ppfEnabled:true,
     amountsHidden:false, changeCount:0, lastOpenDate:'', testNotifEnabled:false,
     customHolidays:[]
   },
   years:{}, notifLog:[]
 };
 const giderOpenCats = new Set();
+// Active page. Declared here (loaded first) with a default so it's ALWAYS defined
+// — it used to be created implicitly only on the first showPage() call, so
+// importing data before tapping any nav tab threw "currentPage is not defined".
+let currentPage = 'dashboard';
+// When true, the unload/visibility autosave is suppressed. Set before wiping data
+// + reloading so the in-memory (still-full) S isn't written straight back.
+let _skipAutoSave = false;
 
 function getYear(y){
   y = y || S.settings.currentYear;

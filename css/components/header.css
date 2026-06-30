@@ -1,7 +1,10 @@
 /* HEADER */
 .header{position:fixed;top:0;left:0;right:0;height:var(--hdr);background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:50}
-.header-logo{font-size:20px;font-weight:800;letter-spacing:-1px;color:var(--accent)}
+.header-logo{font-size:20px;font-weight:800;letter-spacing:-1px;color:var(--accent);display:flex;align-items:center;gap:0}
 .header-logo span{color:var(--text)}
+.header-logo-img{width:26px;height:26px;border-radius:7px;flex-shrink:0;margin-right:8px}
+/* Notification bell badge */
+.notif-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:var(--danger,#ef4444);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
 .header-center{display:flex;align-items:center;gap:8px}
 .year-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:50px;font-size:14px;font-weight:600;cursor:pointer}
 .header-actions{display:flex;gap:8px}

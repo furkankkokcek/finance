@@ -3,10 +3,18 @@
 function openSettingsModal(){
   document.getElementById('cfg-salary').value=S.settings.salaryDay;
   document.getElementById('cfg-theme').checked=S.settings.theme==='light';
-  document.getElementById('cfg-notif').checked=S.settings.notifEnabled&&Notification.permission==='granted';
+  // On native the web Notification API is irrelevant; reflect the stored setting.
+  const notifOn=(typeof nativeNotifAvailable==='function'&&nativeNotifAvailable())
+    ? !!S.settings.notifEnabled
+    : !!(S.settings.notifEnabled&&notifPermission()==='granted');
+  document.getElementById('cfg-notif').checked=notifOn;
   document.getElementById('cfg-ppf').checked=S.settings.ppfEnabled!==false;
   const testEl=document.getElementById('cfg-test-notif');
   if(testEl) testEl.checked=S.settings.testNotifEnabled===true;
+  const langSel=document.getElementById('cfg-language');
+  if(langSel) langSel.value=getLang();
+  const curSel=document.getElementById('cfg-currency');
+  if(curSel) curSel.value=getCurrencyCode();
   updatePpfInfoTexts();
   renderHolidayList();
   openModal('overlay-settings');
@@ -25,7 +33,7 @@ function updatePpfInfoTexts(){
   if(ppfInfoEl) ppfInfoEl.style.display=enabled?'':'none';
   if(noPpfInfoEl) noPpfInfoEl.style.display=enabled?'none':'';
   const subEl=document.getElementById('cfg-notif-sub');
-  if(subEl) subEl.textContent=enabled?'Ödeme ve PPF bildirimleri':'Ödeme bildirimleri';
+  if(subEl) subEl.textContent=enabled?t('settings.notifSubBoth'):t('settings.notifSubPay');
 }
 
 function saveSettings(){
@@ -34,7 +42,59 @@ function saveSettings(){
   saveS();
   closeModal('overlay-settings');
   renderPage(currentPage);
-  alert('Ayarlar kaydedildi.');
+  alert(t('settings.savedAlert'));
+}
+
+// Salary/income day now auto-saves on change (the explicit "Kaydet" button was removed).
+function saveSalaryDay(v){
+  S.settings.salaryDay=parseInt(v)||1;
+  saveS();
+  if(typeof renderPage==='function') renderPage(currentPage);
+}
+
+// Currency selection. Affects every amount via fmtTRY() (which reads the symbol
+// from settings). All historical numbers stay numerically the same — only the
+// displayed symbol changes (no exchange-rate conversion).
+function changeCurrency(code){
+  if(!CURRENCIES[code]) return;
+  S.settings.currency=code;
+  saveS();
+  if(typeof renderPage==='function') renderPage(currentPage);
+}
+
+// On language change, suggest the matching default currency for that language —
+// only if the user hasn't deliberately picked one yet (state is still 'TRY').
+function suggestCurrencyForLang(lang, selectId){
+  const def=(typeof LANG_DEFAULT_CURRENCY!=='undefined' && LANG_DEFAULT_CURRENCY[lang])||'TRY';
+  const sel=document.getElementById(selectId);
+  if(sel) sel.value=def;
+}
+
+// Import a backup from the first-launch setup screen, then jump straight into the app.
+function importAtSetup(e){
+  const input=e.target;
+  const file=input.files[0];
+  if(!file){ input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data.settings){ alert(t('settings.invalidFile')); return; }
+      S=data;
+      if(!S.cards||!S.settings.customHolidays) migrateToV4(S);
+      S.setupDone=true;
+      saveS();
+      document.getElementById('setup').style.display='none';
+      document.getElementById('app').style.display='block';
+      applyTheme(S.settings.theme||'dark');
+      if(typeof applyLocale==='function') applyLocale();
+      initApp();
+    }catch(err){
+      alert(t('settings.fileReadError')+(err&&err.message?('\n\n['+err.message+']'):''));
+    }finally{ input.value=''; }
+  };
+  reader.onerror=()=>{ alert(t('settings.fileReadError')); input.value=''; };
+  reader.readAsText(file);
 }
 
 // ---- Holiday management ----
@@ -44,7 +104,7 @@ function renderHolidayList(){
   if(!el) return;
   const holidays=(S.settings.customHolidays||[]).slice().sort();
   if(holidays.length===0){
-    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">Özel tatil eklenmemiş</div>`;
+    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">${t('settings.noCustomHoliday')}</div>`;
     return;
   }
   el.innerHTML=holidays.map(d=>{
@@ -52,14 +112,14 @@ function renderHolidayList(){
     const label=`${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]} ${dt.getFullYear()}`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg4);border-radius:var(--r3);margin-bottom:4px">
       <span style="font-size:13px;color:var(--text)">${label}</span>
-      <button onclick="removeHoliday('${d}')" style="padding:2px 8px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);font-size:11px;cursor:pointer">Sil</button>
+      <button onclick="removeHoliday('${d}')" style="padding:2px 8px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);font-size:11px;cursor:pointer">${t('common.delete')}</button>
     </div>`;
   }).join('');
 }
 
 function addHoliday(){
   const inp=document.getElementById('holiday-input');
-  if(!inp||!inp.value){alert('Tarih seçin');return;}
+  if(!inp||!inp.value){alert(t('settings.selectDate'));return;}
   if(!S.settings.customHolidays) S.settings.customHolidays=[];
   if(!S.settings.customHolidays.includes(inp.value)){
     S.settings.customHolidays.push(inp.value);
@@ -77,60 +137,70 @@ function removeHoliday(date){
 
 // ---- Data export/import ----
 
-function exportData(){
+async function exportData(){
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); return; }
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const ts=`${todayStr()}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
   const json=JSON.stringify(S,null,2);
-  const blob=new Blob([json],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`fintrack_${ts}.json`;a.click();
-  URL.revokeObjectURL(url);
+  await saveFile(`fintrack_${ts}.json`, json, 'application/json');
   S.settings.changeCount=0;
   saveS();
 }
 
 function showBackupDialog(){
-  if(confirm('💾 Veri yedeği almanız önerilir. Şimdi dışa aktarmak ister misiniz?')){
+  if(confirm(t('settings.backupSuggest'))){
     exportData();
   }
 }
 
-function importData(e){
-  const file=e.target.files[0];
-  if(!file) return;
+async function importData(e){
+  const input=e.target;
+  const file=input.files[0];
+  if(!file){ input.value=''; return; }
+  if(typeof showRewardedThen==='function' && !(await showRewardedThen())){ alert(t('ads.rewardNeeded')); input.value=''; return; }
   const reader=new FileReader();
   reader.onload=()=>{
     try{
       const data=JSON.parse(reader.result);
-      if(!data.settings){alert('Geçersiz dosya');return;}
-      if(confirm('Tüm veriler bu dosyayla değiştirilecek. Devam?')){
+      if(!data.settings){alert(t('settings.invalidFile'));return;}
+      if(confirm(t('settings.importConfirm'))){
         S=data;
         if(!S.cards||!S.settings.customHolidays) migrateToV4(S);
         saveS();
         applyTheme(S.settings.theme||'dark');
         closeModal('overlay-settings');
         document.getElementById('year-btn').textContent=S.settings.currentYear;
+        applyLocale();
         renderPage(currentPage);
-        alert('İçe aktarma başarılı!');
+        alert(t('settings.importSuccess'));
       }
-    }catch(err){alert('Dosya okunamadı');}
+    }catch(err){
+      alert(t('settings.fileReadError')+(err&&err.message?('\n\n['+err.message+']'):''));
+    }finally{
+      // Clear the input ONLY after the read finished. Clearing it earlier (before
+      // readAsText) releases the file's content:// URI on Android, so the read
+      // returns empty/partial data and JSON.parse fails ("file unreadable").
+      input.value='';
+    }
   };
+  reader.onerror=()=>{ alert(t('settings.fileReadError')); input.value=''; };
   reader.readAsText(file);
-  e.target.value='';
 }
 
 function clearAllData(){
-  if(!confirm('⚠️ Tüm veriler silinecek!\nBu işlem geri alınamaz.')) return;
-  if(!confirm('Son onay: Tüm yıllara ait gelir, gider ve harcama verileri silinecek. Emin misiniz?')) return;
+  if(!confirm(t('settings.clearConfirm1'))) return;
+  if(!confirm(t('settings.clearConfirm2'))) return;
+  // Stop the pagehide/visibilitychange autosave from writing the still-full
+  // in-memory S back to storage during the reload (that's why it "didn't work").
+  _skipAutoSave=true;
   localStorage.removeItem('fintrack_v4');
   localStorage.removeItem('fintrack_v3');
   location.reload();
 }
 
 async function forceRefreshCache(){
-  if(!confirm('Önbellek temizlenecek ve sayfa yenilenecek. Devam?')) return;
+  if(!confirm(t('settings.cacheConfirm'))) return;
   try{
     if('serviceWorker' in navigator){
       const regs=await navigator.serviceWorker.getRegistrations();
@@ -151,7 +221,7 @@ function setupExitGuard(){
   window.addEventListener('popstate',()=>{
     if((S.settings.changeCount||0)>0){
       history.pushState(null,'',location.href);
-      if(confirm('💾 Kaydedilmemiş değişiklikler var. Yedek almak ister misiniz?')){
+      if(confirm(t('settings.exitGuard'))){
         exportData();
       }
     }

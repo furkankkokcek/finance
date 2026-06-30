@@ -1,0 +1,15 @@
+{
+  "appId": "io.github.furkankkokcek.finance",
+  "appName": "FinTrack",
+  "webDir": "www",
+  "backgroundColor": "#09090c",
+  "plugins": {
+    "AdMob": {
+      "initializeForTesting": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#7c5cff"
+    }
+  }
+}

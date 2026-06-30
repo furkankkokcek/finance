@@ -1,11 +1,66 @@
 // Utilities - formatters, date helpers, data calculations
 
+// Save a generated file. In the browser this triggers a normal download; inside
+// the Capacitor native app a blob/`<a download>` does nothing, so we write the
+// file and open the OS share sheet instead (needs @capacitor/filesystem +
+// @capacitor/share). Returns a Promise<boolean>.
+async function saveFile(filename, content, mimeType){
+  const Cap=window.Capacitor;
+  const isNative=!!(Cap && typeof Cap.isNativePlatform==='function' && Cap.isNativePlatform());
+  if(isNative){
+    const tt=(k,fb)=>(typeof t==='function'?t(k):fb);
+    if(Cap.Plugins && Cap.Plugins.Filesystem && Cap.Plugins.Share){
+      try{
+        await Cap.Plugins.Filesystem.writeFile({path:filename,data:content,directory:'CACHE',encoding:'utf8'});
+        const {uri}=await Cap.Plugins.Filesystem.getUri({path:filename,directory:'CACHE'});
+        await Cap.Plugins.Share.share({title:filename,files:[uri]});
+        return true;
+      }catch(e){
+        alert(tt('settings.exportError','Export failed')+'\n'+(e&&e.message?e.message:e));
+        return false;
+      }
+    }
+    // Native build is missing @capacitor/filesystem / @capacitor/share — tell the
+    // user instead of silently falling through to a no-op blob download.
+    alert(tt('settings.exportPluginMissing','Export needs an app rebuild (npm install + npx cap sync).'));
+    return false;
+  }
+  try{
+    const blob=new Blob([content],{type:mimeType||'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename; a.click();
+    URL.revokeObjectURL(url);
+    return true;
+  }catch(e){ return false; }
+}
+
+// Currency catalogue. Default per locale lets us pick a sensible currency on
+// first launch from the chosen language, but the user can override it in Setup
+// or Settings. Code stays "fmtTRY" for historical reasons — it now formats in
+// the user's chosen currency, not just TRY.
+const CURRENCIES = {
+  TRY: { symbol: '₺', name: 'Türk Lirası' },
+  USD: { symbol: '$', name: 'US Dollar' },
+  EUR: { symbol: '€', name: 'Euro' },
+  GBP: { symbol: '£', name: 'British Pound' },
+};
+const LANG_DEFAULT_CURRENCY = { tr:'TRY', en:'USD', de:'EUR', es:'EUR', fr:'EUR' };
+
+function getCurrencyCode(){
+  return (S && S.settings && S.settings.currency && CURRENCIES[S.settings.currency])
+    ? S.settings.currency : 'TRY';
+}
+function getCurrencySymbol(){ return CURRENCIES[getCurrencyCode()].symbol; }
+
 function fmtTRY(n, showSign=false){
   if(n===undefined||n===null||isNaN(n)) return '—';
   const abs=Math.abs(n);
-  const str=abs.toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:0});
-  if(showSign) return (n>=0?'+':'-')+str+' ₺';
-  return str+' ₺';
+  const loc=(typeof i18nLocaleCode==='function')?i18nLocaleCode():'tr-TR';
+  const str=abs.toLocaleString(loc,{minimumFractionDigits:0,maximumFractionDigits:0});
+  const sym=getCurrencySymbol();
+  if(showSign) return (n>=0?'+':'-')+str+' '+sym;
+  return str+' '+sym;
 }
 
 function fmtPct(n){ return isNaN(n)?'%0':'%'+n.toFixed(1); }

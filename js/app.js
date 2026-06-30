@@ -18,8 +18,8 @@ function initApp(){
   syncNotifSchedule();
   setupExitGuard();
   checkMonthlyCalendarPrompt();
-  if(S.settings.notifEnabled&&Notification.permission==='granted') registerPeriodicSync();
-  if(S.settings.testNotifEnabled&&Notification.permission==='granted') startTestNotifMode();
+  if(S.settings.notifEnabled&&notifPermission()==='granted') registerPeriodicSync();
+  if(S.settings.testNotifEnabled&&notifPermission()==='granted') startTestNotifMode();
   setTimeout(()=>{
     document.querySelectorAll('.month-tab.active').forEach(t=>t.scrollIntoView({inline:'center',block:'nearest',behavior:'auto'}));
   },100);
@@ -33,7 +33,7 @@ function checkMonthlyCalendarPrompt(){
   S.settings.lastCalExportPrompt=key;
   saveS();
   setTimeout(()=>{
-    if(confirm(`📅 ${MONTHS_FULL[today.getMonth()]} ayı başladı!\n\nBu ayın ödeme günlerini takvimine görev olarak eklemek ister misin?\n(.ics dosyası indirilecek, takvim uygulamanla açabilirsin)`)){
+    if(confirm(t('app.monthStarted',{month:MONTHS_FULL[today.getMonth()]}))){
       exportICS(today.getFullYear(),today.getMonth()+1);
     }
   },800);
@@ -41,9 +41,9 @@ function checkMonthlyCalendarPrompt(){
 
 // Silent save on tab hide / page unload
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'&&typeof saveS==='function') saveS();
+  if(document.visibilityState==='hidden'&&!_skipAutoSave&&typeof saveS==='function') saveS();
 });
-window.addEventListener('pagehide',()=>{ if(typeof saveS==='function') saveS(); });
+window.addEventListener('pagehide',()=>{ if(!_skipAutoSave&&typeof saveS==='function') saveS(); });
 
 // Service worker
 if('serviceWorker' in navigator){
@@ -52,6 +52,12 @@ if('serviceWorker' in navigator){
 
 // Boot
 const loaded=loadS();
+// Localize month arrays + static DOM before first render.
+if(typeof applyLocale==='function') applyLocale();
+// Native-only banner ads (no-op on web/PWA).
+if(typeof initAds==='function') initAds();
+// Native-only FCM push registration (no-op on web/PWA and until configured).
+if(typeof initPush==='function') initPush();
 if(loaded&&S.setupDone){
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='block';

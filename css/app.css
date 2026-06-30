@@ -18,7 +18,7 @@
 .btn-primary{width:100%;padding:14px;background:var(--accent);color:#000;font-weight:700;font-size:16px;border:none;border-radius:var(--r2);cursor:pointer;margin-top:8px}
 .btn-secondary{width:100%;padding:12px;background:var(--bg4);color:var(--text);font-weight:600;font-size:15px;border:1px solid var(--border2);border-radius:var(--r2);cursor:pointer;margin-top:8px}
 .btn-danger{width:100%;padding:12px;background:var(--danger-bg);color:var(--danger);font-weight:700;font-size:15px;border:1px solid var(--danger);border-radius:var(--r2);cursor:pointer;margin-top:8px}
-.fab{position:fixed;bottom:calc(var(--nav) + 16px);right:16px;width:52px;height:52px;background:var(--accent);color:#000;border:none;border-radius:50%;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,158,11,.4);z-index:40}
+.fab{position:fixed;bottom:calc(var(--nav) + 16px);right:16px;width:52px;height:52px;background:var(--accent);color:#000;border:none;border-radius:50%;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,158,11,.4);z-index:55}
 
 /* SHARE BUTTON */
 .share-btn{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--success-bg);border:1px solid var(--success);border-radius:var(--r2);color:var(--success);font-weight:700;font-size:14px;cursor:pointer;width:100%;justify-content:center;margin-top:12px;margin-bottom: 12px;}
@@ -39,4 +39,5 @@ body.amounts-hidden .spending-amount,
 body.amounts-hidden .section-badge,
 body.amounts-hidden .inv-amount,
 body.amounts-hidden .year-table td:not(:first-child),
+body.amounts-hidden .amt-hideable,
 body.amounts-hidden .notif-text b{filter:blur(6px);user-select:none;cursor:default;transition:filter .2s}

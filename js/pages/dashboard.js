@@ -7,64 +7,42 @@ function renderDashboard(){
 
   buildMonthTabs('month-tabs','');
 
-  // Notification banners
+  // Upcoming payment / salary reminders no longer render on the summary page —
+  // they live in the notification center (bell icon). Keep the container empty.
   const banners=document.getElementById('notif-banners');
-  banners.innerHTML='';
-  const today=new Date();
-  getYear(year).expenses.forEach(exp=>{
-    if(!exp.dueDay) return;
-    const adj=getAdjustedDueDate(year,month,exp.dueDay);
-    const diff=Math.ceil((adj-today)/(1000*60*60*24));
-    if(diff>=0&&diff<=3){
-      const status=exp.status?.[month]||'unpaid';
-      if(status!=='paid'){
-        const amt=parseFloat(exp.amounts[month]||0);
-        if(amt===0) return;
-        const dayLbl=diff===0?'Bugün':diff===1?'Yarın':`${diff} gün sonra`;
-        banners.innerHTML+=`<div class="notif-banner"><div class="notif-icon">⏰</div><div class="notif-text"><b>${dayLbl}:</b> ${exp.name} — <b>${fmtTRY(amt)}</b> ödemesi</div></div>`;
-      }
-    }
-  });
-
-  // Salary day PPF
-  const sd=S.settings.salaryDay;
-  const daysToSalary=sd-today.getDate();
-  if(S.settings.ppfEnabled!==false&&daysToSalary>=0&&daysToSalary<=3&&d.ppfTotal>0){
-    const salaryLbl=daysToSalary===0?'Bugün':daysToSalary===1?'Yarın':`${daysToSalary} gün sonra`;
-    banners.innerHTML+=`<div class="notif-banner" style="background:var(--purple-bg);border-color:rgba(168,85,247,.25)"><div class="notif-icon">🏦</div><div class="notif-text"><b>${salaryLbl}</b> maaş günü! PPF: <b style="color:var(--purple)">${fmtTRY(d.ppfTotal)}</b></div></div>`;
-  }
+  if(banners) banners.innerHTML='';
 
   // Stat cards
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card">
-      <div class="stat-label">🤑 Toplam Gelir</div>
+      <div class="stat-label">${t('dash.totalIncome')}</div>
       <div class="stat-value pos">${fmtTRY(d.totalIncome)}</div>
       <div class="stat-sub">${MONTHS_FULL[month-1]} ${year}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">💸 Toplam Gider</div>
+      <div class="stat-label">${t('dash.totalExpense')}</div>
       <div class="stat-value neg">${fmtTRY(d.totalExpense)}</div>
-      ${d.investment>0?`<div class="stat-sub inv-amount">+${fmtTRY(d.investment)} yatırım</div>`:''}
+      ${d.investment>0?`<div class="stat-sub inv-amount">+${fmtTRY(d.investment)} ${t('dash.investmentSuffix')}</div>`:''}
     </div>
     <div class="stat-card">
-      <div class="stat-label">💲 Nakit Kalan</div>
+      <div class="stat-label">${t('dash.cashLeft')}</div>
       <div class="stat-value ${d.cashLeft>=0?'pos':'neg'}">${fmtTRY(d.cashLeft)}</div>
-      <div class="stat-sub">Gelir - Gider</div>
+      <div class="stat-sub">${t('dash.incomeMinusExpense')}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">📈 Tasarruf Oranı</div>
+      <div class="stat-label">${t('dash.savingsRate')}</div>
       <div class="stat-value acc">${fmtPct(d.savingsRate)}</div>
-      <div class="stat-sub">Yatırım/Gelir</div>
+      <div class="stat-sub">${t('dash.investmentPerIncome')}</div>
     </div>`;
 
   // PPF Box
   const ppfBox=document.getElementById('dash-ppf');
   if(S.settings.ppfEnabled!==false && d.ppfTotal>0){
-    ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">Bu Ay PPF Tutarı</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
+    ppfBox.innerHTML=`<div class="ppf-box"><div class="ppf-title">${t('dash.ppfThisMonth')}</div><div class="ppf-amount">${fmtTRY(d.ppfTotal)}</div></div>`;
   } else { ppfBox.innerHTML=''; }
 
   // Year Table Button
-  document.getElementById('dash-yeartable-btn').innerHTML=`<button style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">📋 Yıllık Tablo</button>`;
+  document.getElementById('dash-yeartable-btn').innerHTML=`<button style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" onclick="openYearTable()">${t('dash.yearTable')}</button>`;
 
   // Charts
   renderBarChart();
@@ -72,14 +50,15 @@ function renderDashboard(){
   renderTrendChart();
   renderSpendingPieChart();
 
-  // Share button
+  // Share button — (re)build every render so its label follows language changes
   const statsEl=document.getElementById('dash-stats');
-  if(!document.getElementById('share-btn-wrap')){
-    const wrap=document.createElement('div');
+  let wrap=document.getElementById('share-btn-wrap');
+  if(!wrap){
+    wrap=document.createElement('div');
     wrap.id='share-btn-wrap';
-    wrap.innerHTML=`<button class="share-btn" onclick="shareWhatsApp()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>WhatsApp'ta Paylaş</button>`;
     statsEl.after(wrap);
   }
+  wrap.innerHTML=`<button class="share-btn" onclick="shareWhatsApp()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>${t('dash.shareWhatsApp')}</button>`;
 }
 
 function renderSpendingPieChart(){
@@ -92,7 +71,7 @@ function renderSpendingPieChart(){
     return d.getFullYear()===year&&d.getMonth()+1===month;
   });
   if(items.length===0){
-    el.innerHTML=`<div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Bu ay harcama yok</div></div>`;
+    el.innerHTML=`<div class="chart-title">${t('dash.spendingDist')} — ${MONTHS_FULL[month-1]}</div><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">${t('dash.noSpendingThisMonth')}</div></div>`;
     return;
   }
   const catColors={market:'#22c55e',restoran:'#f59e0b',ulasim:'#3b82f6',giyim:'#ec4899',eglence:'#a855f7',saglik:'#06b6d4',egitim:'#f97316',diger:'#6b7280'};
@@ -104,7 +83,7 @@ function renderSpendingPieChart(){
     total+=parseFloat(s.amount||0);
   });
   if(total===0){
-    el.innerHTML=`<div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Bu ay harcama yok</div></div>`;
+    el.innerHTML=`<div class="chart-title">${t('dash.spendingDist')} — ${MONTHS_FULL[month-1]}</div><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">${t('dash.noSpendingThisMonth')}</div></div>`;
     return;
   }
   const segs=Object.entries(groups).map(([cat,val])=>({cat,val,color:catColors[cat]||'#6b7280',label:SPD_CATS[cat]||cat})).sort((a,b)=>b.val-a.val);
@@ -127,11 +106,11 @@ function renderSpendingPieChart(){
     angle=endAngle;
   });
   paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--bg3)"/>`;
-  paths+=`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Outfit">Toplam</text>`;
-  paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit">${fmtTRY(total)}</text>`;
+  paths+=`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Outfit">${t('common.total')}</text>`;
+  paths+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600" font-family="Outfit" class="amt-hideable">${fmtTRY(total)}</text>`;
   const legendRows=segs.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0"></div><span style="font-size:12px;color:var(--muted)">${s.label}</span></div><div style="text-align:right"><span class="inv-amount" style="font-size:12px;font-weight:600;color:var(--text)">${fmtTRY(s.val)}</span><span style="font-size:11px;color:var(--muted2);margin-left:4px">${Math.round(s.val/total*100)}%</span></div></div>`).join('');
   el.innerHTML=`
-    <div class="chart-title">Harcama Dağılımı — ${MONTHS_FULL[month-1]}</div>
+    <div class="chart-title">${t('dash.spendingDist')} — ${MONTHS_FULL[month-1]}</div>
     <div style="display:flex;align-items:flex-start;gap:8px">
       <svg viewBox="0 0 156 164" width="156" height="164" style="flex-shrink:0">${paths}</svg>
       <div style="flex:1;padding-top:8px">${legendRows}</div>
@@ -149,7 +128,7 @@ function renderBarChart(){
     return d;
   });
   if(maxVal===0){
-    document.getElementById('chart-bar').innerHTML=`<div class="chart-title">Aylık Gelir / Gider</div><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Henüz veri yok</div></div>`;
+    document.getElementById('chart-bar').innerHTML=`<div class="chart-title">${t('dash.monthlyIncomeExpense')}</div><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">${t('dash.noDataYet')}</div></div>`;
     return;
   }
   const cm=S.settings.currentMonth;
@@ -171,14 +150,14 @@ function renderBarChart(){
   });
 
   document.getElementById('chart-bar').innerHTML=`
-    <div class="chart-title">Aylık Gelir / Gider</div>
+    <div class="chart-title">${t('dash.monthlyIncomeExpense')}</div>
     <svg class="chart-svg" viewBox="0 0 ${W} ${H}" height="${H}">
       <line x1="0" y1="${H-PB}" x2="${W}" y2="${H-PB}" stroke="var(--border)" stroke-width="1"/>
       ${svgBars}
     </svg>
     <div class="chart-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Gelir</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Gider</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>${t('chart.income')}</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>${t('chart.expense')}</div>
     </div>`;
 }
 
@@ -186,14 +165,14 @@ function renderPieChart(d){
   const total=d.totalExpense;
   const el=document.getElementById('chart-pie');
   if(total===0){
-    el.innerHTML=`<div class="chart-title">Gider Dağılımı</div><div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">Veri yok</div>`;
+    el.innerHTML=`<div class="chart-title">${t('dash.expenseDist')}</div><div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">${t('dash.noData')}</div>`;
     return;
   }
   const segs=[
-    {val:d.sabitTotal,color:'#3b82f6',label:'Sabit'},
-    {val:d.krediTotal,color:'#a855f7',label:'Kredi'},
-    {val:d.kkTotal,color:'#f59e0b',label:'KK'},
-    {val:d.abonelikTotal||0,color:'#ec4899',label:'Abonelik'},
+    {val:d.sabitTotal,color:'#3b82f6',label:t('pie.sabit')},
+    {val:d.krediTotal,color:'#a855f7',label:t('pie.kredi')},
+    {val:d.kkTotal,color:'#f59e0b',label:t('pie.kk')},
+    {val:d.abonelikTotal||0,color:'#ec4899',label:t('pie.abonelik')},
   ].filter(s=>s.val>0);
   const R=55,cx=70,cy=70,r=40;
   let startAngle=-Math.PI/2;
@@ -213,7 +192,7 @@ function renderPieChart(d){
 
   const legendHtml=segs.map(s=>`<div class="legend-item"><div class="legend-dot" style="background:${s.color}"></div>${s.label}: ${Math.round(s.val/total*100)}%</div>`).join('');
 
-  el.innerHTML=`<div class="chart-title">Gider Dağılımı</div>
+  el.innerHTML=`<div class="chart-title">${t('dash.expenseDist')}</div>
     <svg class="chart-svg" viewBox="0 0 140 140" height="110" style="display:block;margin:0 auto">
       ${paths}
     </svg>
@@ -242,7 +221,7 @@ function renderTrendChart(){
 
   const zeroY=PT+(1-(0-minV)/range)*(H-PT-PB);
 
-  el.innerHTML=`<div class="chart-title">Nakit Kalan Trendi</div>
+  el.innerHTML=`<div class="chart-title">${t('dash.cashTrend')}</div>
     <svg class="chart-svg" viewBox="0 0 ${W} ${H}" height="${H}">
       <line x1="0" y1="${Math.min(H-PB,Math.max(PT,zeroY))}" x2="${W}" y2="${Math.min(H-PB,Math.max(PT,zeroY))}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>
       <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
