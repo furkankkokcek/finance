@@ -331,6 +331,9 @@ window.I18N.es = {
   "notif.diagTestOff": "Desactivado",
   "notif.diagCount": "Número de entradas en el centro de notificaciones:",
 
+  "inv.sellOverQty": "Tienes {have} unidades pero vendes {want}. ¿Continuar de todos modos?",
+  "inv.lotSellSide": "VENTA",
+  "inv.lotBuySide": "COMPRA",
   "inv.tapHint": "toca un punto",
   "inv.valueTrend": "Valor actual (diario)",
   "inv.investedTrend": "Importe invertido (diario)",
@@ -430,6 +433,7 @@ window.I18N.es = {
   "freedom.lvl5Desc": "Gasto mensual × 12 × 25",
   "freedom.lvl5Label": "25 años de gastos",
 
+  "lot.typeSell": "Venta",
   "lot.addTitle": "Añadir compra",
   "lot.type": "Tipo de compra",
   "lot.typeBuy": "Compra",

@@ -331,6 +331,9 @@ window.I18N.en = {
   "notif.diagTestOff": "Off",
   "notif.diagCount": "Notification center entry count:",
 
+  "inv.sellOverQty": "You hold {have} units but selling {want}. Continue anyway?",
+  "inv.lotSellSide": "SELL",
+  "inv.lotBuySide": "BUY",
   "inv.tapHint": "tap a point",
   "inv.valueTrend": "Current Value (daily)",
   "inv.investedTrend": "Invested Amount (daily)",
@@ -430,6 +433,7 @@ window.I18N.en = {
   "freedom.lvl5Desc": "Monthly expense × 12 × 25",
   "freedom.lvl5Label": "25 Years of Expenses",
 
+  "lot.typeSell": "Sell",
   "lot.addTitle": "Add Purchase",
   "lot.type": "Purchase Type",
   "lot.typeBuy": "Purchase",

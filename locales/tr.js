@@ -346,6 +346,9 @@ window.I18N.tr = {
   "notif.diagCount": "Bildirim merkezi kayıt sayısı:",
 
   // investments
+  "inv.sellOverQty": "Elinizde {have} adet var ama {want} satıyorsunuz. Yine de devam edilsin mi?",
+  "inv.lotSellSide": "SAT",
+  "inv.lotBuySide": "AL",
   "inv.tapHint": "noktaya dokun",
   "inv.valueTrend": "Güncel Değer (gün bazlı)",
   "inv.investedTrend": "Yatırım Tutarı (gün bazlı)",
@@ -446,6 +449,7 @@ window.I18N.tr = {
   "freedom.lvl5Label": "25 Yıllık Gider",
 
   // lot modal
+  "lot.typeSell": "Satım",
   "lot.addTitle": "Alım Ekle",
   "lot.type": "Alım Tipi",
   "lot.typeBuy": "Alım",

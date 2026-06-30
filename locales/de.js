@@ -331,6 +331,9 @@ window.I18N.de = {
   "notif.diagTestOff": "Aus",
   "notif.diagCount": "Anzahl der Einträge im Benachrichtigungscenter:",
 
+  "inv.sellOverQty": "Sie halten {have} Einheiten, verkaufen aber {want}. Trotzdem fortfahren?",
+  "inv.lotSellSide": "VERK",
+  "inv.lotBuySide": "KAUF",
   "inv.tapHint": "Punkt antippen",
   "inv.valueTrend": "Aktueller Wert (täglich)",
   "inv.investedTrend": "Investierter Betrag (täglich)",
@@ -430,6 +433,7 @@ window.I18N.de = {
   "freedom.lvl5Desc": "Monatsausgaben × 12 × 25",
   "freedom.lvl5Label": "25 Jahre Ausgaben",
 
+  "lot.typeSell": "Verkauf",
   "lot.addTitle": "Kauf hinzufügen",
   "lot.type": "Kaufart",
   "lot.typeBuy": "Kauf",

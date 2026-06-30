@@ -366,24 +366,53 @@ function getPortfolio(){
   return S.investmentPortfolio;
 }
 
+// Running average-cost accounting. Lots are replayed in date order; buys and
+// dividends ADD to holdings + cost basis, sells RELEASE units at the running
+// average cost (the difference between sell price and that average is locked in
+// as realized P&L). After replay: remaining qty × current price is the live
+// value, and total P&L = realized (closed positions) + unrealized (open
+// position vs current price).
 function calcInv(inv){
-  const lots=inv.lots||[];
-  const totalQty=lots.reduce((s,l)=>s+parseFloat(l.qty||0),0);
-  const totalCostTL=lots.reduce((s,l)=>s+parseFloat(l.qty||0)*parseFloat(l.price||0),0);
-  const totalCostUSD=lots.reduce((s,l)=>{
+  const lots=(inv.lots||[]).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  let totalQty=0, totalCostTL=0, totalCostUSD=0;
+  let realizedTL=0, realizedUSD=0;
+  for(const l of lots){
+    const qty=parseFloat(l.qty||0);
+    const price=parseFloat(l.price||0);
     const rate=parseFloat(l.usdRate||0);
-    return s+(rate>0?(parseFloat(l.qty||0)*parseFloat(l.price||0))/rate:0);
-  },0);
-  const avgCostTL=totalQty>0?totalCostTL/totalQty:0;
-  const avgCostUSD=totalQty>0?totalCostUSD/totalQty:0;
+    if(l.lotType==='satim'){
+      if(totalQty<=0) continue; // can't sell what we don't have
+      const sellQty=Math.min(qty, totalQty);
+      const avgTL = totalCostTL/totalQty;
+      const avgUSD = totalCostUSD>0 ? totalCostUSD/totalQty : 0;
+      realizedTL += sellQty*(price - avgTL);
+      if(rate>0 && avgUSD>0) realizedUSD += sellQty*((price/rate) - avgUSD);
+      totalCostTL  -= sellQty*avgTL;
+      if(avgUSD>0) totalCostUSD -= sellQty*avgUSD;
+      totalQty     -= sellQty;
+    } else {
+      totalQty += qty;
+      totalCostTL += qty*price;
+      if(rate>0) totalCostUSD += (qty*price)/rate;
+    }
+  }
+  const avgCostTL = totalQty>0 ? totalCostTL/totalQty : 0;
+  const avgCostUSD = totalQty>0 ? (totalCostUSD>0?totalCostUSD/totalQty:0) : 0;
   const cur=parseFloat(inv.currentPrice||0);
   const currentValueTL=totalQty*cur;
   const currentValueUSD=_currentUsdRate>0?currentValueTL/_currentUsdRate:0;
-  const pnlTL=currentValueTL-totalCostTL;
-  const hasUsd=totalCostUSD>0&&_currentUsdRate>0;
-  const pnlUSD=hasUsd?currentValueUSD-totalCostUSD:0;
-  const pnlPct=totalCostTL>0?(pnlTL/totalCostTL)*100:0;
-  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,currentValueTL,currentValueUSD,pnlTL,pnlUSD,pnlPct,hasUsd};
+  const unrealizedTL=currentValueTL-totalCostTL;
+  const hasUsd=(totalCostUSD>0||realizedUSD!==0)&&_currentUsdRate>0;
+  const unrealizedUSD=hasUsd?currentValueUSD-totalCostUSD:0;
+  const pnlTL=unrealizedTL+realizedTL;
+  const pnlUSD=hasUsd?(unrealizedUSD+realizedUSD):0;
+  // Percent is on capital invested in the still-open portion (avoid divide-by-0
+  // for fully-closed positions where totalCostTL is 0).
+  const pnlPct=totalCostTL>0?(pnlTL/totalCostTL)*100:(realizedTL!==0?100:0);
+  return {totalQty,totalCostTL,totalCostUSD,avgCostTL,avgCostUSD,
+    currentValueTL,currentValueUSD,
+    realizedTL,realizedUSD,
+    pnlTL,pnlUSD,pnlPct,hasUsd};
 }
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -548,8 +577,14 @@ function renderInvTrendChart(port){
     const price=parseFloat(inv.currentPrice||0);
     (inv.lots||[]).forEach(l=>{
       if(!l.date) return;
-      const valTL=parseFloat(l.qty||0)*price;
-      if(valTL<=0) return; // no current price yet → not valued
+      // Sells release units, so they REDUCE the line (negative delta in qty ×
+      // current price). Skip 0-cost lots (reinvested dividends already counted
+      // by their qty).
+      const qty=parseFloat(l.qty||0);
+      if(qty<=0) return;
+      const sign=l.lotType==='satim'?-1:1;
+      const valTL=sign*qty*price;
+      if(valTL===0) return;
       const valUSD=_currentUsdRate>0?valTL/_currentUsdRate:0;
       evs.push({date:l.date.slice(0,10),valTL,valUSD});
     });
@@ -828,13 +863,19 @@ function renderInvLots(inv){
     }
     const total=parseFloat(l.qty||0)*parseFloat(l.price||0);
     const usdTotal=parseFloat(l.usdRate||0)>0?total/parseFloat(l.usdRate):0;
+    const isSell=l.lotType==='satim';
+    const sideLabel=isSell?t('inv.lotSellSide'):t('inv.lotBuySide');
+    const sideColor=isSell?'var(--danger)':'var(--success)';
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
       <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${l.date} · ${l.qty} ${t('inv.unitPiece')} @ ${fmtTRY(l.price)}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">
+          <span style="display:inline-block;padding:1px 6px;border-radius:10px;background:${sideColor}22;color:${sideColor};font-weight:700;font-size:10px;margin-right:4px">${sideLabel}</span>
+          ${l.date} · ${l.qty} ${t('inv.unitPiece')} @ ${fmtTRY(l.price)}
+        </div>
         <div style="font-size:11px;color:var(--muted)">$1 = ${parseFloat(l.usdRate||0).toFixed(4)}₺</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;font-weight:700;color:var(--text)">${fmtTRY(total)}</div>
+        <div style="font-size:12px;font-weight:700;color:${isSell?'var(--danger)':'var(--text)'}">${isSell?'-':''}${fmtTRY(total)}</div>
         <div style="font-size:11px;color:var(--muted)">${fmtUSD(usdTotal)}</div>
         <button onclick="deleteLot('${inv.id}','${l.id}')" style="font-size:10px;padding:1px 7px;background:var(--danger-bg);border:none;border-radius:var(--r3);color:var(--danger);cursor:pointer;margin-top:2px">${t('common.delete')}</button>
       </div>
@@ -899,9 +940,16 @@ function openAddLot(invId){
   document.getElementById('lot-usd-status').textContent='';
   const typeField=document.getElementById('lot-type-field');
   const typeSel=document.getElementById('lot-type-sel');
-  if(typeSel) typeSel.value='alim';
-  const isStock=inv&&(inv.type==='hisse'||inv.type==='fon');
-  if(typeField) typeField.style.display=isStock?'':'none';
+  if(typeSel){
+    typeSel.value='alim';
+    // Show/hide the temettu (reinvested dividend) option per asset class — only
+    // makes sense for stocks/funds. Sell is universal so it's always available.
+    const divOpt=typeSel.querySelector('option[value="temettu"]');
+    if(divOpt) divOpt.style.display=(inv&&(inv.type==='hisse'||inv.type==='fon'))?'':'none';
+  }
+  // The lot-type field itself now always shows (was hidden for non-stocks);
+  // every asset can have buys AND sells, so a chooser is always useful.
+  if(typeField) typeField.style.display='';
   onLotTypeChange('alim');
   fetchUsdRate(todayStr());
   openModal('overlay-lot');
@@ -973,9 +1021,9 @@ function saveLot(){
   const inv=(S.investmentPortfolio||[]).find(x=>x.id===invId);
   if(!inv){alert(t('inv.notFound'));return;}
   const date=document.getElementById('lot-date').value;
-  const isTemettu=document.getElementById('lot-type-sel')?.value==='temettu';
+  const lotType=document.getElementById('lot-type-sel')?.value||'alim';
   if(!inv.lots) inv.lots=[];
-  if(isTemettu){
+  if(lotType==='temettu'){
     const divPerShare=parseFloat(document.getElementById('lot-div-per-share').value)||0;
     const rebuyPrice=parseFloat(document.getElementById('lot-div-rebuy-price').value)||0;
     if(!date||!(divPerShare>0)||!(rebuyPrice>0)){alert(t('inv.divRequired'));return;}
@@ -989,7 +1037,15 @@ function saveLot(){
     const price=parseFloat(document.getElementById('lot-price').value);
     const usdRate=parseFloat(document.getElementById('lot-usd-rate').value)||0;
     if(!date||!(qty>0)||!(price>0)){alert(t('inv.lotRequired'));return;}
-    inv.lots.push({id:uid('lot'),date,qty,price,usdRate});
+    if(lotType==='satim'){
+      // Defensive: warn if the user is trying to sell more than they hold (lots
+      // are replayed in date order, so we re-check at this lot's date).
+      const cNow=calcInv(inv);
+      if(qty>cNow.totalQty+1e-9 && !confirm(t('inv.sellOverQty',{have:cNow.totalQty,want:qty}))){ return; }
+      inv.lots.push({id:uid('lot'),date,qty,price,usdRate,lotType:'satim'});
+    } else {
+      inv.lots.push({id:uid('lot'),date,qty,price,usdRate,lotType:'alim'});
+    }
   }
   saveS();
   closeModal('overlay-lot');
